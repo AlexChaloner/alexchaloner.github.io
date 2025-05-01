@@ -1,7 +1,7 @@
-<!DOCTYPE html>
-<html>
-<body>
-<h1>About Me</h1>
+---
+layout: default
+title: About Me
+---
 
 <p>
     Currently I'm a Software Engineer at Meta. I do Machine Learning and Software Engineering, and it's a really interesting space to work in.
@@ -19,5 +19,3 @@
         </li>
     </ul>
 </p>
-</body>
-</html>
