@@ -29,7 +29,6 @@ if ($LASTEXITCODE -ne 0) {
 Write-Host "Running linkinator..." -ForegroundColor Cyan
 linkinator .\_site --concurrency 20
 if ($LASTEXITCODE -ne 0) {
-    Write-Error "❌ Broken links detected"
     exit 1
 }
 
