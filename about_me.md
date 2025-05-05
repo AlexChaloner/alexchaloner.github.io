@@ -3,19 +3,23 @@ layout: default
 title: About Me
 ---
 
-<p>
-    Currently I'm a Software Engineer at Meta. I do Machine Learning and Software Engineering, and it's a really interesting space to work in.
-</p>
-<p>
-    Previous experience:
-    <ul>
-        <li> 
-            Software Engineer at Ocado - I loved my time at Ocado, it was there where I learned to be a Software Engineer and how to work with a real project and real specifications. 
-            My work is running somewhere in a warehouse in Luton!
-        </li>
-        <li>
-            Data Scientist at Agari - My first job, and frankly I did more ML research than Data Science. 
-            At the height of the COVID pandemic, this was a weird job where I had a lot of freedom as a junior hire. I learned a lot about how *not* to do ML work.
-        </li>
-    </ul>
-</p>
+
+Currently I'm a Software Engineer at Meta. I'm officially a Software Engineer, but I do a lot of ML too.
+
+## Previous experience:
+
+- Software Engineer, Ocado
+Nov 2022 - July 2024
+
+- Data Scientist, Agari
+Oct 2021 - July 2022
+
+
+
+## My Masters Dissertation, 2020
+
+An exploratory paper in using graph clustering algorithms for hierarchical *states* in Reinforcement Learning.
+
+- There exist many hierarchical action frameworks, e.g. Options. These string actions together to create a string of individual actions.
+- However, Options require re-learning for every new state, even if the state is very similar to one previously seen.
+- In this dissertation we take the novel approach to cluster the state space rather than the actions, using graph-clustering algorithms against the state graph the agent has visited.
