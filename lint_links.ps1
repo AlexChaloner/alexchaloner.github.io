@@ -1,9 +1,9 @@
 # 1) Ensure all installed
-if (-not (Get-Command htmlproofer -ErrorAction SilentlyContinue)) {
-    Write-Host "Installing html-proofer..." -ForegroundColor Cyan
-    gem install html-proofer
+if (-not (Get-Command linkinator -ErrorAction SilentlyContinue)) {
+    Write-Host "Installing linkinator..." -ForegroundColor Cyan
+    npm install linkinator
     if ($LASTEXITCODE -ne 0) {
-        Write-Error "❌ Failed to install html-proofer"
+        Write-Error "❌ Failed to install linkinator"
         exit 1
     }
 }
@@ -26,8 +26,8 @@ if ($LASTEXITCODE -ne 0) {
 }
 
 # 3) Run html-proofer on the generated folder
-Write-Host "Running link checker..." -ForegroundColor Cyan
-htmlproofer .\_site --allow-hash-href --check-external --check-img-http
+Write-Host "Running linkinator..." -ForegroundColor Cyan
+linkinator .\_site --concurrency 20
 if ($LASTEXITCODE -ne 0) {
     Write-Error "❌ Broken links detected"
     exit 1
