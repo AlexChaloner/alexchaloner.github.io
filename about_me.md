@@ -1,20 +1,19 @@
 ---
 layout: default
 title: About Me
+date: 2025-08-25
 ---
 
 
 Currently I'm a Software Engineer at Meta. I'm officially a Software Engineer, but I do a lot of ML too.
 
-## Previous experience:
+## Previous experience
 
 - Software Engineer, Ocado
 Nov 2022 - July 2024
 
 - Data Scientist, Agari
 Oct 2021 - July 2022
-
-
 
 ## My Masters Dissertation, 2020
 

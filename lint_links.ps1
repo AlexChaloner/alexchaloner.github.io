@@ -33,3 +33,4 @@ if ($LASTEXITCODE -ne 0) {
 }
 
 Write-Host "✅ All links OK!" -ForegroundColor Green
+exit 0
