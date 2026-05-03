@@ -5,7 +5,9 @@ permalink: /musings/
 ---
 <h1>Musings</h1>
 <ul>
-  {% for p in site.pages %}
+  <li>2026-05-03 <a href="https://alexchaloner.substack.com/p/simulating-the-red-button-blue-button">Simulating the Red Button / Blue Button Hypothetical</a></li>
+  {% assign sorted_pages = site.pages | sort: 'date' | reverse %}
+  {% for p in sorted_pages %}
     {% if p.url contains '/musings/' and p.url != '/musings/' %}
       <li>{{p.date}} <a href="{{ p.url | relative_url }}">{{ p.title }}</a></li>
     {% endif %}
