@@ -8,9 +8,9 @@
 <body>
   <header>
     <h1><a href="{{ "/" | relative_url }}">{{ site.title }}</a></h1>
-    <nav>
-      <a href="{{ "/about_me.html" | relative_url }}">About Me</a> |
-      <a href="{{ "/musings/index.html" | relative_url }}">Musings</a>
+    <nav aria-label="Main navigation">
+      <a href="{{ "/" | relative_url }}">Main</a> |
+      <a href="{{ "/about_me.html" | relative_url }}">About Me</a>
     </nav>
   </header>
 
@@ -23,7 +23,12 @@
   <hr>
 
   <footer>
-    <p>{{ site.time | date: "%Y" }}</p>
+    <nav aria-label="Social links">
+      <a href="https://github.com/AlexChaloner">GitHub</a> |
+      <a href="https://twitter.com/alex_chaloner">Twitter</a> |
+      <a href="https://linkedin.com/in/alexchaloner/">LinkedIn</a>
+    </nav>
+    <p>&copy; {{ site.time | date: "%Y" }} Alex Chaloner</p>
   </footer>
 </body>
 </html>
