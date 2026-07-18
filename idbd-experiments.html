@@ -50,23 +50,17 @@ title: "Learning the learning rate"
 
         <div class="score-row">
           <div class="primary-score">
-            <span>Final clean RMS</span>
-            <strong id="sgd-clean-score">—</strong>
+            <span>Recent prediction MSE</span>
+            <strong id="sgd-loss-score">—</strong>
           </div>
           <dl>
-            <div><dt>Stream loss</dt><dd id="sgd-loss-score">—</dd></div>
             <div><dt>Signal weight</dt><dd id="sgd-signal-weight">—</dd></div>
           </dl>
         </div>
 
         <figure class="chart-block">
-          <figcaption><span>Noisy-stream loss</span><small>prequential MSE · lower is better</small></figcaption>
-          <canvas id="sgd-loss-chart" role="img" aria-label="SGD noisy-stream loss over training examples"></canvas>
-        </figure>
-
-        <figure class="chart-block">
-          <figcaption><span>Clean RMS over steps</span><small>exact population score</small></figcaption>
-          <canvas id="sgd-clean-chart" role="img" aria-label="SGD clean RMS over training examples"></canvas>
+          <figcaption><span>Prediction MSE</span><small>EMA over minibatches · logarithmic scale</small></figcaption>
+          <canvas id="sgd-loss-chart" role="img" aria-label="SGD prediction mean squared error over training examples on a logarithmic scale"></canvas>
         </figure>
 
         <figure class="chart-block model-chart">
@@ -99,23 +93,17 @@ title: "Learning the learning rate"
 
         <div class="score-row">
           <div class="primary-score">
-            <span>Final clean RMS</span>
-            <strong id="idbd-clean-score">—</strong>
+            <span>Recent prediction MSE</span>
+            <strong id="idbd-loss-score">—</strong>
           </div>
           <dl>
-            <div><dt>Stream loss</dt><dd id="idbd-loss-score">—</dd></div>
             <div><dt>Signal / noise rate</dt><dd id="idbd-rate-ratio">—</dd></div>
           </dl>
         </div>
 
         <figure class="chart-block">
-          <figcaption><span>Noisy-stream loss</span><small>prequential MSE · lower is better</small></figcaption>
-          <canvas id="idbd-loss-chart" role="img" aria-label="IDBD noisy-stream loss over training examples"></canvas>
-        </figure>
-
-        <figure class="chart-block">
-          <figcaption><span>Clean RMS over steps</span><small>exact population score</small></figcaption>
-          <canvas id="idbd-clean-chart" role="img" aria-label="IDBD clean RMS over training examples"></canvas>
+          <figcaption><span>Prediction MSE</span><small>EMA over minibatches · logarithmic scale</small></figcaption>
+          <canvas id="idbd-loss-chart" role="img" aria-label="IDBD prediction mean squared error over training examples on a logarithmic scale"></canvas>
         </figure>
 
         <figure class="chart-block model-chart">
@@ -158,8 +146,8 @@ title: "Learning the learning rate"
             <label for="training-steps">Training steps</label>
             <output id="training-steps-value" for="training-steps">4,096</output>
           </div>
-          <input id="training-steps" type="range" min="8" max="14" step="1" value="12" aria-describedby="training-steps-help">
-          <div class="range-labels" aria-hidden="true"><span>256</span><span>16,384</span></div>
+          <input id="training-steps" type="range" min="0" max="14" step="1" value="4" aria-describedby="training-steps-help">
+          <div class="range-labels" aria-hidden="true"><span>256</span><span>5,000,000</span></div>
           <p id="training-steps-help">Total examples processed; the horizontal axis above.</p>
         </div>
 
@@ -186,11 +174,11 @@ title: "Learning the learning rate"
           <button id="new-stream" type="button">New noise stream <span aria-hidden="true">↻</span></button>
         </div>
       </div>
-      <p class="simulation-scope"><strong>Computed live in this browser.</strong> This compact demonstration uses 64 sparse features and no precomputed curves. It is intentionally much smaller than the full experiment.</p>
+      <p class="simulation-scope"><strong>Computed live in this browser.</strong> The 64-feature sparse stream is generated incrementally while both models train; no examples or curves are precomputed.</p>
     </fieldset>
 
     <aside class="experiment-note">
-      <p><strong>Reading the experiment.</strong> The green bar is the only coefficient that should approach 1. Every other coefficient should stay near zero. “Clean RMS” evaluates against the predictable target with the target noise removed.</p>
+      <p><strong>Reading the experiment.</strong> The green bar is the only coefficient that should approach the reference line at 1. Every other coefficient should stay near zero. Prediction MSE is measured before each update against the noisy target; the curve is an exponential moving average over minibatches.</p>
       <p id="batch-note"><strong>At batch size 1</strong>, this is classic online IDBD. Larger batches use a mean-gradient diagonal approximation and are best read as an exploration, not the original 1992 rule.</p>
     </aside>
   </section>

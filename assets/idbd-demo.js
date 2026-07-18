@@ -4,7 +4,13 @@
   const FEATURE_COUNT = 64;
   const FEATURE_PROBABILITY = 0.08;
   const GAUSSIAN_VARIANCE = 2;
+  const GAUSSIAN_STANDARD_DEVIATION = Math.sqrt(GAUSSIAN_VARIANCE);
   const SPARSE_NOISE_PROBABILITY = 0.02;
+  const LOG_ONE_MINUS_FEATURE_PROBABILITY = Math.log(1 - FEATURE_PROBABILITY);
+  const STEP_OPTIONS = [
+    256, 512, 1024, 2048, 4096, 8192, 16384, 32768,
+    65536, 100000, 250000, 500000, 1000000, 2000000, 5000000
+  ];
   const COLORS = {
     ink: "#222222",
     muted: "#555555",
@@ -50,57 +56,51 @@
     };
   }
 
-  function gaussian(random) {
-    const first = Math.max(random(), 1e-12);
-    const second = random();
-    return Math.sqrt(-2 * Math.log(first)) * Math.cos(2 * Math.PI * second);
-  }
-
-  function makeStream(streamSeed, exampleCount) {
-    const random = mulberry32(streamSeed);
-    const features = new Array(exampleCount);
-    const targets = new Float64Array(exampleCount);
-
-    for (let row = 0; row < exampleCount; row += 1) {
-      const active = [];
-      for (let feature = 0; feature < FEATURE_COUNT; feature += 1) {
-        if (random() < FEATURE_PROBABILITY) active.push(feature);
+  function makeGaussian(random) {
+    let spare = null;
+    return function () {
+      if (spare !== null) {
+        const value = spare;
+        spare = null;
+        return value;
       }
-      const cleanTarget = active.length && active[0] === 0 ? 1 : 0;
-      const sparseNoise = random() < SPARSE_NOISE_PROBABILITY
-        ? (random() < 0.5 ? -1 : 1)
-        : 0;
-      features[row] = active;
-      targets[row] = cleanTarget + sparseNoise + Math.sqrt(GAUSSIAN_VARIANCE) * gaussian(random);
-    }
-    return { features, targets };
+      const radius = Math.sqrt(-2 * Math.log(Math.max(random(), 1e-12)));
+      const angle = 2 * Math.PI * random();
+      spare = radius * Math.sin(angle);
+      return radius * Math.cos(angle);
+    };
   }
 
-  function prediction(weights, active) {
+  function fillActiveFeatures(random, active) {
+    let count = 0;
+    let feature = Math.floor(
+      Math.log(1 - random()) / LOG_ONE_MINUS_FEATURE_PROBABILITY
+    );
+    while (feature < FEATURE_COUNT) {
+      active[count] = feature;
+      count += 1;
+      feature += 1 + Math.floor(
+        Math.log(1 - random()) / LOG_ONE_MINUS_FEATURE_PROBABILITY
+      );
+    }
+    return count;
+  }
+
+  function prediction(weights, active, activeCount) {
     let total = 0;
-    for (let index = 0; index < active.length; index += 1) {
+    for (let index = 0; index < activeCount; index += 1) {
       total += weights[active[index]];
     }
     return total;
-  }
-
-  function cleanRms(weights) {
-    let coefficientSum = 0;
-    let coefficientSquares = 0;
-    for (let index = 0; index < weights.length; index += 1) {
-      const coefficient = weights[index] - (index === 0 ? 1 : 0);
-      coefficientSum += coefficient;
-      coefficientSquares += coefficient * coefficient;
-    }
-    const p = FEATURE_PROBABILITY;
-    return Math.sqrt(Math.max(0, p * (1 - p) * coefficientSquares + p * p * coefficientSum * coefficientSum));
   }
 
   function clamp(value, minimum, maximum) {
     return Math.min(maximum, Math.max(minimum, value));
   }
 
-  function runExperiment(stream, sgdRate, idbdInitialRate, theta, batchSize, exampleCount) {
+  function runExperiment(streamSeed, sgdRate, idbdInitialRate, theta, batchSize, exampleCount) {
+    const random = mulberry32(streamSeed);
+    const gaussian = makeGaussian(random);
     const sgdWeights = new Float64Array(FEATURE_COUNT);
     const idbdWeights = new Float64Array(FEATURE_COUNT);
     const beta = new Float64Array(FEATURE_COUNT);
@@ -108,14 +108,14 @@
     const directionSgd = new Float64Array(FEATURE_COUNT);
     const directionIdbd = new Float64Array(FEATURE_COUNT);
     const activeCounts = new Float64Array(FEATURE_COUNT);
+    const active = new Uint8Array(FEATURE_COUNT);
+    const touched = new Uint8Array(FEATURE_COUNT);
     beta.fill(Math.log(idbdInitialRate));
 
     const curves = {
       steps: [0],
       sgdLoss: [null],
-      idbdLoss: [null],
-      sgdClean: [cleanRms(sgdWeights)],
-      idbdClean: [cleanRms(idbdWeights)]
+      idbdLoss: [null]
     };
     let sgdLossEma = null;
     let idbdLossEma = null;
@@ -123,29 +123,36 @@
     for (let start = 0; start < exampleCount; start += batchSize) {
       const end = Math.min(exampleCount, start + batchSize);
       const actualBatchSize = end - start;
-      directionSgd.fill(0);
-      directionIdbd.fill(0);
-      activeCounts.fill(0);
+      let touchedCount = 0;
       let batchSgdSquaredError = 0;
       let batchIdbdSquaredError = 0;
 
       for (let row = start; row < end; row += 1) {
-        const active = stream.features[row];
-        const target = stream.targets[row];
-        const sgdError = target - prediction(sgdWeights, active);
-        const idbdError = target - prediction(idbdWeights, active);
+        const activeCount = fillActiveFeatures(random, active);
+        const predictableTarget = activeCount > 0 && active[0] === 0 ? 1 : 0;
+        const sparseNoise = random() < SPARSE_NOISE_PROBABILITY
+          ? (random() < 0.5 ? -1 : 1)
+          : 0;
+        const target = predictableTarget + sparseNoise + GAUSSIAN_STANDARD_DEVIATION * gaussian();
+        const sgdError = target - prediction(sgdWeights, active, activeCount);
+        const idbdError = target - prediction(idbdWeights, active, activeCount);
         batchSgdSquaredError += sgdError * sgdError;
         batchIdbdSquaredError += idbdError * idbdError;
 
-        for (let index = 0; index < active.length; index += 1) {
+        for (let index = 0; index < activeCount; index += 1) {
           const feature = active[index];
+          if (activeCounts[feature] === 0) {
+            touched[touchedCount] = feature;
+            touchedCount += 1;
+          }
           directionSgd[feature] += sgdError;
           directionIdbd[feature] += idbdError;
           activeCounts[feature] += 1;
         }
       }
 
-      for (let feature = 0; feature < FEATURE_COUNT; feature += 1) {
+      for (let index = 0; index < touchedCount; index += 1) {
+        const feature = touched[index];
         const sgdDirection = directionSgd[feature] / actualBatchSize;
         const idbdDirection = directionIdbd[feature] / actualBatchSize;
         const curvature = activeCounts[feature] / actualBatchSize;
@@ -157,6 +164,9 @@
         const weightChange = featureRate * idbdDirection;
         idbdWeights[feature] += weightChange;
         trace[feature] = trace[feature] * Math.max(0, 1 - featureRate * curvature) + weightChange;
+        directionSgd[feature] = 0;
+        directionIdbd[feature] = 0;
+        activeCounts[feature] = 0;
       }
 
       const sgdBatchLoss = batchSgdSquaredError / actualBatchSize;
@@ -171,8 +181,6 @@
         curves.steps.push(end);
         curves.sgdLoss.push(sgdLossEma);
         curves.idbdLoss.push(idbdLossEma);
-        curves.sgdClean.push(cleanRms(sgdWeights));
-        curves.idbdClean.push(cleanRms(idbdWeights));
       }
     }
 
@@ -183,13 +191,11 @@
       curves,
       sgd: {
         weights: Array.from(sgdWeights),
-        clean: cleanRms(sgdWeights),
         loss: sgdLossEma,
         signal: sgdWeights[0]
       },
       idbd: {
         weights: Array.from(idbdWeights),
-        clean: cleanRms(idbdWeights),
         loss: idbdLossEma,
         rateRatio: idbdRates[0] / Math.max(medianNoiseRate, 1e-12)
       }
@@ -232,7 +238,7 @@
     return nice * power;
   }
 
-  function drawLineChart(canvasId, steps, values, color, fill, sharedMax, exampleCount) {
+  function drawLineChart(canvasId, steps, values, color, fill, bounds, exampleCount) {
     const canvas = document.getElementById(canvasId);
     const surface = setupCanvas(canvas);
     const context = surface.context;
@@ -241,8 +247,10 @@
     const margins = { top: 10, right: 10, bottom: 27, left: 42 };
     const plotWidth = width - margins.left - margins.right;
     const plotHeight = height - margins.top - margins.bottom;
-    const finiteValues = values.filter(Number.isFinite);
-    const maximum = sharedMax || niceMaximum(Math.max.apply(null, finiteValues));
+    const minimum = bounds.minimum;
+    const maximum = bounds.maximum;
+    const logMinimum = Math.log10(minimum);
+    const logRange = Math.log10(maximum) - logMinimum;
 
     context.fillStyle = "#fcfcfc";
     context.fillRect(margins.left, margins.top, plotWidth, plotHeight);
@@ -252,6 +260,7 @@
     for (let tick = 0; tick <= 2; tick += 1) {
       const fraction = tick / 2;
       const y = margins.top + plotHeight * (1 - fraction);
+      const tickValue = Math.pow(10, logMinimum + logRange * fraction);
       context.strokeStyle = COLORS.grid;
       context.beginPath();
       context.moveTo(margins.left, y);
@@ -259,7 +268,7 @@
       context.stroke();
       context.fillStyle = COLORS.muted;
       context.textAlign = "right";
-      context.fillText(formatScore(maximum * fraction), margins.left - 7, y);
+      context.fillText(formatScore(tickValue), margins.left - 7, y);
     }
 
     context.strokeStyle = "#aaa";
@@ -278,10 +287,11 @@
 
     const coordinates = [];
     for (let index = 0; index < values.length; index += 1) {
-      if (!Number.isFinite(values[index])) continue;
+      if (!Number.isFinite(values[index]) || values[index] <= 0) continue;
+      const logValue = Math.log10(Math.max(values[index], minimum));
       coordinates.push({
         x: margins.left + (steps[index] / exampleCount) * plotWidth,
-        y: margins.top + (1 - clamp(values[index] / maximum, 0, 1)) * plotHeight
+        y: margins.top + (1 - clamp((logValue - logMinimum) / logRange, 0, 1)) * plotHeight
       });
     }
     if (!coordinates.length) return;
@@ -339,6 +349,22 @@
     context.fillText("0", margins.left - 7, zeroY);
     context.fillText("−" + formatScore(extent), margins.left - 7, margins.top + plotHeight);
 
+    if (extent >= 1) {
+      const referenceY = zeroY - (plotHeight / 2) / extent;
+      context.save();
+      context.setLineDash([4, 3]);
+      context.strokeStyle = COLORS.signal;
+      context.globalAlpha = 0.75;
+      context.beginPath();
+      context.moveTo(margins.left, referenceY);
+      context.lineTo(width - margins.right, referenceY);
+      context.stroke();
+      context.restore();
+      context.fillStyle = COLORS.signal;
+      context.textAlign = "right";
+      context.fillText("target = 1", width - margins.right, referenceY - 8);
+    }
+
     for (let index = 0; index < weights.length; index += 1) {
       const value = clamp(weights[index], -extent, extent);
       const valueHeight = Math.abs(value) / extent * (plotHeight / 2);
@@ -358,9 +384,17 @@
     context.fillText("63 irrelevant features", width - margins.right, height - 7);
   }
 
-  function maximumAcross(first, second, minimum) {
-    const values = first.concat(second).filter(Number.isFinite);
-    return niceMaximum(Math.max(minimum || 0, Math.max.apply(null, values)) * 1.05);
+  function logarithmicBoundsAcross(first, second) {
+    const values = first.concat(second).filter(function (value) {
+      return Number.isFinite(value) && value > 0;
+    });
+    if (!values.length) return { minimum: 0.1, maximum: 1 };
+    const smallest = Math.min.apply(null, values);
+    const largest = Math.max.apply(null, values);
+    const minimum = Math.pow(10, Math.floor(Math.log10(smallest)));
+    let maximum = Math.pow(10, Math.ceil(Math.log10(largest)));
+    if (maximum <= minimum) maximum = minimum * 10;
+    return { minimum, maximum };
   }
 
   function updateBatchNote(batchSize) {
@@ -378,7 +412,7 @@
     const idbdInitialRate = Math.pow(10, Number(controls.idbdRate.value));
     const theta = Math.pow(10, Number(controls.theta.value));
     const batchSize = Math.pow(2, Number(controls.batch.value));
-    const exampleCount = Math.pow(2, Number(controls.steps.value));
+    const exampleCount = STEP_OPTIONS[Number(controls.steps.value)];
     outputs.sgdRate.value = formatRate(sgdRate);
     outputs.idbdRate.value = formatRate(idbdInitialRate);
     outputs.theta.value = formatRate(theta);
@@ -388,34 +422,31 @@
     outputs.status.textContent = "Running identical streams…";
 
     window.requestAnimationFrame(function () {
-      const stream = makeStream(seed, exampleCount);
-      const result = runExperiment(stream, sgdRate, idbdInitialRate, theta, batchSize, exampleCount);
+      const started = performance.now();
+      const result = runExperiment(seed, sgdRate, idbdInitialRate, theta, batchSize, exampleCount);
       const curves = result.curves;
 
-      document.getElementById("sgd-clean-score").textContent = formatScore(result.sgd.clean);
-      document.getElementById("idbd-clean-score").textContent = formatScore(result.idbd.clean);
       document.getElementById("sgd-loss-score").textContent = formatScore(result.sgd.loss);
       document.getElementById("idbd-loss-score").textContent = formatScore(result.idbd.loss);
       document.getElementById("sgd-signal-weight").textContent = formatScore(result.sgd.signal);
       document.getElementById("idbd-rate-ratio").textContent = formatScore(result.idbd.rateRatio) + "×";
 
-      const lossMax = maximumAcross(curves.sgdLoss, curves.idbdLoss, GAUSSIAN_VARIANCE + 1);
-      const cleanMax = maximumAcross(curves.sgdClean, curves.idbdClean, 0.5);
+      const lossBounds = logarithmicBoundsAcross(curves.sgdLoss, curves.idbdLoss);
       const weightMax = niceMaximum(Math.max(
         1,
         Math.max.apply(null, result.sgd.weights.map(Math.abs)),
         Math.max.apply(null, result.idbd.weights.map(Math.abs))
       ) * 1.05);
 
-      drawLineChart("sgd-loss-chart", curves.steps, curves.sgdLoss, COLORS.sgd, COLORS.sgdFill, lossMax, exampleCount);
-      drawLineChart("idbd-loss-chart", curves.steps, curves.idbdLoss, COLORS.idbd, COLORS.idbdFill, lossMax, exampleCount);
-      drawLineChart("sgd-clean-chart", curves.steps, curves.sgdClean, COLORS.sgd, COLORS.sgdFill, cleanMax, exampleCount);
-      drawLineChart("idbd-clean-chart", curves.steps, curves.idbdClean, COLORS.idbd, COLORS.idbdFill, cleanMax, exampleCount);
+      drawLineChart("sgd-loss-chart", curves.steps, curves.sgdLoss, COLORS.sgd, COLORS.sgdFill, lossBounds, exampleCount);
+      drawLineChart("idbd-loss-chart", curves.steps, curves.idbdLoss, COLORS.idbd, COLORS.idbdFill, lossBounds, exampleCount);
       drawWeights("sgd-weights-chart", result.sgd.weights, COLORS.sgd, weightMax);
       drawWeights("idbd-weights-chart", result.idbd.weights, COLORS.idbd, weightMax);
       updateBatchNote(batchSize);
       const updateCount = Math.ceil(exampleCount / batchSize);
-      outputs.status.textContent = "Complete · " + formatInteger(updateCount) + " updates · stream " + String(seed).slice(-4);
+      const runtime = performance.now() - started;
+      const runtimeLabel = runtime < 1000 ? Math.round(runtime) + " ms" : (runtime / 1000).toFixed(1) + " s";
+      outputs.status.textContent = "Complete · " + formatInteger(updateCount) + " updates · " + runtimeLabel + " · stream " + String(seed).slice(-4);
     });
   }
 
@@ -427,7 +458,7 @@
     outputs.idbdRate.value = formatRate(idbdInitialRate);
     outputs.theta.value = formatRate(theta);
     outputs.batch.value = String(Math.pow(2, Number(controls.batch.value)));
-    outputs.steps.value = formatInteger(Math.pow(2, Number(controls.steps.value)));
+    outputs.steps.value = formatInteger(STEP_OPTIONS[Number(controls.steps.value)]);
     if (scheduled) return;
     scheduled = true;
     window.requestAnimationFrame(render);
