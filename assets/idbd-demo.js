@@ -8,9 +8,10 @@
   const SPARSE_NOISE_PROBABILITY = 0.01;
   const WEIGHT_LINEAR_THRESHOLD = 0.001;
   const PREDICTION_LOSS_BOUNDS = Object.freeze({ minimum: 0.1, maximum: 100 });
-  const SIGNAL_LOSS_BOUNDS = Object.freeze({ minimum: 0.0001, maximum: 1 });
+  const SIGNAL_LOSS_BOUNDS = Object.freeze({ minimum: 0.00001, maximum: 100 });
   const LEARNING_RATE_BOUNDS = Object.freeze({ minimum: 0.00001, maximum: 1 });
   const MODEL_WEIGHT_EXTENT = 2;
+  const PREVIEW_LENGTH = 500;
   const LOG_ONE_MINUS_FEATURE_PROBABILITY = Math.log(1 - FEATURE_PROBABILITY);
   const STEP_OPTIONS = [
     256, 512, 1024, 2048, 4096, 8192, 16384, 32768,
@@ -135,6 +136,34 @@
       + probability * probability * coefficientSum * coefficientSum;
   }
 
+  function createStreamPreview(streamSeed) {
+    const random = mulberry32((streamSeed ^ 0x9E3779B9) >>> 0);
+    const gaussian = makeGaussian(random);
+    const active = new Uint8Array(FEATURE_COUNT);
+    const features = new Uint8Array(PREVIEW_LENGTH * FEATURE_COUNT);
+    const cleanTarget = new Float64Array(PREVIEW_LENGTH);
+    const noisyTarget = new Float64Array(PREVIEW_LENGTH);
+    for (let step = 0; step < PREVIEW_LENGTH; step += 1) {
+      const activeCount = fillActiveFeatures(random, active);
+      for (let index = 0; index < activeCount; index += 1) {
+        features[step * FEATURE_COUNT + active[index]] = 1;
+      }
+      const predictableTarget = features[step * FEATURE_COUNT] ? 1 : 0;
+      const sparseNoise = random() < SPARSE_NOISE_PROBABILITY
+        ? (random() < 0.5 ? -1 : 1)
+        : 0;
+      cleanTarget[step] = predictableTarget;
+      noisyTarget[step] = predictableTarget + sparseNoise + GAUSSIAN_STANDARD_DEVIATION * gaussian();
+    }
+    return {
+      features,
+      cleanTarget,
+      noisyTarget,
+      sgdPrediction: new Float64Array(PREVIEW_LENGTH),
+      idbdPrediction: new Float64Array(PREVIEW_LENGTH)
+    };
+  }
+
   function createTrainingState(streamSeed, sgdRate, idbdInitialRate, theta, batchSize, exampleCount) {
     const random = mulberry32(streamSeed);
     const beta = new Float64Array(FEATURE_COUNT);
@@ -160,6 +189,7 @@
       activeCounts: new Float64Array(FEATURE_COUNT),
       active: new Uint8Array(FEATURE_COUNT),
       touched: new Uint8Array(FEATURE_COUNT),
+      preview: createStreamPreview(streamSeed),
       curves: {
         steps: [0],
         sgdLoss: [null],
@@ -299,6 +329,110 @@
     context.fillStyle = COLORS.alert;
     context.fillText(text, right - 2, y);
     context.restore();
+  }
+
+  function drawTraceChart(canvasId, series, bounds, ticks) {
+    const canvas = document.getElementById(canvasId);
+    const surface = setupCanvas(canvas);
+    const context = surface.context;
+    const width = surface.width;
+    const height = surface.height;
+    const margins = { top: 9, right: 9, bottom: 25, left: 42 };
+    const plotWidth = width - margins.left - margins.right;
+    const plotHeight = height - margins.top - margins.bottom;
+    const length = series[0].values.length;
+    let observedMaximum = -Infinity;
+    let observedMinimum = Infinity;
+
+    function valueY(value) {
+      return margins.top + (1 - (clamp(value, bounds.minimum, bounds.maximum) - bounds.minimum) /
+        (bounds.maximum - bounds.minimum)) * plotHeight;
+    }
+
+    context.fillStyle = "#fcfcfc";
+    context.fillRect(margins.left, margins.top, plotWidth, plotHeight);
+    context.font = "11px serif";
+    context.lineWidth = 1;
+    context.textBaseline = "middle";
+    ticks.forEach(function (tick) {
+      const y = valueY(tick);
+      context.strokeStyle = tick === 0 ? COLORS.noise : COLORS.grid;
+      context.beginPath();
+      context.moveTo(margins.left, y);
+      context.lineTo(width - margins.right, y);
+      context.stroke();
+      context.fillStyle = COLORS.muted;
+      context.textAlign = "right";
+      context.fillText(String(tick).replace("-", "−"), margins.left - 7, y);
+    });
+
+    context.strokeStyle = "#aaa";
+    context.beginPath();
+    context.moveTo(margins.left, margins.top);
+    context.lineTo(margins.left, margins.top + plotHeight);
+    context.lineTo(width - margins.right, margins.top + plotHeight);
+    context.stroke();
+
+    context.fillStyle = COLORS.muted;
+    context.textBaseline = "alphabetic";
+    context.textAlign = "left";
+    context.fillText("0", margins.left, height - 5);
+    context.textAlign = "right";
+    context.fillText(String(length) + " steps", width - margins.right, height - 5);
+
+    context.save();
+    context.beginPath();
+    context.rect(margins.left, margins.top, plotWidth, plotHeight);
+    context.clip();
+    series.forEach(function (item) {
+      context.beginPath();
+      let drawing = false;
+      for (let index = 0; index < item.values.length; index += 1) {
+        const value = item.values[index];
+        if (!Number.isFinite(value)) {
+          drawing = false;
+          continue;
+        }
+        observedMaximum = Math.max(observedMaximum, value);
+        observedMinimum = Math.min(observedMinimum, value);
+        const x = margins.left + index / Math.max(1, length - 1) * plotWidth;
+        const y = valueY(value);
+        if (!drawing) {
+          context.moveTo(x, y);
+          drawing = true;
+        } else {
+          context.lineTo(x, y);
+        }
+      }
+      context.strokeStyle = item.color;
+      context.lineWidth = item.width || 1.5;
+      context.lineJoin = "round";
+      context.setLineDash(item.dash || []);
+      context.stroke();
+    });
+    context.restore();
+
+    if (observedMaximum > bounds.maximum) {
+      drawEdgeWarning(context, width - margins.right, margins.top + 10, "↑ max " + formatScore(observedMaximum) + " (limit " + String(bounds.maximum) + ")");
+    }
+    if (observedMinimum < bounds.minimum) {
+      drawEdgeWarning(context, width - margins.right, margins.top + plotHeight - 10, "↓ min " + formatScore(observedMinimum) + " (limit " + String(bounds.minimum) + ")");
+    }
+  }
+
+  function updatePreviewPredictions(preview, sgdWeights, idbdWeights) {
+    for (let step = 0; step < PREVIEW_LENGTH; step += 1) {
+      const offset = step * FEATURE_COUNT;
+      let sgdPrediction = 0;
+      let idbdPrediction = 0;
+      for (let feature = 0; feature < FEATURE_COUNT; feature += 1) {
+        if (!preview.features[offset + feature]) continue;
+        sgdPrediction += sgdWeights[feature];
+        idbdPrediction += idbdWeights[feature];
+      }
+      preview.sgdPrediction[step] = sgdPrediction;
+      preview.idbdPrediction[step] = idbdPrediction;
+    }
   }
 
   function drawLineChart(canvasId, steps, values, color, fill, bounds, exampleCount) {
@@ -636,6 +770,22 @@
     document.getElementById("idbd-rate-ratio").textContent = formatScore(idbdRateRatio(state.beta)) + "×";
     document.getElementById("sgd-signal-loss-score").textContent = formatScore(noiselessSignalMse(state.sgdWeights));
     document.getElementById("idbd-signal-loss-score").textContent = formatScore(noiselessSignalMse(state.idbdWeights));
+
+    updatePreviewPredictions(state.preview, state.sgdWeights, state.idbdWeights);
+    drawTraceChart("feature-stream-chart", [
+      { values: state.preview.cleanTarget, color: COLORS.signal, width: 1.6 }
+    ], { minimum: -0.2, maximum: 1.2 }, [0, 1]);
+    drawTraceChart("target-stream-chart", [
+      { values: state.preview.noisyTarget, color: COLORS.ink, width: 1.25 }
+    ], { minimum: -8, maximum: 8 }, [-8, 0, 8]);
+    drawTraceChart("sgd-prediction-chart", [
+      { values: state.preview.cleanTarget, color: COLORS.signal, width: 1.1, dash: [4, 3] },
+      { values: state.preview.sgdPrediction, color: COLORS.sgd, width: 1.7 }
+    ], { minimum: -2, maximum: 2 }, [-2, 0, 1, 2]);
+    drawTraceChart("idbd-prediction-chart", [
+      { values: state.preview.cleanTarget, color: COLORS.signal, width: 1.1, dash: [4, 3] },
+      { values: state.preview.idbdPrediction, color: COLORS.idbd, width: 1.7 }
+    ], { minimum: -2, maximum: 2 }, [-2, 0, 1, 2]);
 
     drawLineChart("sgd-loss-chart", state.curves.steps, state.curves.sgdLoss, COLORS.sgd, COLORS.sgdFill, PREDICTION_LOSS_BOUNDS, state.exampleCount);
     drawLineChart("idbd-loss-chart", state.curves.steps, state.curves.idbdLoss, COLORS.idbd, COLORS.idbdFill, PREDICTION_LOSS_BOUNDS, state.exampleCount);

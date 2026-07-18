@@ -38,6 +38,26 @@ title: "Learning the learning rate"
       <span>64 features</span>
     </div>
 
+    <section class="stream-preview" aria-labelledby="stream-preview-title">
+      <div class="stream-preview-heading">
+        <div>
+          <p class="section-label">A window onto the stream</p>
+          <h3 id="stream-preview-title">Predictable spikes inside noisy experience</h3>
+        </div>
+        <p>One fixed 500-step held-out window, shared by both learners.</p>
+      </div>
+      <div class="stream-preview-grid">
+        <figure>
+          <figcaption><span>Predictive feature</span><small>Bernoulli · 1% active</small></figcaption>
+          <canvas id="feature-stream-chart" role="img" aria-label="A 500-step sample of the sparse predictive binary feature"></canvas>
+        </figure>
+        <figure>
+          <figcaption><span>Target given to the learner</span><small>clean signal + sparse and Gaussian noise</small></figcaption>
+          <canvas id="target-stream-chart" role="img" aria-label="The noisy observed targets for the same 500-step sample"></canvas>
+        </figure>
+      </div>
+    </section>
+
     <div class="comparison">
       <section class="method-card sgd-card" aria-labelledby="sgd-title">
         <div class="method-heading">
@@ -59,14 +79,19 @@ title: "Learning the learning rate"
           </dl>
         </div>
 
+        <figure class="chart-block prediction-chart">
+          <figcaption><span>Prediction on the sample stream</span><small>solid model · dashed clean signal · fixed −2–2</small></figcaption>
+          <canvas id="sgd-prediction-chart" role="img" aria-label="SGD model predictions on the shared 500-step sample stream"></canvas>
+        </figure>
+
         <figure class="chart-block">
           <figcaption><span>Prediction MSE</span><small>fixed 0.1–100 · logarithmic scale</small></figcaption>
           <canvas id="sgd-loss-chart" role="img" aria-label="SGD prediction mean squared error over training examples on a fixed logarithmic scale from 0.1 to 100"></canvas>
         </figure>
 
         <figure class="chart-block">
-          <figcaption><span>Loss against noiseless signal</span><small>fixed 10⁻⁴–1 · logarithmic scale</small></figcaption>
-          <canvas id="sgd-signal-loss-chart" role="img" aria-label="SGD exact mean squared error against the noiseless signal on a fixed logarithmic scale from 0.0001 to 1"></canvas>
+          <figcaption><span>Loss against noiseless signal</span><small>fixed 10⁻⁵–100 · logarithmic scale</small></figcaption>
+          <canvas id="sgd-signal-loss-chart" role="img" aria-label="SGD exact mean squared error against the noiseless signal on a fixed logarithmic scale from 0.00001 to 100"></canvas>
         </figure>
 
         <figure class="chart-block rate-chart">
@@ -101,14 +126,19 @@ title: "Learning the learning rate"
           </dl>
         </div>
 
+        <figure class="chart-block prediction-chart">
+          <figcaption><span>Prediction on the sample stream</span><small>solid model · dashed clean signal · fixed −2–2</small></figcaption>
+          <canvas id="idbd-prediction-chart" role="img" aria-label="IDBD model predictions on the shared 500-step sample stream"></canvas>
+        </figure>
+
         <figure class="chart-block">
           <figcaption><span>Prediction MSE</span><small>fixed 0.1–100 · logarithmic scale</small></figcaption>
           <canvas id="idbd-loss-chart" role="img" aria-label="IDBD prediction mean squared error over training examples on a fixed logarithmic scale from 0.1 to 100"></canvas>
         </figure>
 
         <figure class="chart-block">
-          <figcaption><span>Loss against noiseless signal</span><small>fixed 10⁻⁴–1 · logarithmic scale</small></figcaption>
-          <canvas id="idbd-signal-loss-chart" role="img" aria-label="IDBD exact mean squared error against the noiseless signal on a fixed logarithmic scale from 0.0001 to 1"></canvas>
+          <figcaption><span>Loss against noiseless signal</span><small>fixed 10⁻⁵–100 · logarithmic scale</small></figcaption>
+          <canvas id="idbd-signal-loss-chart" role="img" aria-label="IDBD exact mean squared error against the noiseless signal on a fixed logarithmic scale from 0.00001 to 100"></canvas>
         </figure>
 
         <figure class="chart-block rate-chart">
