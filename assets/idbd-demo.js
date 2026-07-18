@@ -6,6 +6,7 @@
   const GAUSSIAN_VARIANCE = 5;
   const GAUSSIAN_STANDARD_DEVIATION = Math.sqrt(GAUSSIAN_VARIANCE);
   const SPARSE_NOISE_PROBABILITY = 0.01;
+  const WEIGHT_LINEAR_THRESHOLD = 0.001;
   const LOG_ONE_MINUS_FEATURE_PROBABILITY = Math.log(1 - FEATURE_PROBABILITY);
   const STEP_OPTIONS = [
     256, 512, 1024, 2048, 4096, 8192, 16384, 32768,
@@ -99,6 +100,10 @@
 
   function clamp(value, minimum, maximum) {
     return Math.min(maximum, Math.max(minimum, value));
+  }
+
+  function symmetricLog(value) {
+    return Math.sign(value) * Math.log10(1 + Math.abs(value) / WEIGHT_LINEAR_THRESHOLD);
   }
 
   function noiselessSignalMse(weights) {
@@ -368,25 +373,43 @@
     const margins = { top: 11, right: 9, bottom: 34, left: 42 };
     const plotWidth = width - margins.left - margins.right;
     const plotHeight = height - margins.top - margins.bottom;
-    const extent = Math.max(0.1, sharedExtent);
+    const extent = Math.max(1, sharedExtent);
+    const transformedExtent = symmetricLog(extent);
     const zeroY = margins.top + plotHeight / 2;
     const barStep = plotWidth / FEATURE_COUNT;
 
+    function weightY(value) {
+      return zeroY - symmetricLog(clamp(value, -extent, extent)) /
+        transformedExtent * (plotHeight / 2);
+    }
+
+    const ticks = [0];
+    const largestExponent = Math.ceil(Math.log10(extent));
+    for (let exponent = -2; exponent <= largestExponent; exponent += 1) {
+      const magnitude = Math.pow(10, exponent);
+      if (magnitude <= extent * 1.000001) {
+        ticks.push(-magnitude, magnitude);
+      }
+    }
+    ticks.sort(function (first, second) { return first - second; });
+
     context.font = "11px serif";
-    context.strokeStyle = COLORS.grid;
-    context.beginPath();
-    context.moveTo(margins.left, zeroY);
-    context.lineTo(width - margins.right, zeroY);
-    context.stroke();
-    context.fillStyle = COLORS.muted;
-    context.textAlign = "right";
-    context.textBaseline = "middle";
-    context.fillText("+" + formatScore(extent), margins.left - 7, margins.top);
-    context.fillText("0", margins.left - 7, zeroY);
-    context.fillText("−" + formatScore(extent), margins.left - 7, margins.top + plotHeight);
+    ticks.forEach(function (tick) {
+      const y = weightY(tick);
+      context.strokeStyle = tick === 0 ? COLORS.noise : COLORS.grid;
+      context.beginPath();
+      context.moveTo(margins.left, y);
+      context.lineTo(width - margins.right, y);
+      context.stroke();
+      context.fillStyle = COLORS.muted;
+      context.textAlign = "right";
+      context.textBaseline = "middle";
+      const label = tick < 0 ? "−" + String(Math.abs(tick)) : String(tick);
+      context.fillText(label, margins.left - 7, y);
+    });
 
     if (extent >= 1) {
-      const referenceY = zeroY - (plotHeight / 2) / extent;
+      const referenceY = weightY(1);
       context.save();
       context.setLineDash([4, 3]);
       context.strokeStyle = COLORS.signal;
@@ -403,9 +426,10 @@
 
     for (let index = 0; index < weights.length; index += 1) {
       const value = clamp(weights[index], -extent, extent);
-      const valueHeight = Math.abs(value) / extent * (plotHeight / 2);
+      const valueY = weightY(value);
+      const valueHeight = Math.abs(valueY - zeroY);
       const x = margins.left + index * barStep + Math.max(0.5, barStep * 0.12);
-      const y = value >= 0 ? zeroY - valueHeight : zeroY;
+      const y = Math.min(valueY, zeroY);
       context.fillStyle = index === 0 ? COLORS.signal : color;
       context.globalAlpha = index === 0 ? 1 : 0.62;
       context.fillRect(x, y, Math.max(1, barStep * 0.72), valueHeight);
