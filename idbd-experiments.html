@@ -95,8 +95,8 @@ title: "Learning the learning rate"
         </figure>
 
         <figure class="chart-block rate-chart">
-          <figcaption><span>Per-parameter learning rates</span><small>fixed 10⁻⁵–1 · logarithmic scale</small></figcaption>
-          <canvas id="sgd-rates-chart" role="img" aria-label="SGD learning rate for each model parameter on a fixed logarithmic scale from 0.00001 to 1"></canvas>
+          <figcaption><span>Per-parameter learning rates</span><small>fixed 10⁻⁵–10 · logarithmic scale</small></figcaption>
+          <canvas id="sgd-rates-chart" role="img" aria-label="SGD learning rate for each model parameter on a fixed logarithmic scale from 0.00001 to 10"></canvas>
         </figure>
 
         <figure class="chart-block model-chart">
@@ -142,8 +142,8 @@ title: "Learning the learning rate"
         </figure>
 
         <figure class="chart-block rate-chart">
-          <figcaption><span>Per-parameter learning rates</span><small>fixed 10⁻⁵–1 · logarithmic scale</small></figcaption>
-          <canvas id="idbd-rates-chart" role="img" aria-label="IDBD learning rate for each model parameter on a fixed logarithmic scale from 0.00001 to 1"></canvas>
+          <figcaption><span>Per-parameter learning rates</span><small>fixed 10⁻⁵–10 · logarithmic scale</small></figcaption>
+          <canvas id="idbd-rates-chart" role="img" aria-label="IDBD learning rate for each model parameter on a fixed logarithmic scale from 0.00001 to 10"></canvas>
         </figure>
 
         <figure class="chart-block model-chart">
@@ -162,8 +162,8 @@ title: "Learning the learning rate"
             <label for="sgd-rate">Learning rate</label>
             <output id="sgd-rate-value" for="sgd-rate">0.0100</output>
           </div>
-          <input id="sgd-rate" type="range" min="-3" max="-0.5" step="0.05" value="-2" aria-describedby="sgd-rate-help">
-          <div class="range-labels" aria-hidden="true"><span>0.001</span><span>0.316</span></div>
+          <input id="sgd-rate" type="range" min="-3" max="1" step="0.05" value="-2" aria-describedby="sgd-rate-help">
+          <div class="range-labels" aria-hidden="true"><span>0.001</span><span>10.0</span></div>
           <p id="sgd-rate-help">SGD keeps this rate fixed for every feature.</p>
         </div>
       </div>
@@ -184,8 +184,8 @@ title: "Learning the learning rate"
             <label for="idbd-rate">Initial learning rate</label>
             <output id="idbd-rate-value" for="idbd-rate">0.0100</output>
           </div>
-          <input id="idbd-rate" type="range" min="-3" max="-0.5" step="0.05" value="-2" aria-describedby="idbd-rate-help">
-          <div class="range-labels" aria-hidden="true"><span>0.001</span><span>0.316</span></div>
+          <input id="idbd-rate" type="range" min="-3" max="1" step="0.05" value="-2" aria-describedby="idbd-rate-help">
+          <div class="range-labels" aria-hidden="true"><span>0.001</span><span>10.0</span></div>
           <p id="idbd-rate-help">The starting rate before IDBD adapts each feature.</p>
         </div>
 

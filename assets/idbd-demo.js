@@ -9,7 +9,7 @@
   const WEIGHT_LINEAR_THRESHOLD = 0.001;
   const PREDICTION_LOSS_BOUNDS = Object.freeze({ minimum: 0.1, maximum: 100 });
   const SIGNAL_LOSS_BOUNDS = Object.freeze({ minimum: 0.00001, maximum: 100 });
-  const LEARNING_RATE_BOUNDS = Object.freeze({ minimum: 0.00001, maximum: 1 });
+  const LEARNING_RATE_BOUNDS = Object.freeze({ minimum: 0.00001, maximum: 10 });
   const MODEL_WEIGHT_EXTENT = 2;
   const PREVIEW_LENGTH = 500;
   const LOG_ONE_MINUS_FEATURE_PROBABILITY = Math.log(1 - FEATURE_PROBABILITY);
@@ -246,7 +246,7 @@
       state.sgdWeights[feature] += state.sgdRate * sgdDirection;
 
       const betaChange = clamp(state.theta * idbdDirection * state.trace[feature], -2, 2);
-      state.beta[feature] = clamp(state.beta[feature] + betaChange, -10, Math.log(0.5));
+      state.beta[feature] = clamp(state.beta[feature] + betaChange, -10, Math.log(10));
       const featureRate = Math.exp(state.beta[feature]);
       const weightChange = featureRate * idbdDirection;
       state.idbdWeights[feature] += weightChange;
@@ -343,6 +343,7 @@
     const length = series[0].values.length;
     let observedMaximum = -Infinity;
     let observedMinimum = Infinity;
+    let unstable = false;
 
     function valueY(value) {
       return margins.top + (1 - (clamp(value, bounds.minimum, bounds.maximum) - bounds.minimum) /
@@ -390,6 +391,7 @@
       for (let index = 0; index < item.values.length; index += 1) {
         const value = item.values[index];
         if (!Number.isFinite(value)) {
+          unstable = true;
           drawing = false;
           continue;
         }
@@ -412,8 +414,8 @@
     });
     context.restore();
 
-    if (observedMaximum > bounds.maximum) {
-      drawEdgeWarning(context, width - margins.right, margins.top + 10, "↑ max " + formatScore(observedMaximum) + " (limit " + String(bounds.maximum) + ")");
+    if (unstable || observedMaximum > bounds.maximum) {
+      drawEdgeWarning(context, width - margins.right, margins.top + 10, "↑ max " + formatScore(unstable ? Infinity : observedMaximum) + " (limit " + String(bounds.maximum) + ")");
     }
     if (observedMinimum < bounds.minimum) {
       drawEdgeWarning(context, width - margins.right, margins.top + plotHeight - 10, "↓ min " + formatScore(observedMinimum) + " (limit " + String(bounds.minimum) + ")");
@@ -571,7 +573,7 @@
     context.font = "11px serif";
     context.lineWidth = 1;
     context.textBaseline = "middle";
-    for (let exponent = -5; exponent <= 0; exponent += 1) {
+    for (let exponent = -5; exponent <= Math.log10(maximum); exponent += 1) {
       const rate = Math.pow(10, exponent);
       const y = rateY(rate);
       context.strokeStyle = COLORS.grid;
@@ -581,7 +583,7 @@
       context.stroke();
       context.fillStyle = COLORS.muted;
       context.textAlign = "right";
-      context.fillText(exponent === 0 ? "1" : "1e−" + String(Math.abs(exponent)), margins.left - 7, y);
+      context.fillText(exponent === 0 ? "1" : exponent > 0 ? "10" : "1e−" + String(Math.abs(exponent)), margins.left - 7, y);
     }
 
     context.strokeStyle = "#aaa";
@@ -620,7 +622,7 @@
     context.fillText("63 irrelevant features", width - margins.right, height - 7);
 
     if (aboveScale) {
-      drawEdgeWarning(context, width - margins.right, margins.top + 10, "↑ max " + formatScore(observedMaximum) + " (limit 1)");
+      drawEdgeWarning(context, width - margins.right, margins.top + 10, "↑ max " + formatScore(observedMaximum) + " (limit " + String(maximum) + ")");
     }
     if (belowScale) {
       drawEdgeWarning(context, width - margins.right, margins.top + plotHeight - 10, "↓ min " + formatScore(observedMinimum) + " (limit 0.00001)");
