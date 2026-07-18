@@ -31,47 +31,10 @@ title: "Learning the learning rate"
       <p class="experiment-lede">One feature predicts the target. The other 63 are coincidences. Both learners receive the same noisy examples.</p>
     </div>
 
-    <div class="controls" aria-label="Experiment controls">
-      <div class="control">
-        <div class="control-heading">
-          <label for="initial-rate">Initial learning rate</label>
-          <output id="initial-rate-value" for="initial-rate">0.0501</output>
-        </div>
-        <input id="initial-rate" type="range" min="-3" max="-0.5" step="0.05" value="-1.3" aria-describedby="initial-rate-help">
-        <div class="range-labels" aria-hidden="true"><span>0.001</span><span>0.316</span></div>
-        <p id="initial-rate-help">Fixed for SGD; the starting point for IDBD.</p>
-      </div>
-
-      <div class="control">
-        <div class="control-heading">
-          <label for="theta">Meta learning rate <span class="math">θ</span></label>
-          <output id="theta-value" for="theta">0.316</output>
-        </div>
-        <input id="theta" type="range" min="-3" max="0.5" step="0.05" value="-0.5" aria-describedby="theta-help">
-        <div class="range-labels" aria-hidden="true"><span>0.001</span><span>3.16</span></div>
-        <p id="theta-help">How quickly IDBD changes its per-feature rates.</p>
-      </div>
-
-      <div class="control">
-        <div class="control-heading">
-          <label for="batch-size">Batch size</label>
-          <output id="batch-size-value" for="batch-size">1</output>
-        </div>
-        <input id="batch-size" type="range" min="0" max="6" step="1" value="0" aria-describedby="batch-size-help">
-        <div class="range-labels" aria-hidden="true"><span>1</span><span>64</span></div>
-        <p id="batch-size-help">Examples combined into each update.</p>
-      </div>
-
-      <div class="stream-control">
-        <p><span class="status-dot" aria-hidden="true"></span><span id="run-status" aria-live="polite">Ready</span></p>
-        <button id="new-stream" type="button">New noise stream <span aria-hidden="true">↻</span></button>
-      </div>
-    </div>
-
     <div class="shared-legend" aria-label="Chart legend">
       <span><i class="legend-signal"></i> predictive feature</span>
       <span><i class="legend-noise"></i> irrelevant features</span>
-      <span>4,096 examples</span>
+      <span id="example-count-label">4,096 examples</span>
       <span>64 features</span>
     </div>
 
@@ -110,6 +73,19 @@ title: "Learning the learning rate"
           <figcaption><span>The model</span><small>learned feature coefficients</small></figcaption>
           <canvas id="sgd-weights-chart" role="img" aria-label="SGD learned model coefficients"></canvas>
         </figure>
+
+        <div class="method-controls" aria-label="SGD controls">
+          <p class="control-group-title">SGD control</p>
+          <div class="control">
+            <div class="control-heading">
+              <label for="sgd-rate">Learning rate</label>
+              <output id="sgd-rate-value" for="sgd-rate">0.0501</output>
+            </div>
+            <input id="sgd-rate" type="range" min="-3" max="-0.5" step="0.05" value="-1.3" aria-describedby="sgd-rate-help">
+            <div class="range-labels" aria-hidden="true"><span>0.001</span><span>0.316</span></div>
+            <p id="sgd-rate-help">SGD keeps this rate fixed for every feature.</p>
+          </div>
+        </div>
       </section>
 
       <section class="method-card idbd-card" aria-labelledby="idbd-title">
@@ -146,8 +122,72 @@ title: "Learning the learning rate"
           <figcaption><span>The model</span><small>learned feature coefficients</small></figcaption>
           <canvas id="idbd-weights-chart" role="img" aria-label="IDBD learned model coefficients"></canvas>
         </figure>
+
+        <div class="method-controls idbd-method-controls" aria-label="IDBD controls">
+          <p class="control-group-title">IDBD controls</p>
+          <div class="control-pair">
+            <div class="control">
+              <div class="control-heading">
+                <label for="idbd-rate">Initial learning rate</label>
+                <output id="idbd-rate-value" for="idbd-rate">0.0501</output>
+              </div>
+              <input id="idbd-rate" type="range" min="-3" max="-0.5" step="0.05" value="-1.3" aria-describedby="idbd-rate-help">
+              <div class="range-labels" aria-hidden="true"><span>0.001</span><span>0.316</span></div>
+              <p id="idbd-rate-help">The starting rate before IDBD adapts each feature.</p>
+            </div>
+
+            <div class="control theta-control">
+              <div class="control-heading">
+                <label for="theta">Meta learning rate <span class="math">θ</span></label>
+                <output id="theta-value" for="theta">0.316</output>
+              </div>
+              <input id="theta" type="range" min="-3" max="0.5" step="0.05" value="-0.5" aria-describedby="theta-help">
+              <div class="range-labels" aria-hidden="true"><span>0.001</span><span>3.16</span></div>
+              <p id="theta-help">Only IDBD uses θ; it controls rate adaptation.</p>
+            </div>
+          </div>
+        </div>
       </section>
     </div>
+
+    <fieldset class="shared-controls">
+      <legend>Shared settings — applied to both learners</legend>
+      <div class="shared-control-grid">
+        <div class="control">
+          <div class="control-heading">
+            <label for="training-steps">Training steps</label>
+            <output id="training-steps-value" for="training-steps">4,096</output>
+          </div>
+          <input id="training-steps" type="range" min="8" max="14" step="1" value="12" aria-describedby="training-steps-help">
+          <div class="range-labels" aria-hidden="true"><span>256</span><span>16,384</span></div>
+          <p id="training-steps-help">Total examples processed; the horizontal axis above.</p>
+        </div>
+
+        <div class="control">
+          <div class="control-heading">
+            <label for="batch-size">Batch size</label>
+            <output id="batch-size-value" for="batch-size">1</output>
+          </div>
+          <input id="batch-size" type="range" min="0" max="6" step="1" value="0" aria-describedby="batch-size-help">
+          <div class="range-labels" aria-hidden="true"><span>1</span><span>64</span></div>
+          <p id="batch-size-help">Examples combined into each parameter update.</p>
+        </div>
+
+        <div class="lock-control">
+          <label for="lock-rates">
+            <input id="lock-rates" type="checkbox" checked>
+            Lock SGD and IDBD starting rates together
+          </label>
+          <p>When locked, moving either learning-rate slider moves both.</p>
+        </div>
+
+        <div class="stream-control">
+          <p><span class="status-dot" aria-hidden="true"></span><span id="run-status" aria-live="polite">Ready</span></p>
+          <button id="new-stream" type="button">New noise stream <span aria-hidden="true">↻</span></button>
+        </div>
+      </div>
+      <p class="simulation-scope"><strong>Computed live in this browser.</strong> This compact demonstration uses 64 sparse features and no precomputed curves. It is intentionally much smaller than the full experiment.</p>
+    </fieldset>
 
     <aside class="experiment-note">
       <p><strong>Reading the experiment.</strong> The green bar is the only coefficient that should approach 1. Every other coefficient should stay near zero. “Clean RMS” evaluates against the predictable target with the target noise removed.</p>

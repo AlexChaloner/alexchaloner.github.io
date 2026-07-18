@@ -2,7 +2,6 @@
   "use strict";
 
   const FEATURE_COUNT = 64;
-  const EXAMPLE_COUNT = 4096;
   const FEATURE_PROBABILITY = 0.08;
   const GAUSSIAN_VARIANCE = 2;
   const SPARSE_NOISE_PROBABILITY = 0.02;
@@ -19,18 +18,23 @@
   };
 
   const controls = {
-    rate: document.getElementById("initial-rate"),
+    sgdRate: document.getElementById("sgd-rate"),
+    idbdRate: document.getElementById("idbd-rate"),
     theta: document.getElementById("theta"),
-    batch: document.getElementById("batch-size")
+    batch: document.getElementById("batch-size"),
+    steps: document.getElementById("training-steps"),
+    lockRates: document.getElementById("lock-rates")
   };
   const outputs = {
-    rate: document.getElementById("initial-rate-value"),
+    sgdRate: document.getElementById("sgd-rate-value"),
+    idbdRate: document.getElementById("idbd-rate-value"),
     theta: document.getElementById("theta-value"),
     batch: document.getElementById("batch-size-value"),
+    steps: document.getElementById("training-steps-value"),
     status: document.getElementById("run-status")
   };
 
-  if (!controls.rate || !controls.theta || !controls.batch) return;
+  if (!controls.sgdRate || !controls.idbdRate || !controls.theta || !controls.batch || !controls.steps) return;
 
   let seed = 20260713;
   let scheduled = false;
@@ -52,12 +56,12 @@
     return Math.sqrt(-2 * Math.log(first)) * Math.cos(2 * Math.PI * second);
   }
 
-  function makeStream(streamSeed) {
+  function makeStream(streamSeed, exampleCount) {
     const random = mulberry32(streamSeed);
-    const features = new Array(EXAMPLE_COUNT);
-    const targets = new Float64Array(EXAMPLE_COUNT);
+    const features = new Array(exampleCount);
+    const targets = new Float64Array(exampleCount);
 
-    for (let row = 0; row < EXAMPLE_COUNT; row += 1) {
+    for (let row = 0; row < exampleCount; row += 1) {
       const active = [];
       for (let feature = 0; feature < FEATURE_COUNT; feature += 1) {
         if (random() < FEATURE_PROBABILITY) active.push(feature);
@@ -96,7 +100,7 @@
     return Math.min(maximum, Math.max(minimum, value));
   }
 
-  function runExperiment(stream, initialRate, theta, batchSize) {
+  function runExperiment(stream, sgdRate, idbdInitialRate, theta, batchSize, exampleCount) {
     const sgdWeights = new Float64Array(FEATURE_COUNT);
     const idbdWeights = new Float64Array(FEATURE_COUNT);
     const beta = new Float64Array(FEATURE_COUNT);
@@ -104,7 +108,7 @@
     const directionSgd = new Float64Array(FEATURE_COUNT);
     const directionIdbd = new Float64Array(FEATURE_COUNT);
     const activeCounts = new Float64Array(FEATURE_COUNT);
-    beta.fill(Math.log(initialRate));
+    beta.fill(Math.log(idbdInitialRate));
 
     const curves = {
       steps: [0],
@@ -116,8 +120,8 @@
     let sgdLossEma = null;
     let idbdLossEma = null;
 
-    for (let start = 0; start < EXAMPLE_COUNT; start += batchSize) {
-      const end = Math.min(EXAMPLE_COUNT, start + batchSize);
+    for (let start = 0; start < exampleCount; start += batchSize) {
+      const end = Math.min(exampleCount, start + batchSize);
       const actualBatchSize = end - start;
       directionSgd.fill(0);
       directionIdbd.fill(0);
@@ -145,7 +149,7 @@
         const sgdDirection = directionSgd[feature] / actualBatchSize;
         const idbdDirection = directionIdbd[feature] / actualBatchSize;
         const curvature = activeCounts[feature] / actualBatchSize;
-        sgdWeights[feature] += initialRate * sgdDirection;
+        sgdWeights[feature] += sgdRate * sgdDirection;
 
         const betaChange = clamp(theta * idbdDirection * trace[feature], -2, 2);
         beta[feature] = clamp(beta[feature] + betaChange, -10, Math.log(0.5));
@@ -161,9 +165,9 @@
       idbdLossEma = idbdLossEma === null ? idbdBatchLoss : 0.92 * idbdLossEma + 0.08 * idbdBatchLoss;
 
       const batchIndex = Math.floor(start / batchSize);
-      const totalBatches = Math.ceil(EXAMPLE_COUNT / batchSize);
+      const totalBatches = Math.ceil(exampleCount / batchSize);
       const recordEvery = Math.max(1, Math.floor(totalBatches / 150));
-      if (batchIndex % recordEvery === 0 || end === EXAMPLE_COUNT) {
+      if (batchIndex % recordEvery === 0 || end === exampleCount) {
         curves.steps.push(end);
         curves.sgdLoss.push(sgdLossEma);
         curves.idbdLoss.push(idbdLossEma);
@@ -204,6 +208,10 @@
     return value.toFixed(3);
   }
 
+  function formatInteger(value) {
+    return Math.round(value).toLocaleString("en-GB");
+  }
+
   function setupCanvas(canvas) {
     const ratio = Math.min(window.devicePixelRatio || 1, 2);
     const width = Math.max(260, canvas.clientWidth);
@@ -224,7 +232,7 @@
     return nice * power;
   }
 
-  function drawLineChart(canvasId, steps, values, color, fill, sharedMax) {
+  function drawLineChart(canvasId, steps, values, color, fill, sharedMax, exampleCount) {
     const canvas = document.getElementById(canvasId);
     const surface = setupCanvas(canvas);
     const context = surface.context;
@@ -257,13 +265,13 @@
     context.textAlign = "left";
     context.fillText("0", margins.left, height - 5);
     context.textAlign = "right";
-    context.fillText("4,096 examples", width - margins.right, height - 5);
+    context.fillText(formatInteger(exampleCount) + " examples", width - margins.right, height - 5);
 
     const coordinates = [];
     for (let index = 0; index < values.length; index += 1) {
       if (!Number.isFinite(values[index])) continue;
       coordinates.push({
-        x: margins.left + (steps[index] / EXAMPLE_COUNT) * plotWidth,
+        x: margins.left + (steps[index] / exampleCount) * plotWidth,
         y: margins.top + (1 - clamp(values[index] / maximum, 0, 1)) * plotHeight
       });
     }
@@ -357,17 +365,22 @@
 
   function render() {
     scheduled = false;
-    const initialRate = Math.pow(10, Number(controls.rate.value));
+    const sgdRate = Math.pow(10, Number(controls.sgdRate.value));
+    const idbdInitialRate = Math.pow(10, Number(controls.idbdRate.value));
     const theta = Math.pow(10, Number(controls.theta.value));
     const batchSize = Math.pow(2, Number(controls.batch.value));
-    outputs.rate.value = formatRate(initialRate);
+    const exampleCount = Math.pow(2, Number(controls.steps.value));
+    outputs.sgdRate.value = formatRate(sgdRate);
+    outputs.idbdRate.value = formatRate(idbdInitialRate);
     outputs.theta.value = formatRate(theta);
     outputs.batch.value = String(batchSize);
+    outputs.steps.value = formatInteger(exampleCount);
+    document.getElementById("example-count-label").textContent = formatInteger(exampleCount) + " examples";
     outputs.status.textContent = "Running identical streams…";
 
     window.requestAnimationFrame(function () {
-      const stream = makeStream(seed);
-      const result = runExperiment(stream, initialRate, theta, batchSize);
+      const stream = makeStream(seed, exampleCount);
+      const result = runExperiment(stream, sgdRate, idbdInitialRate, theta, batchSize, exampleCount);
       const curves = result.curves;
 
       document.getElementById("sgd-clean-score").textContent = formatScore(result.sgd.clean);
@@ -385,31 +398,50 @@
         Math.max.apply(null, result.idbd.weights.map(Math.abs))
       ) * 1.05);
 
-      drawLineChart("sgd-loss-chart", curves.steps, curves.sgdLoss, COLORS.sgd, COLORS.sgdFill, lossMax);
-      drawLineChart("idbd-loss-chart", curves.steps, curves.idbdLoss, COLORS.idbd, COLORS.idbdFill, lossMax);
-      drawLineChart("sgd-clean-chart", curves.steps, curves.sgdClean, COLORS.sgd, COLORS.sgdFill, cleanMax);
-      drawLineChart("idbd-clean-chart", curves.steps, curves.idbdClean, COLORS.idbd, COLORS.idbdFill, cleanMax);
+      drawLineChart("sgd-loss-chart", curves.steps, curves.sgdLoss, COLORS.sgd, COLORS.sgdFill, lossMax, exampleCount);
+      drawLineChart("idbd-loss-chart", curves.steps, curves.idbdLoss, COLORS.idbd, COLORS.idbdFill, lossMax, exampleCount);
+      drawLineChart("sgd-clean-chart", curves.steps, curves.sgdClean, COLORS.sgd, COLORS.sgdFill, cleanMax, exampleCount);
+      drawLineChart("idbd-clean-chart", curves.steps, curves.idbdClean, COLORS.idbd, COLORS.idbdFill, cleanMax, exampleCount);
       drawWeights("sgd-weights-chart", result.sgd.weights, COLORS.sgd, weightMax);
       drawWeights("idbd-weights-chart", result.idbd.weights, COLORS.idbd, weightMax);
       updateBatchNote(batchSize);
-      outputs.status.textContent = "Complete · stream " + String(seed).slice(-4);
+      const updateCount = Math.ceil(exampleCount / batchSize);
+      outputs.status.textContent = "Complete · " + formatInteger(updateCount) + " updates · stream " + String(seed).slice(-4);
     });
   }
 
   function scheduleRender() {
-    const initialRate = Math.pow(10, Number(controls.rate.value));
+    const sgdRate = Math.pow(10, Number(controls.sgdRate.value));
+    const idbdInitialRate = Math.pow(10, Number(controls.idbdRate.value));
     const theta = Math.pow(10, Number(controls.theta.value));
-    outputs.rate.value = formatRate(initialRate);
+    outputs.sgdRate.value = formatRate(sgdRate);
+    outputs.idbdRate.value = formatRate(idbdInitialRate);
     outputs.theta.value = formatRate(theta);
     outputs.batch.value = String(Math.pow(2, Number(controls.batch.value)));
+    outputs.steps.value = formatInteger(Math.pow(2, Number(controls.steps.value)));
     if (scheduled) return;
     scheduled = true;
     window.requestAnimationFrame(render);
   }
 
-  controls.rate.addEventListener("input", scheduleRender);
+  function handleRateInput(source, target) {
+    if (controls.lockRates.checked) target.value = source.value;
+    scheduleRender();
+  }
+
+  controls.sgdRate.addEventListener("input", function () {
+    handleRateInput(controls.sgdRate, controls.idbdRate);
+  });
+  controls.idbdRate.addEventListener("input", function () {
+    handleRateInput(controls.idbdRate, controls.sgdRate);
+  });
   controls.theta.addEventListener("input", scheduleRender);
   controls.batch.addEventListener("input", scheduleRender);
+  controls.steps.addEventListener("input", scheduleRender);
+  controls.lockRates.addEventListener("change", function () {
+    if (controls.lockRates.checked) controls.idbdRate.value = controls.sgdRate.value;
+    scheduleRender();
+  });
   document.getElementById("new-stream").addEventListener("click", function () {
     seed += 1;
     scheduleRender();
