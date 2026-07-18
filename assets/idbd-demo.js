@@ -249,6 +249,7 @@
   function formatRate(value) {
     if (value < 0.001) return value.toExponential(1);
     if (value < 0.1) return value.toFixed(4);
+    if (value >= 10) return value.toFixed(value >= 100 ? 0 : 1);
     return value.toFixed(3);
   }
 
@@ -303,6 +304,8 @@
     const logRange = Math.log10(maximum) - logMinimum;
     let aboveScale = false;
     let belowScale = false;
+    let observedMaximum = -Infinity;
+    let observedMinimum = Infinity;
 
     context.fillStyle = "#fcfcfc";
     context.fillRect(margins.left, margins.top, plotWidth, plotHeight);
@@ -340,9 +343,14 @@
     const coordinates = [];
     for (let index = 0; index < values.length; index += 1) {
       if (!Number.isFinite(values[index])) {
-        if (values[index] !== null) aboveScale = true;
+        if (values[index] !== null) {
+          aboveScale = true;
+          observedMaximum = Infinity;
+        }
         continue;
       }
+      observedMaximum = Math.max(observedMaximum, values[index]);
+      observedMinimum = Math.min(observedMinimum, values[index]);
       if (values[index] > maximum) aboveScale = true;
       if (values[index] < minimum) belowScale = true;
       if (values[index] <= 0) continue;
@@ -381,10 +389,10 @@
     }
 
     if (aboveScale) {
-      drawEdgeWarning(context, width - margins.right, margins.top + 10, "↑ off scale (above " + String(maximum) + ")");
+      drawEdgeWarning(context, width - margins.right, margins.top + 10, "↑ max " + formatScore(observedMaximum) + " (limit " + String(maximum) + ")");
     }
     if (belowScale) {
-      drawEdgeWarning(context, width - margins.right, margins.top + plotHeight - 10, "↓ off scale (below " + String(minimum) + ")");
+      drawEdgeWarning(context, width - margins.right, margins.top + plotHeight - 10, "↓ min " + formatScore(observedMinimum) + " (limit " + String(minimum) + ")");
     }
   }
 
@@ -403,6 +411,8 @@
     const barStep = plotWidth / FEATURE_COUNT;
     let aboveScale = false;
     let belowScale = false;
+    let observedMaximum = -Infinity;
+    let observedMinimum = Infinity;
 
     function weightY(value) {
       return zeroY - symmetricLog(clamp(value, -extent, extent)) /
@@ -451,8 +461,15 @@
     }
 
     for (let index = 0; index < weights.length; index += 1) {
-      if (!Number.isFinite(weights[index]) || weights[index] > extent) aboveScale = true;
-      if (Number.isFinite(weights[index]) && weights[index] < -extent) belowScale = true;
+      if (!Number.isFinite(weights[index])) {
+        aboveScale = true;
+        observedMaximum = Infinity;
+      } else {
+        observedMaximum = Math.max(observedMaximum, weights[index]);
+        observedMinimum = Math.min(observedMinimum, weights[index]);
+        if (weights[index] > extent) aboveScale = true;
+        if (weights[index] < -extent) belowScale = true;
+      }
       const value = clamp(weights[index], -extent, extent);
       const valueY = weightY(value);
       const valueHeight = Math.abs(valueY - zeroY);
@@ -471,10 +488,11 @@
     context.textAlign = "right";
     context.fillText("63 irrelevant features", width - margins.right, height - 7);
     if (aboveScale) {
-      drawEdgeWarning(context, width - margins.right, margins.top + 10, "↑ off scale (above +" + String(extent) + ")");
+      const maximumLabel = Number.isFinite(observedMaximum) ? "+" + formatScore(observedMaximum) : formatScore(observedMaximum);
+      drawEdgeWarning(context, width - margins.right, margins.top + 10, "↑ max " + maximumLabel + " (limit +" + String(extent) + ")");
     }
     if (belowScale) {
-      drawEdgeWarning(context, width - margins.right, margins.top + plotHeight - 10, "↓ off scale (below −" + String(extent) + ")");
+      drawEdgeWarning(context, width - margins.right, margins.top + plotHeight - 10, "↓ min −" + formatScore(Math.abs(observedMinimum)) + " (limit −" + String(extent) + ")");
     }
   }
 
