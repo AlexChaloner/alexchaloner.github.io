@@ -374,11 +374,11 @@
 .chart-block canvas {
   display: block;
   width: 100%;
-  height: 166px;
+  height: 184px;
 }
 
 .model-chart canvas {
-  height: 182px;
+  height: 190px;
 }
 
 .model-chart {

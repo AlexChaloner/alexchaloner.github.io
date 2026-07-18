@@ -6,13 +6,13 @@
   const GAUSSIAN_VARIANCE = 2;
   const SPARSE_NOISE_PROBABILITY = 0.02;
   const COLORS = {
-    ink: "#15201d",
-    muted: "#707a75",
-    grid: "#e9ebe6",
-    sgd: "#666666",
-    sgdFill: "rgba(102, 102, 102, 0.10)",
-    idbd: "#0645ad",
-    idbdFill: "rgba(6, 69, 173, 0.09)",
+    ink: "#222222",
+    muted: "#555555",
+    grid: "#d6d6d6",
+    sgd: "#494949",
+    sgdFill: "rgba(73, 73, 73, 0.12)",
+    idbd: "#1b5eaa",
+    idbdFill: "rgba(27, 94, 170, 0.11)",
     signal: "#287a45",
     noise: "#999999"
   };
@@ -244,6 +244,8 @@
     const finiteValues = values.filter(Number.isFinite);
     const maximum = sharedMax || niceMaximum(Math.max.apply(null, finiteValues));
 
+    context.fillStyle = "#fcfcfc";
+    context.fillRect(margins.left, margins.top, plotWidth, plotHeight);
     context.font = "11px serif";
     context.lineWidth = 1;
     context.textBaseline = "middle";
@@ -259,6 +261,13 @@
       context.textAlign = "right";
       context.fillText(formatScore(maximum * fraction), margins.left - 7, y);
     }
+
+    context.strokeStyle = "#aaa";
+    context.beginPath();
+    context.moveTo(margins.left, margins.top);
+    context.lineTo(margins.left, margins.top + plotHeight);
+    context.lineTo(width - margins.right, margins.top + plotHeight);
+    context.stroke();
 
     context.textBaseline = "alphabetic";
     context.fillStyle = COLORS.muted;
@@ -293,13 +302,13 @@
       context.lineTo(coordinates[index].x, coordinates[index].y);
     }
     context.strokeStyle = color;
-    context.lineWidth = 2;
+    context.lineWidth = 2.5;
     context.lineJoin = "round";
     context.stroke();
 
     const last = coordinates[coordinates.length - 1];
     context.beginPath();
-    context.arc(last.x, last.y, 3, 0, Math.PI * 2);
+    context.arc(last.x, last.y, 3.5, 0, Math.PI * 2);
     context.fillStyle = color;
     context.fill();
   }
@@ -391,7 +400,7 @@
       document.getElementById("idbd-rate-ratio").textContent = formatScore(result.idbd.rateRatio) + "×";
 
       const lossMax = maximumAcross(curves.sgdLoss, curves.idbdLoss, GAUSSIAN_VARIANCE + 1);
-      const cleanMax = maximumAcross(curves.sgdClean, curves.idbdClean, 1);
+      const cleanMax = maximumAcross(curves.sgdClean, curves.idbdClean, 0.5);
       const weightMax = niceMaximum(Math.max(
         1,
         Math.max.apply(null, result.sgd.weights.map(Math.abs)),
