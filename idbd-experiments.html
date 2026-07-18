@@ -34,7 +34,7 @@ title: "Learning the learning rate"
     <div class="shared-legend" aria-label="Chart legend">
       <span><i class="legend-signal"></i> predictive feature</span>
       <span><i class="legend-noise"></i> irrelevant features</span>
-      <span id="example-count-label">4,096 examples</span>
+      <span id="example-count-label">1,000,000 examples</span>
       <span>64 features</span>
     </div>
 
@@ -55,12 +55,18 @@ title: "Learning the learning rate"
           </div>
           <dl>
             <div><dt>Signal weight</dt><dd id="sgd-signal-weight">—</dd></div>
+            <div><dt>Noiseless MSE</dt><dd id="sgd-signal-loss-score">—</dd></div>
           </dl>
         </div>
 
         <figure class="chart-block">
           <figcaption><span>Prediction MSE</span><small>EMA over minibatches · logarithmic scale</small></figcaption>
           <canvas id="sgd-loss-chart" role="img" aria-label="SGD prediction mean squared error over training examples on a logarithmic scale"></canvas>
+        </figure>
+
+        <figure class="chart-block">
+          <figcaption><span>Loss against noiseless signal</span><small>exact population MSE · logarithmic scale</small></figcaption>
+          <canvas id="sgd-signal-loss-chart" role="img" aria-label="SGD exact mean squared error against the noiseless signal over training examples on a logarithmic scale"></canvas>
         </figure>
 
         <figure class="chart-block model-chart">
@@ -73,9 +79,9 @@ title: "Learning the learning rate"
           <div class="control">
             <div class="control-heading">
               <label for="sgd-rate">Learning rate</label>
-              <output id="sgd-rate-value" for="sgd-rate">0.0501</output>
+              <output id="sgd-rate-value" for="sgd-rate">0.0100</output>
             </div>
-            <input id="sgd-rate" type="range" min="-3" max="-0.5" step="0.05" value="-1.3" aria-describedby="sgd-rate-help">
+            <input id="sgd-rate" type="range" min="-3" max="-0.5" step="0.05" value="-2" aria-describedby="sgd-rate-help">
             <div class="range-labels" aria-hidden="true"><span>0.001</span><span>0.316</span></div>
             <p id="sgd-rate-help">SGD keeps this rate fixed for every feature.</p>
           </div>
@@ -98,12 +104,18 @@ title: "Learning the learning rate"
           </div>
           <dl>
             <div><dt>Signal / noise rate</dt><dd id="idbd-rate-ratio">—</dd></div>
+            <div><dt>Noiseless MSE</dt><dd id="idbd-signal-loss-score">—</dd></div>
           </dl>
         </div>
 
         <figure class="chart-block">
           <figcaption><span>Prediction MSE</span><small>EMA over minibatches · logarithmic scale</small></figcaption>
           <canvas id="idbd-loss-chart" role="img" aria-label="IDBD prediction mean squared error over training examples on a logarithmic scale"></canvas>
+        </figure>
+
+        <figure class="chart-block">
+          <figcaption><span>Loss against noiseless signal</span><small>exact population MSE · logarithmic scale</small></figcaption>
+          <canvas id="idbd-signal-loss-chart" role="img" aria-label="IDBD exact mean squared error against the noiseless signal over training examples on a logarithmic scale"></canvas>
         </figure>
 
         <figure class="chart-block model-chart">
@@ -117,9 +129,9 @@ title: "Learning the learning rate"
             <div class="control">
               <div class="control-heading">
                 <label for="idbd-rate">Initial learning rate</label>
-                <output id="idbd-rate-value" for="idbd-rate">0.0501</output>
+                <output id="idbd-rate-value" for="idbd-rate">0.0100</output>
               </div>
-              <input id="idbd-rate" type="range" min="-3" max="-0.5" step="0.05" value="-1.3" aria-describedby="idbd-rate-help">
+              <input id="idbd-rate" type="range" min="-3" max="-0.5" step="0.05" value="-2" aria-describedby="idbd-rate-help">
               <div class="range-labels" aria-hidden="true"><span>0.001</span><span>0.316</span></div>
               <p id="idbd-rate-help">The starting rate before IDBD adapts each feature.</p>
             </div>
@@ -127,9 +139,9 @@ title: "Learning the learning rate"
             <div class="control theta-control">
               <div class="control-heading">
                 <label for="theta">Meta learning rate <span class="math">θ</span></label>
-                <output id="theta-value" for="theta">0.316</output>
+                <output id="theta-value" for="theta">0.100</output>
               </div>
-              <input id="theta" type="range" min="-3" max="0.5" step="0.05" value="-0.5" aria-describedby="theta-help">
+              <input id="theta" type="range" min="-3" max="0.5" step="0.05" value="-1" aria-describedby="theta-help">
               <div class="range-labels" aria-hidden="true"><span>0.001</span><span>3.16</span></div>
               <p id="theta-help">Only IDBD uses θ; it controls rate adaptation.</p>
             </div>
@@ -144,9 +156,9 @@ title: "Learning the learning rate"
         <div class="control">
           <div class="control-heading">
             <label for="training-steps">Training steps</label>
-            <output id="training-steps-value" for="training-steps">4,096</output>
+            <output id="training-steps-value" for="training-steps">1,000,000</output>
           </div>
-          <input id="training-steps" type="range" min="0" max="14" step="1" value="4" aria-describedby="training-steps-help">
+          <input id="training-steps" type="range" min="0" max="14" step="1" value="12" aria-describedby="training-steps-help">
           <div class="range-labels" aria-hidden="true"><span>256</span><span>5,000,000</span></div>
           <p id="training-steps-help">Total examples processed; the horizontal axis above.</p>
         </div>
@@ -174,7 +186,7 @@ title: "Learning the learning rate"
           <button id="new-stream" type="button">New noise stream <span aria-hidden="true">↻</span></button>
         </div>
       </div>
-      <p class="simulation-scope"><strong>Computed live in this browser.</strong> The 64-feature sparse stream is generated incrementally while both models train; no examples or curves are precomputed. Training yields between animation frames, and changing a setting cancels the current run.</p>
+      <p class="simulation-scope"><strong>Computed live in this browser.</strong> Following the Oak Lab stream, every feature activates independently with 1% probability; feature 1 is the only predictive feature. The browser-sized version uses 64 rather than 4,096 features. Training yields between animation frames, and changing a setting cancels the current run.</p>
     </fieldset>
 
     <aside class="experiment-note">

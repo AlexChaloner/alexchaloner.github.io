@@ -2,10 +2,10 @@
   "use strict";
 
   const FEATURE_COUNT = 64;
-  const FEATURE_PROBABILITY = 0.08;
-  const GAUSSIAN_VARIANCE = 2;
+  const FEATURE_PROBABILITY = 0.01;
+  const GAUSSIAN_VARIANCE = 5;
   const GAUSSIAN_STANDARD_DEVIATION = Math.sqrt(GAUSSIAN_VARIANCE);
-  const SPARSE_NOISE_PROBABILITY = 0.02;
+  const SPARSE_NOISE_PROBABILITY = 0.01;
   const LOG_ONE_MINUS_FEATURE_PROBABILITY = Math.log(1 - FEATURE_PROBABILITY);
   const STEP_OPTIONS = [
     256, 512, 1024, 2048, 4096, 8192, 16384, 32768,
@@ -101,6 +101,19 @@
     return Math.min(maximum, Math.max(minimum, value));
   }
 
+  function noiselessSignalMse(weights) {
+    let coefficientSum = 0;
+    let coefficientSquares = 0;
+    for (let index = 0; index < FEATURE_COUNT; index += 1) {
+      const coefficient = weights[index] - (index === 0 ? 1 : 0);
+      coefficientSum += coefficient;
+      coefficientSquares += coefficient * coefficient;
+    }
+    const probability = FEATURE_PROBABILITY;
+    return probability * (1 - probability) * coefficientSquares
+      + probability * probability * coefficientSum * coefficientSum;
+  }
+
   function createTrainingState(streamSeed, sgdRate, idbdInitialRate, theta, batchSize, exampleCount) {
     const random = mulberry32(streamSeed);
     const beta = new Float64Array(FEATURE_COUNT);
@@ -126,7 +139,13 @@
       activeCounts: new Float64Array(FEATURE_COUNT),
       active: new Uint8Array(FEATURE_COUNT),
       touched: new Uint8Array(FEATURE_COUNT),
-      curves: { steps: [0], sgdLoss: [null], idbdLoss: [null] },
+      curves: {
+        steps: [0],
+        sgdLoss: [null],
+        idbdLoss: [null],
+        sgdSignalLoss: [FEATURE_PROBABILITY],
+        idbdSignalLoss: [FEATURE_PROBABILITY]
+      },
       sgdLossEma: null,
       idbdLossEma: null,
       examplesSeen: 0,
@@ -196,6 +215,8 @@
       state.curves.steps.push(end);
       state.curves.sgdLoss.push(state.sgdLossEma);
       state.curves.idbdLoss.push(state.idbdLossEma);
+      state.curves.sgdSignalLoss.push(noiselessSignalMse(state.sgdWeights));
+      state.curves.idbdSignalLoss.push(noiselessSignalMse(state.idbdWeights));
     }
     state.batchIndex += 1;
   }
@@ -224,6 +245,7 @@
 
   function formatScore(value) {
     if (!Number.isFinite(value)) return "unstable";
+    if (value !== 0 && Math.abs(value) < 0.001) return value.toExponential(1);
     if (value >= 100) return value.toExponential(1);
     return value.toFixed(3);
   }
@@ -460,11 +482,16 @@
     document.getElementById("idbd-loss-score").textContent = state.idbdLossEma === null ? "—" : formatScore(state.idbdLossEma);
     document.getElementById("sgd-signal-weight").textContent = formatScore(state.sgdWeights[0]);
     document.getElementById("idbd-rate-ratio").textContent = formatScore(idbdRateRatio(state.beta)) + "×";
+    document.getElementById("sgd-signal-loss-score").textContent = formatScore(noiselessSignalMse(state.sgdWeights));
+    document.getElementById("idbd-signal-loss-score").textContent = formatScore(noiselessSignalMse(state.idbdWeights));
 
     const lossBounds = logarithmicBoundsAcross(state.curves.sgdLoss, state.curves.idbdLoss);
+    const signalLossBounds = logarithmicBoundsAcross(state.curves.sgdSignalLoss, state.curves.idbdSignalLoss);
     const weightMax = niceMaximum(maximumAbsolute(state.sgdWeights, state.idbdWeights) * 1.05);
     drawLineChart("sgd-loss-chart", state.curves.steps, state.curves.sgdLoss, COLORS.sgd, COLORS.sgdFill, lossBounds, state.exampleCount);
     drawLineChart("idbd-loss-chart", state.curves.steps, state.curves.idbdLoss, COLORS.idbd, COLORS.idbdFill, lossBounds, state.exampleCount);
+    drawLineChart("sgd-signal-loss-chart", state.curves.steps, state.curves.sgdSignalLoss, COLORS.sgd, COLORS.sgdFill, signalLossBounds, state.exampleCount);
+    drawLineChart("idbd-signal-loss-chart", state.curves.steps, state.curves.idbdSignalLoss, COLORS.idbd, COLORS.idbdFill, signalLossBounds, state.exampleCount);
     drawWeights("sgd-weights-chart", state.sgdWeights, COLORS.sgd, weightMax);
     drawWeights("idbd-weights-chart", state.idbdWeights, COLORS.idbd, weightMax);
   }
