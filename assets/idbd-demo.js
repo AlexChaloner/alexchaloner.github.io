@@ -44,6 +44,9 @@
 
   let seed = 20260713;
   let scheduled = false;
+  let runVersion = 0;
+  let currentState = null;
+  let resizeScheduled = false;
 
   function mulberry32(initialSeed) {
     let state = initialSeed >>> 0;
@@ -98,108 +101,119 @@
     return Math.min(maximum, Math.max(minimum, value));
   }
 
-  function runExperiment(streamSeed, sgdRate, idbdInitialRate, theta, batchSize, exampleCount) {
+  function createTrainingState(streamSeed, sgdRate, idbdInitialRate, theta, batchSize, exampleCount) {
     const random = mulberry32(streamSeed);
-    const gaussian = makeGaussian(random);
-    const sgdWeights = new Float64Array(FEATURE_COUNT);
-    const idbdWeights = new Float64Array(FEATURE_COUNT);
     const beta = new Float64Array(FEATURE_COUNT);
-    const trace = new Float64Array(FEATURE_COUNT);
-    const directionSgd = new Float64Array(FEATURE_COUNT);
-    const directionIdbd = new Float64Array(FEATURE_COUNT);
-    const activeCounts = new Float64Array(FEATURE_COUNT);
-    const active = new Uint8Array(FEATURE_COUNT);
-    const touched = new Uint8Array(FEATURE_COUNT);
     beta.fill(Math.log(idbdInitialRate));
-
-    const curves = {
-      steps: [0],
-      sgdLoss: [null],
-      idbdLoss: [null]
+    const totalBatches = Math.ceil(exampleCount / batchSize);
+    return {
+      streamSeed,
+      sgdRate,
+      theta,
+      batchSize,
+      exampleCount,
+      totalBatches,
+      maxBatchesPerFrame: Math.max(1, Math.ceil(totalBatches / 30)),
+      recordEvery: Math.max(1, Math.floor(totalBatches / 150)),
+      random,
+      gaussian: makeGaussian(random),
+      sgdWeights: new Float64Array(FEATURE_COUNT),
+      idbdWeights: new Float64Array(FEATURE_COUNT),
+      beta,
+      trace: new Float64Array(FEATURE_COUNT),
+      directionSgd: new Float64Array(FEATURE_COUNT),
+      directionIdbd: new Float64Array(FEATURE_COUNT),
+      activeCounts: new Float64Array(FEATURE_COUNT),
+      active: new Uint8Array(FEATURE_COUNT),
+      touched: new Uint8Array(FEATURE_COUNT),
+      curves: { steps: [0], sgdLoss: [null], idbdLoss: [null] },
+      sgdLossEma: null,
+      idbdLossEma: null,
+      examplesSeen: 0,
+      batchIndex: 0,
+      started: performance.now(),
+      lastStatusUpdate: 0
     };
-    let sgdLossEma = null;
-    let idbdLossEma = null;
+  }
 
-    for (let start = 0; start < exampleCount; start += batchSize) {
-      const end = Math.min(exampleCount, start + batchSize);
-      const actualBatchSize = end - start;
-      let touchedCount = 0;
-      let batchSgdSquaredError = 0;
-      let batchIdbdSquaredError = 0;
+  function processBatch(state) {
+    const start = state.examplesSeen;
+    const end = Math.min(state.exampleCount, start + state.batchSize);
+    const actualBatchSize = end - start;
+    let touchedCount = 0;
+    let batchSgdSquaredError = 0;
+    let batchIdbdSquaredError = 0;
 
-      for (let row = start; row < end; row += 1) {
-        const activeCount = fillActiveFeatures(random, active);
-        const predictableTarget = activeCount > 0 && active[0] === 0 ? 1 : 0;
-        const sparseNoise = random() < SPARSE_NOISE_PROBABILITY
-          ? (random() < 0.5 ? -1 : 1)
-          : 0;
-        const target = predictableTarget + sparseNoise + GAUSSIAN_STANDARD_DEVIATION * gaussian();
-        const sgdError = target - prediction(sgdWeights, active, activeCount);
-        const idbdError = target - prediction(idbdWeights, active, activeCount);
-        batchSgdSquaredError += sgdError * sgdError;
-        batchIdbdSquaredError += idbdError * idbdError;
+    for (let row = start; row < end; row += 1) {
+      const activeCount = fillActiveFeatures(state.random, state.active);
+      const predictableTarget = activeCount > 0 && state.active[0] === 0 ? 1 : 0;
+      const sparseNoise = state.random() < SPARSE_NOISE_PROBABILITY
+        ? (state.random() < 0.5 ? -1 : 1)
+        : 0;
+      const target = predictableTarget + sparseNoise + GAUSSIAN_STANDARD_DEVIATION * state.gaussian();
+      const sgdError = target - prediction(state.sgdWeights, state.active, activeCount);
+      const idbdError = target - prediction(state.idbdWeights, state.active, activeCount);
+      batchSgdSquaredError += sgdError * sgdError;
+      batchIdbdSquaredError += idbdError * idbdError;
 
-        for (let index = 0; index < activeCount; index += 1) {
-          const feature = active[index];
-          if (activeCounts[feature] === 0) {
-            touched[touchedCount] = feature;
-            touchedCount += 1;
-          }
-          directionSgd[feature] += sgdError;
-          directionIdbd[feature] += idbdError;
-          activeCounts[feature] += 1;
+      for (let index = 0; index < activeCount; index += 1) {
+        const feature = state.active[index];
+        if (state.activeCounts[feature] === 0) {
+          state.touched[touchedCount] = feature;
+          touchedCount += 1;
         }
-      }
-
-      for (let index = 0; index < touchedCount; index += 1) {
-        const feature = touched[index];
-        const sgdDirection = directionSgd[feature] / actualBatchSize;
-        const idbdDirection = directionIdbd[feature] / actualBatchSize;
-        const curvature = activeCounts[feature] / actualBatchSize;
-        sgdWeights[feature] += sgdRate * sgdDirection;
-
-        const betaChange = clamp(theta * idbdDirection * trace[feature], -2, 2);
-        beta[feature] = clamp(beta[feature] + betaChange, -10, Math.log(0.5));
-        const featureRate = Math.exp(beta[feature]);
-        const weightChange = featureRate * idbdDirection;
-        idbdWeights[feature] += weightChange;
-        trace[feature] = trace[feature] * Math.max(0, 1 - featureRate * curvature) + weightChange;
-        directionSgd[feature] = 0;
-        directionIdbd[feature] = 0;
-        activeCounts[feature] = 0;
-      }
-
-      const sgdBatchLoss = batchSgdSquaredError / actualBatchSize;
-      const idbdBatchLoss = batchIdbdSquaredError / actualBatchSize;
-      sgdLossEma = sgdLossEma === null ? sgdBatchLoss : 0.92 * sgdLossEma + 0.08 * sgdBatchLoss;
-      idbdLossEma = idbdLossEma === null ? idbdBatchLoss : 0.92 * idbdLossEma + 0.08 * idbdBatchLoss;
-
-      const batchIndex = Math.floor(start / batchSize);
-      const totalBatches = Math.ceil(exampleCount / batchSize);
-      const recordEvery = Math.max(1, Math.floor(totalBatches / 150));
-      if (batchIndex % recordEvery === 0 || end === exampleCount) {
-        curves.steps.push(end);
-        curves.sgdLoss.push(sgdLossEma);
-        curves.idbdLoss.push(idbdLossEma);
+        state.directionSgd[feature] += sgdError;
+        state.directionIdbd[feature] += idbdError;
+        state.activeCounts[feature] += 1;
       }
     }
 
-    const idbdRates = Array.from(beta, Math.exp);
-    const irrelevantRates = idbdRates.slice(1).sort(function (a, b) { return a - b; });
-    const medianNoiseRate = irrelevantRates[Math.floor(irrelevantRates.length / 2)];
-    return {
-      curves,
-      sgd: {
-        weights: Array.from(sgdWeights),
-        loss: sgdLossEma,
-        signal: sgdWeights[0]
-      },
-      idbd: {
-        weights: Array.from(idbdWeights),
-        loss: idbdLossEma,
-        rateRatio: idbdRates[0] / Math.max(medianNoiseRate, 1e-12)
-      }
-    };
+    for (let index = 0; index < touchedCount; index += 1) {
+      const feature = state.touched[index];
+      const sgdDirection = state.directionSgd[feature] / actualBatchSize;
+      const idbdDirection = state.directionIdbd[feature] / actualBatchSize;
+      const curvature = state.activeCounts[feature] / actualBatchSize;
+      state.sgdWeights[feature] += state.sgdRate * sgdDirection;
+
+      const betaChange = clamp(state.theta * idbdDirection * state.trace[feature], -2, 2);
+      state.beta[feature] = clamp(state.beta[feature] + betaChange, -10, Math.log(0.5));
+      const featureRate = Math.exp(state.beta[feature]);
+      const weightChange = featureRate * idbdDirection;
+      state.idbdWeights[feature] += weightChange;
+      state.trace[feature] = state.trace[feature] * Math.max(0, 1 - featureRate * curvature) + weightChange;
+      state.directionSgd[feature] = 0;
+      state.directionIdbd[feature] = 0;
+      state.activeCounts[feature] = 0;
+    }
+
+    const sgdBatchLoss = batchSgdSquaredError / actualBatchSize;
+    const idbdBatchLoss = batchIdbdSquaredError / actualBatchSize;
+    state.sgdLossEma = state.sgdLossEma === null ? sgdBatchLoss : 0.92 * state.sgdLossEma + 0.08 * sgdBatchLoss;
+    state.idbdLossEma = state.idbdLossEma === null ? idbdBatchLoss : 0.92 * state.idbdLossEma + 0.08 * idbdBatchLoss;
+    state.examplesSeen = end;
+
+    if (state.batchIndex % state.recordEvery === 0 || end === state.exampleCount) {
+      state.curves.steps.push(end);
+      state.curves.sgdLoss.push(state.sgdLossEma);
+      state.curves.idbdLoss.push(state.idbdLossEma);
+    }
+    state.batchIndex += 1;
+  }
+
+  function processTrainingChunk(state) {
+    const chunkStarted = performance.now();
+    let batchesProcessed = 0;
+    while (
+      state.examplesSeen < state.exampleCount &&
+      batchesProcessed < state.maxBatchesPerFrame
+    ) {
+      processBatch(state);
+      batchesProcessed += 1;
+      if (
+        (batchesProcessed & 63) === 0 &&
+        performance.now() - chunkStarted >= 8
+      ) break;
+    }
   }
 
   function formatRate(value) {
@@ -406,67 +420,123 @@
     }
   }
 
-  function render() {
-    scheduled = false;
+  function selectedSettings() {
     const sgdRate = Math.pow(10, Number(controls.sgdRate.value));
     const idbdInitialRate = Math.pow(10, Number(controls.idbdRate.value));
     const theta = Math.pow(10, Number(controls.theta.value));
     const batchSize = Math.pow(2, Number(controls.batch.value));
     const exampleCount = STEP_OPTIONS[Number(controls.steps.value)];
-    outputs.sgdRate.value = formatRate(sgdRate);
-    outputs.idbdRate.value = formatRate(idbdInitialRate);
-    outputs.theta.value = formatRate(theta);
-    outputs.batch.value = String(batchSize);
-    outputs.steps.value = formatInteger(exampleCount);
-    document.getElementById("example-count-label").textContent = formatInteger(exampleCount) + " examples";
-    outputs.status.textContent = "Running identical streams…";
+    return { sgdRate, idbdInitialRate, theta, batchSize, exampleCount };
+  }
 
+  function updateControlOutputs(settings) {
+    const values = settings || selectedSettings();
+    outputs.sgdRate.value = formatRate(values.sgdRate);
+    outputs.idbdRate.value = formatRate(values.idbdInitialRate);
+    outputs.theta.value = formatRate(values.theta);
+    outputs.batch.value = String(values.batchSize);
+    outputs.steps.value = formatInteger(values.exampleCount);
+    document.getElementById("example-count-label").textContent = formatInteger(values.exampleCount) + " examples";
+  }
+
+  function maximumAbsolute(first, second) {
+    let maximum = 1;
+    for (let index = 0; index < FEATURE_COUNT; index += 1) {
+      maximum = Math.max(maximum, Math.abs(first[index]), Math.abs(second[index]));
+    }
+    return maximum;
+  }
+
+  function idbdRateRatio(beta) {
+    const rates = Array.from(beta, Math.exp);
+    const irrelevant = rates.slice(1).sort(function (first, second) {
+      return first - second;
+    });
+    return rates[0] / Math.max(irrelevant[Math.floor(irrelevant.length / 2)], 1e-12);
+  }
+
+  function drawTrainingState(state) {
+    document.getElementById("sgd-loss-score").textContent = state.sgdLossEma === null ? "—" : formatScore(state.sgdLossEma);
+    document.getElementById("idbd-loss-score").textContent = state.idbdLossEma === null ? "—" : formatScore(state.idbdLossEma);
+    document.getElementById("sgd-signal-weight").textContent = formatScore(state.sgdWeights[0]);
+    document.getElementById("idbd-rate-ratio").textContent = formatScore(idbdRateRatio(state.beta)) + "×";
+
+    const lossBounds = logarithmicBoundsAcross(state.curves.sgdLoss, state.curves.idbdLoss);
+    const weightMax = niceMaximum(maximumAbsolute(state.sgdWeights, state.idbdWeights) * 1.05);
+    drawLineChart("sgd-loss-chart", state.curves.steps, state.curves.sgdLoss, COLORS.sgd, COLORS.sgdFill, lossBounds, state.exampleCount);
+    drawLineChart("idbd-loss-chart", state.curves.steps, state.curves.idbdLoss, COLORS.idbd, COLORS.idbdFill, lossBounds, state.exampleCount);
+    drawWeights("sgd-weights-chart", state.sgdWeights, COLORS.sgd, weightMax);
+    drawWeights("idbd-weights-chart", state.idbdWeights, COLORS.idbd, weightMax);
+  }
+
+  function elapsedLabel(milliseconds) {
+    return milliseconds < 1000
+      ? Math.round(milliseconds) + " ms"
+      : (milliseconds / 1000).toFixed(1) + " s";
+  }
+
+  function updateProgressStatus(state, complete) {
+    const now = performance.now();
+    if (!complete && now - state.lastStatusUpdate < 80) return;
+    state.lastStatusUpdate = now;
+    if (complete) {
+      outputs.status.textContent = "Complete · " + formatInteger(state.totalBatches) + " updates · " + elapsedLabel(now - state.started) + " · stream " + String(state.streamSeed).slice(-4);
+      return;
+    }
+    const percent = 100 * state.examplesSeen / state.exampleCount;
+    outputs.status.textContent = "Training · " + formatInteger(state.examplesSeen) + " / " + formatInteger(state.exampleCount) + " · " + percent.toFixed(0) + "%";
+  }
+
+  function continueTraining(version, state) {
+    if (version !== runVersion) return;
+    processTrainingChunk(state);
+    if (version !== runVersion) return;
+    drawTrainingState(state);
+    const complete = state.examplesSeen >= state.exampleCount;
+    updateProgressStatus(state, complete);
+    if (!complete) {
+      window.requestAnimationFrame(function () {
+        continueTraining(version, state);
+      });
+    }
+  }
+
+  function startTraining(version) {
+    if (version !== runVersion) return;
+    scheduled = false;
+    const settings = selectedSettings();
+    updateControlOutputs(settings);
+    const state = createTrainingState(
+      seed,
+      settings.sgdRate,
+      settings.idbdInitialRate,
+      settings.theta,
+      settings.batchSize,
+      settings.exampleCount
+    );
+    currentState = state;
+    updateBatchNote(settings.batchSize);
+    drawTrainingState(state);
+    outputs.status.textContent = "Training · 0 / " + formatInteger(settings.exampleCount) + " · 0%";
     window.requestAnimationFrame(function () {
-      const started = performance.now();
-      const result = runExperiment(seed, sgdRate, idbdInitialRate, theta, batchSize, exampleCount);
-      const curves = result.curves;
-
-      document.getElementById("sgd-loss-score").textContent = formatScore(result.sgd.loss);
-      document.getElementById("idbd-loss-score").textContent = formatScore(result.idbd.loss);
-      document.getElementById("sgd-signal-weight").textContent = formatScore(result.sgd.signal);
-      document.getElementById("idbd-rate-ratio").textContent = formatScore(result.idbd.rateRatio) + "×";
-
-      const lossBounds = logarithmicBoundsAcross(curves.sgdLoss, curves.idbdLoss);
-      const weightMax = niceMaximum(Math.max(
-        1,
-        Math.max.apply(null, result.sgd.weights.map(Math.abs)),
-        Math.max.apply(null, result.idbd.weights.map(Math.abs))
-      ) * 1.05);
-
-      drawLineChart("sgd-loss-chart", curves.steps, curves.sgdLoss, COLORS.sgd, COLORS.sgdFill, lossBounds, exampleCount);
-      drawLineChart("idbd-loss-chart", curves.steps, curves.idbdLoss, COLORS.idbd, COLORS.idbdFill, lossBounds, exampleCount);
-      drawWeights("sgd-weights-chart", result.sgd.weights, COLORS.sgd, weightMax);
-      drawWeights("idbd-weights-chart", result.idbd.weights, COLORS.idbd, weightMax);
-      updateBatchNote(batchSize);
-      const updateCount = Math.ceil(exampleCount / batchSize);
-      const runtime = performance.now() - started;
-      const runtimeLabel = runtime < 1000 ? Math.round(runtime) + " ms" : (runtime / 1000).toFixed(1) + " s";
-      outputs.status.textContent = "Complete · " + formatInteger(updateCount) + " updates · " + runtimeLabel + " · stream " + String(seed).slice(-4);
+      continueTraining(version, state);
     });
   }
 
-  function scheduleRender() {
-    const sgdRate = Math.pow(10, Number(controls.sgdRate.value));
-    const idbdInitialRate = Math.pow(10, Number(controls.idbdRate.value));
-    const theta = Math.pow(10, Number(controls.theta.value));
-    outputs.sgdRate.value = formatRate(sgdRate);
-    outputs.idbdRate.value = formatRate(idbdInitialRate);
-    outputs.theta.value = formatRate(theta);
-    outputs.batch.value = String(Math.pow(2, Number(controls.batch.value)));
-    outputs.steps.value = formatInteger(STEP_OPTIONS[Number(controls.steps.value)]);
+  function scheduleTraining() {
+    runVersion += 1;
+    updateControlOutputs();
+    outputs.status.textContent = currentState ? "Restarting…" : "Preparing…";
     if (scheduled) return;
     scheduled = true;
-    window.requestAnimationFrame(render);
+    window.requestAnimationFrame(function () {
+      startTraining(runVersion);
+    });
   }
 
   function handleRateInput(source, target) {
     if (controls.lockRates.checked) target.value = source.value;
-    scheduleRender();
+    scheduleTraining();
   }
 
   controls.sgdRate.addEventListener("input", function () {
@@ -475,17 +545,24 @@
   controls.idbdRate.addEventListener("input", function () {
     handleRateInput(controls.idbdRate, controls.sgdRate);
   });
-  controls.theta.addEventListener("input", scheduleRender);
-  controls.batch.addEventListener("input", scheduleRender);
-  controls.steps.addEventListener("input", scheduleRender);
+  controls.theta.addEventListener("input", scheduleTraining);
+  controls.batch.addEventListener("input", scheduleTraining);
+  controls.steps.addEventListener("input", scheduleTraining);
   controls.lockRates.addEventListener("change", function () {
     if (controls.lockRates.checked) controls.idbdRate.value = controls.sgdRate.value;
-    scheduleRender();
+    scheduleTraining();
   });
   document.getElementById("new-stream").addEventListener("click", function () {
     seed += 1;
-    scheduleRender();
+    scheduleTraining();
   });
-  window.addEventListener("resize", scheduleRender);
-  render();
+  window.addEventListener("resize", function () {
+    if (resizeScheduled) return;
+    resizeScheduled = true;
+    window.requestAnimationFrame(function () {
+      resizeScheduled = false;
+      if (currentState) drawTrainingState(currentState);
+    });
+  });
+  scheduleTraining();
 }());
