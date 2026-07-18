@@ -141,6 +141,31 @@
   font-size: 0.78rem;
 }
 
+.seed-control label {
+  display: block;
+  margin-bottom: 0.25rem;
+  font-size: 0.78rem;
+  font-weight: bold;
+}
+
+.seed-control > div,
+.transport-controls {
+  display: flex;
+  gap: 0.35rem;
+}
+
+.seed-control input {
+  min-width: 0;
+  width: 100%;
+  padding: 0.35rem 0.4rem;
+  border: 1px solid #888;
+  font: 0.78rem monospace;
+}
+
+.transport-controls button {
+  flex: 1;
+}
+
 .status-dot {
   display: inline-block;
   width: 0.55rem;
@@ -161,6 +186,21 @@
 
 .stream-control button:hover {
   background: #e9e9e9;
+}
+
+.stream-control button:disabled {
+  cursor: default;
+  opacity: 0.45;
+}
+
+.stream-control .stop-button {
+  border-color: #8f1d14;
+  color: #fff;
+  background: #b42318;
+}
+
+.stream-control .stop-button:hover:not(:disabled) {
+  background: #8f1d14;
 }
 
 .method-controls {

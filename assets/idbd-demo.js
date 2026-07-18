@@ -34,7 +34,13 @@
     theta: document.getElementById("theta"),
     batch: document.getElementById("batch-size"),
     steps: document.getElementById("training-steps"),
-    lockRates: document.getElementById("lock-rates")
+    lockRates: document.getElementById("lock-rates"),
+    seed: document.getElementById("stream-seed"),
+    reseed: document.getElementById("reseed-stream"),
+    newStream: document.getElementById("new-stream"),
+    pause: document.getElementById("pause-training"),
+    play: document.getElementById("play-training"),
+    stop: document.getElementById("stop-training")
   };
   const outputs = {
     sgdRate: document.getElementById("sgd-rate-value"),
@@ -49,9 +55,13 @@
 
   let seed = 20260713;
   let scheduled = false;
+  let scheduledFrame = null;
   let runVersion = 0;
   let currentState = null;
   let resizeScheduled = false;
+  let paused = false;
+  let stopped = false;
+  let pausedAt = 0;
 
   function mulberry32(initialSeed) {
     let state = initialSeed >>> 0;
@@ -554,6 +564,20 @@
       : (milliseconds / 1000).toFixed(1) + " s";
   }
 
+  function progressLabel(label, state) {
+    const percent = 100 * state.examplesSeen / state.exampleCount;
+    return label + " · " + formatInteger(state.examplesSeen) + " / " +
+      formatInteger(state.exampleCount) + " · " + percent.toFixed(0) + "%";
+  }
+
+  function updateTransportControls() {
+    const complete = currentState && currentState.examplesSeen >= currentState.exampleCount;
+    const active = currentState && !complete && !paused && !stopped && !scheduled;
+    controls.pause.disabled = !active;
+    controls.play.disabled = !currentState || active || scheduled;
+    controls.stop.disabled = !currentState || complete || stopped || scheduled;
+  }
+
   function updateProgressStatus(state, complete) {
     const now = performance.now();
     if (!complete && now - state.lastStatusUpdate < 80) return;
@@ -567,12 +591,13 @@
   }
 
   function continueTraining(version, state) {
-    if (version !== runVersion) return;
+    if (version !== runVersion || paused || stopped) return;
     processTrainingChunk(state);
-    if (version !== runVersion) return;
+    if (version !== runVersion || paused || stopped) return;
     drawTrainingState(state);
     const complete = state.examplesSeen >= state.exampleCount;
     updateProgressStatus(state, complete);
+    updateTransportControls();
     if (!complete) {
       window.requestAnimationFrame(function () {
         continueTraining(version, state);
@@ -594,9 +619,13 @@
       settings.exampleCount
     );
     currentState = state;
+    paused = false;
+    stopped = false;
+    pausedAt = 0;
     updateBatchNote(settings.batchSize);
     drawTrainingState(state);
     outputs.status.textContent = "Training · 0 / " + formatInteger(settings.exampleCount) + " · 0%";
+    updateTransportControls();
     window.requestAnimationFrame(function () {
       continueTraining(version, state);
     });
@@ -604,11 +633,18 @@
 
   function scheduleTraining() {
     runVersion += 1;
+    paused = false;
+    stopped = false;
+    pausedAt = 0;
     updateControlOutputs();
     outputs.status.textContent = currentState ? "Restarting…" : "Preparing…";
+    updateTransportControls();
     if (scheduled) return;
     scheduled = true;
-    window.requestAnimationFrame(function () {
+    scheduledFrame = window.requestAnimationFrame(function () {
+      scheduled = false;
+      scheduledFrame = null;
+      if (stopped) return;
       startTraining(runVersion);
     });
   }
@@ -631,9 +667,59 @@
     if (controls.lockRates.checked) controls.idbdRate.value = controls.sgdRate.value;
     scheduleTraining();
   });
-  document.getElementById("new-stream").addEventListener("click", function () {
-    seed += 1;
+  controls.reseed.addEventListener("click", function () {
+    const requestedSeed = Number(controls.seed.value);
+    if (!Number.isFinite(requestedSeed)) {
+      controls.seed.value = String(seed);
+      return;
+    }
+    seed = Math.min(4294967295, Math.max(0, Math.trunc(requestedSeed)));
+    controls.seed.value = String(seed);
     scheduleTraining();
+  });
+  controls.seed.addEventListener("keydown", function (event) {
+    if (event.key === "Enter") controls.reseed.click();
+  });
+  controls.newStream.addEventListener("click", function () {
+    seed = (seed + 1) >>> 0;
+    controls.seed.value = String(seed);
+    scheduleTraining();
+  });
+  controls.pause.addEventListener("click", function () {
+    if (!currentState || paused || stopped || currentState.examplesSeen >= currentState.exampleCount) return;
+    paused = true;
+    pausedAt = performance.now();
+    outputs.status.textContent = progressLabel("Paused", currentState);
+    updateTransportControls();
+  });
+  controls.play.addEventListener("click", function () {
+    if (!currentState) return;
+    if (paused) {
+      currentState.started += performance.now() - pausedAt;
+      paused = false;
+      pausedAt = 0;
+      outputs.status.textContent = progressLabel("Training", currentState);
+      updateTransportControls();
+      const version = runVersion;
+      const state = currentState;
+      window.requestAnimationFrame(function () {
+        continueTraining(version, state);
+      });
+      return;
+    }
+    if (stopped || currentState.examplesSeen >= currentState.exampleCount) scheduleTraining();
+  });
+  controls.stop.addEventListener("click", function () {
+    if (!currentState || stopped || currentState.examplesSeen >= currentState.exampleCount) return;
+    runVersion += 1;
+    if (scheduledFrame !== null) window.cancelAnimationFrame(scheduledFrame);
+    scheduledFrame = null;
+    scheduled = false;
+    paused = false;
+    pausedAt = 0;
+    stopped = true;
+    outputs.status.textContent = progressLabel("Stopped", currentState);
+    updateTransportControls();
   });
   window.addEventListener("resize", function () {
     if (resizeScheduled) return;
@@ -643,5 +729,6 @@
       if (currentState) drawTrainingState(currentState);
     });
   });
+  updateTransportControls();
   scheduleTraining();
 }());

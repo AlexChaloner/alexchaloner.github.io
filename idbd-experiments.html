@@ -183,7 +183,19 @@ title: "Learning the learning rate"
 
         <div class="stream-control">
           <p><span class="status-dot" aria-hidden="true"></span><span id="run-status" aria-live="polite">Ready</span></p>
+          <div class="seed-control">
+            <label for="stream-seed">Stream seed</label>
+            <div>
+              <input id="stream-seed" type="number" min="0" max="4294967295" step="1" value="20260713" inputmode="numeric">
+              <button id="reseed-stream" type="button">Reseed</button>
+            </div>
+          </div>
           <button id="new-stream" type="button">New noise stream <span aria-hidden="true">↻</span></button>
+          <div class="transport-controls" aria-label="Training playback controls">
+            <button id="pause-training" type="button">Pause</button>
+            <button id="play-training" type="button">Play</button>
+            <button id="stop-training" class="stop-button" type="button">Stop</button>
+          </div>
         </div>
       </div>
       <p class="simulation-scope"><strong>Computed live in this browser.</strong> Following the Oak Lab stream, every feature activates independently with 1% probability; feature 1 is the only predictive feature. The browser-sized version uses 64 rather than 4,096 features. Training yields between animation frames, and changing a setting cancels the current run.</p>
