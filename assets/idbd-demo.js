@@ -9,6 +9,7 @@
   const WEIGHT_LINEAR_THRESHOLD = 0.001;
   const PREDICTION_LOSS_BOUNDS = Object.freeze({ minimum: 0.1, maximum: 100 });
   const SIGNAL_LOSS_BOUNDS = Object.freeze({ minimum: 0.0001, maximum: 1 });
+  const LEARNING_RATE_BOUNDS = Object.freeze({ minimum: 0.00001, maximum: 1 });
   const MODEL_WEIGHT_EXTENT = 2;
   const LOG_ONE_MINUS_FEATURE_PROBABILITY = Math.log(1 - FEATURE_PROBABILITY);
   const STEP_OPTIONS = [
@@ -407,6 +408,91 @@
     }
   }
 
+  function drawLearningRates(canvasId, color, rateAt) {
+    const canvas = document.getElementById(canvasId);
+    const surface = setupCanvas(canvas);
+    const context = surface.context;
+    const width = surface.width;
+    const height = surface.height;
+    const margins = { top: 10, right: 9, bottom: 34, left: 42 };
+    const plotWidth = width - margins.left - margins.right;
+    const plotHeight = height - margins.top - margins.bottom;
+    const minimum = LEARNING_RATE_BOUNDS.minimum;
+    const maximum = LEARNING_RATE_BOUNDS.maximum;
+    const logMinimum = Math.log10(minimum);
+    const logRange = Math.log10(maximum) - logMinimum;
+    const barStep = plotWidth / FEATURE_COUNT;
+    let aboveScale = false;
+    let belowScale = false;
+    let observedMaximum = -Infinity;
+    let observedMinimum = Infinity;
+
+    function rateY(rate) {
+      const logRate = Math.log10(clamp(rate, minimum, maximum));
+      return margins.top + (1 - (logRate - logMinimum) / logRange) * plotHeight;
+    }
+
+    context.fillStyle = "#fcfcfc";
+    context.fillRect(margins.left, margins.top, plotWidth, plotHeight);
+    context.font = "11px serif";
+    context.lineWidth = 1;
+    context.textBaseline = "middle";
+    for (let exponent = -5; exponent <= 0; exponent += 1) {
+      const rate = Math.pow(10, exponent);
+      const y = rateY(rate);
+      context.strokeStyle = COLORS.grid;
+      context.beginPath();
+      context.moveTo(margins.left, y);
+      context.lineTo(width - margins.right, y);
+      context.stroke();
+      context.fillStyle = COLORS.muted;
+      context.textAlign = "right";
+      context.fillText(exponent === 0 ? "1" : "1e−" + String(Math.abs(exponent)), margins.left - 7, y);
+    }
+
+    context.strokeStyle = "#aaa";
+    context.beginPath();
+    context.moveTo(margins.left, margins.top);
+    context.lineTo(margins.left, margins.top + plotHeight);
+    context.lineTo(width - margins.right, margins.top + plotHeight);
+    context.stroke();
+
+    for (let index = 0; index < FEATURE_COUNT; index += 1) {
+      const rate = rateAt(index);
+      if (!Number.isFinite(rate)) {
+        aboveScale = true;
+        observedMaximum = Infinity;
+        continue;
+      }
+      observedMaximum = Math.max(observedMaximum, rate);
+      observedMinimum = Math.min(observedMinimum, rate);
+      if (rate > maximum) aboveScale = true;
+      if (rate < minimum) belowScale = true;
+      if (rate <= 0) continue;
+      const y = rateY(rate);
+      const x = margins.left + index * barStep + Math.max(0.5, barStep * 0.12);
+      context.fillStyle = index === 0 ? COLORS.signal : color;
+      context.globalAlpha = index === 0 ? 1 : 0.62;
+      context.fillRect(x, y, Math.max(1, barStep * 0.72), margins.top + plotHeight - y);
+    }
+
+    context.globalAlpha = 1;
+    context.fillStyle = COLORS.signal;
+    context.textAlign = "left";
+    context.textBaseline = "alphabetic";
+    context.fillText("signal", margins.left, height - 7);
+    context.fillStyle = COLORS.muted;
+    context.textAlign = "right";
+    context.fillText("63 irrelevant features", width - margins.right, height - 7);
+
+    if (aboveScale) {
+      drawEdgeWarning(context, width - margins.right, margins.top + 10, "↑ max " + formatScore(observedMaximum) + " (limit 1)");
+    }
+    if (belowScale) {
+      drawEdgeWarning(context, width - margins.right, margins.top + plotHeight - 10, "↓ min " + formatScore(observedMinimum) + " (limit 0.00001)");
+    }
+  }
+
   function drawWeights(canvasId, weights, color) {
     const canvas = document.getElementById(canvasId);
     const surface = setupCanvas(canvas);
@@ -555,6 +641,8 @@
     drawLineChart("idbd-loss-chart", state.curves.steps, state.curves.idbdLoss, COLORS.idbd, COLORS.idbdFill, PREDICTION_LOSS_BOUNDS, state.exampleCount);
     drawLineChart("sgd-signal-loss-chart", state.curves.steps, state.curves.sgdSignalLoss, COLORS.sgd, COLORS.sgdFill, SIGNAL_LOSS_BOUNDS, state.exampleCount);
     drawLineChart("idbd-signal-loss-chart", state.curves.steps, state.curves.idbdSignalLoss, COLORS.idbd, COLORS.idbdFill, SIGNAL_LOSS_BOUNDS, state.exampleCount);
+    drawLearningRates("sgd-rates-chart", COLORS.sgd, function () { return state.sgdRate; });
+    drawLearningRates("idbd-rates-chart", COLORS.idbd, function (index) { return Math.exp(state.beta[index]); });
     drawWeights("sgd-weights-chart", state.sgdWeights, COLORS.sgd);
     drawWeights("idbd-weights-chart", state.idbdWeights, COLORS.idbd);
   }

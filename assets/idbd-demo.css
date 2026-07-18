@@ -443,6 +443,10 @@
   height: 190px;
 }
 
+.rate-chart canvas {
+  height: 176px;
+}
+
 .model-chart {
   border-bottom: 0;
 }
