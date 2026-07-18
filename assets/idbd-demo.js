@@ -10,12 +10,12 @@
     ink: "#15201d",
     muted: "#707a75",
     grid: "#e9ebe6",
-    sgd: "#5d6973",
-    sgdFill: "rgba(93, 105, 115, 0.10)",
-    idbd: "#df6844",
-    idbdFill: "rgba(223, 104, 68, 0.11)",
-    signal: "#16805b",
-    noise: "#aab1ad"
+    sgd: "#666666",
+    sgdFill: "rgba(102, 102, 102, 0.10)",
+    idbd: "#0645ad",
+    idbdFill: "rgba(6, 69, 173, 0.09)",
+    signal: "#287a45",
+    noise: "#999999"
   };
 
   const controls = {
@@ -236,7 +236,7 @@
     const finiteValues = values.filter(Number.isFinite);
     const maximum = sharedMax || niceMaximum(Math.max.apply(null, finiteValues));
 
-    context.font = "10px Inter, sans-serif";
+    context.font = "11px serif";
     context.lineWidth = 1;
     context.textBaseline = "middle";
     for (let tick = 0; tick <= 2; tick += 1) {
@@ -309,7 +309,7 @@
     const zeroY = margins.top + plotHeight / 2;
     const barStep = plotWidth / FEATURE_COUNT;
 
-    context.font = "10px Inter, sans-serif";
+    context.font = "11px serif";
     context.strokeStyle = COLORS.grid;
     context.beginPath();
     context.moveTo(margins.left, zeroY);
