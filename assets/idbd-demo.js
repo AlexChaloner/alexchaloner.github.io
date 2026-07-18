@@ -7,6 +7,9 @@
   const GAUSSIAN_STANDARD_DEVIATION = Math.sqrt(GAUSSIAN_VARIANCE);
   const SPARSE_NOISE_PROBABILITY = 0.01;
   const WEIGHT_LINEAR_THRESHOLD = 0.001;
+  const PREDICTION_LOSS_BOUNDS = Object.freeze({ minimum: 0.1, maximum: 100 });
+  const SIGNAL_LOSS_BOUNDS = Object.freeze({ minimum: 0.0001, maximum: 1 });
+  const MODEL_WEIGHT_EXTENT = 2;
   const LOG_ONE_MINUS_FEATURE_PROBABILITY = Math.log(1 - FEATURE_PROBABILITY);
   const STEP_OPTIONS = [
     256, 512, 1024, 2048, 4096, 8192, 16384, 32768,
@@ -21,7 +24,8 @@
     idbd: "#1b5eaa",
     idbdFill: "rgba(27, 94, 170, 0.11)",
     signal: "#287a45",
-    noise: "#999999"
+    noise: "#999999",
+    alert: "#b42318"
   };
 
   const controls = {
@@ -271,12 +275,17 @@
     return { context, width, height };
   }
 
-  function niceMaximum(value) {
-    if (!Number.isFinite(value) || value <= 0) return 1;
-    const power = Math.pow(10, Math.floor(Math.log10(value)));
-    const scaled = value / power;
-    const nice = scaled <= 1 ? 1 : scaled <= 2 ? 2 : scaled <= 5 ? 5 : 10;
-    return nice * power;
+  function drawEdgeWarning(context, right, y, text) {
+    context.save();
+    context.font = "bold 11px sans-serif";
+    context.textAlign = "right";
+    context.textBaseline = "middle";
+    const textWidth = context.measureText(text).width;
+    context.fillStyle = "rgba(252, 252, 252, 0.92)";
+    context.fillRect(right - textWidth - 5, y - 8, textWidth + 7, 16);
+    context.fillStyle = COLORS.alert;
+    context.fillText(text, right - 2, y);
+    context.restore();
   }
 
   function drawLineChart(canvasId, steps, values, color, fill, bounds, exampleCount) {
@@ -292,6 +301,8 @@
     const maximum = bounds.maximum;
     const logMinimum = Math.log10(minimum);
     const logRange = Math.log10(maximum) - logMinimum;
+    let aboveScale = false;
+    let belowScale = false;
 
     context.fillStyle = "#fcfcfc";
     context.fillRect(margins.left, margins.top, plotWidth, plotHeight);
@@ -328,43 +339,56 @@
 
     const coordinates = [];
     for (let index = 0; index < values.length; index += 1) {
-      if (!Number.isFinite(values[index]) || values[index] <= 0) continue;
+      if (!Number.isFinite(values[index])) {
+        if (values[index] !== null) aboveScale = true;
+        continue;
+      }
+      if (values[index] > maximum) aboveScale = true;
+      if (values[index] < minimum) belowScale = true;
+      if (values[index] <= 0) continue;
       const logValue = Math.log10(Math.max(values[index], minimum));
       coordinates.push({
         x: margins.left + (steps[index] / exampleCount) * plotWidth,
         y: margins.top + (1 - clamp((logValue - logMinimum) / logRange, 0, 1)) * plotHeight
       });
     }
-    if (!coordinates.length) return;
+    if (coordinates.length) {
+      context.beginPath();
+      context.moveTo(coordinates[0].x, margins.top + plotHeight);
+      for (let index = 0; index < coordinates.length; index += 1) {
+        context.lineTo(coordinates[index].x, coordinates[index].y);
+      }
+      context.lineTo(coordinates[coordinates.length - 1].x, margins.top + plotHeight);
+      context.closePath();
+      context.fillStyle = fill;
+      context.fill();
 
-    context.beginPath();
-    context.moveTo(coordinates[0].x, margins.top + plotHeight);
-    for (let index = 0; index < coordinates.length; index += 1) {
-      context.lineTo(coordinates[index].x, coordinates[index].y);
+      context.beginPath();
+      context.moveTo(coordinates[0].x, coordinates[0].y);
+      for (let index = 1; index < coordinates.length; index += 1) {
+        context.lineTo(coordinates[index].x, coordinates[index].y);
+      }
+      context.strokeStyle = color;
+      context.lineWidth = 2.5;
+      context.lineJoin = "round";
+      context.stroke();
+
+      const last = coordinates[coordinates.length - 1];
+      context.beginPath();
+      context.arc(last.x, last.y, 3.5, 0, Math.PI * 2);
+      context.fillStyle = color;
+      context.fill();
     }
-    context.lineTo(coordinates[coordinates.length - 1].x, margins.top + plotHeight);
-    context.closePath();
-    context.fillStyle = fill;
-    context.fill();
 
-    context.beginPath();
-    context.moveTo(coordinates[0].x, coordinates[0].y);
-    for (let index = 1; index < coordinates.length; index += 1) {
-      context.lineTo(coordinates[index].x, coordinates[index].y);
+    if (aboveScale) {
+      drawEdgeWarning(context, width - margins.right, margins.top + 10, "↑ off scale (above " + String(maximum) + ")");
     }
-    context.strokeStyle = color;
-    context.lineWidth = 2.5;
-    context.lineJoin = "round";
-    context.stroke();
-
-    const last = coordinates[coordinates.length - 1];
-    context.beginPath();
-    context.arc(last.x, last.y, 3.5, 0, Math.PI * 2);
-    context.fillStyle = color;
-    context.fill();
+    if (belowScale) {
+      drawEdgeWarning(context, width - margins.right, margins.top + plotHeight - 10, "↓ off scale (below " + String(minimum) + ")");
+    }
   }
 
-  function drawWeights(canvasId, weights, color, sharedExtent) {
+  function drawWeights(canvasId, weights, color) {
     const canvas = document.getElementById(canvasId);
     const surface = setupCanvas(canvas);
     const context = surface.context;
@@ -373,10 +397,12 @@
     const margins = { top: 11, right: 9, bottom: 34, left: 42 };
     const plotWidth = width - margins.left - margins.right;
     const plotHeight = height - margins.top - margins.bottom;
-    const extent = Math.max(1, sharedExtent);
+    const extent = MODEL_WEIGHT_EXTENT;
     const transformedExtent = symmetricLog(extent);
     const zeroY = margins.top + plotHeight / 2;
     const barStep = plotWidth / FEATURE_COUNT;
+    let aboveScale = false;
+    let belowScale = false;
 
     function weightY(value) {
       return zeroY - symmetricLog(clamp(value, -extent, extent)) /
@@ -425,6 +451,8 @@
     }
 
     for (let index = 0; index < weights.length; index += 1) {
+      if (!Number.isFinite(weights[index]) || weights[index] > extent) aboveScale = true;
+      if (Number.isFinite(weights[index]) && weights[index] < -extent) belowScale = true;
       const value = clamp(weights[index], -extent, extent);
       const valueY = weightY(value);
       const valueHeight = Math.abs(valueY - zeroY);
@@ -442,19 +470,12 @@
     context.fillStyle = COLORS.muted;
     context.textAlign = "right";
     context.fillText("63 irrelevant features", width - margins.right, height - 7);
-  }
-
-  function logarithmicBoundsAcross(first, second) {
-    const values = first.concat(second).filter(function (value) {
-      return Number.isFinite(value) && value > 0;
-    });
-    if (!values.length) return { minimum: 0.1, maximum: 1 };
-    const smallest = Math.min.apply(null, values);
-    const largest = Math.max.apply(null, values);
-    const minimum = Math.pow(10, Math.floor(Math.log10(smallest)));
-    let maximum = Math.pow(10, Math.ceil(Math.log10(largest)));
-    if (maximum <= minimum) maximum = minimum * 10;
-    return { minimum, maximum };
+    if (aboveScale) {
+      drawEdgeWarning(context, width - margins.right, margins.top + 10, "↑ off scale (above +" + String(extent) + ")");
+    }
+    if (belowScale) {
+      drawEdgeWarning(context, width - margins.right, margins.top + plotHeight - 10, "↓ off scale (below −" + String(extent) + ")");
+    }
   }
 
   function updateBatchNote(batchSize) {
@@ -485,14 +506,6 @@
     document.getElementById("example-count-label").textContent = formatInteger(values.exampleCount) + " examples";
   }
 
-  function maximumAbsolute(first, second) {
-    let maximum = 1;
-    for (let index = 0; index < FEATURE_COUNT; index += 1) {
-      maximum = Math.max(maximum, Math.abs(first[index]), Math.abs(second[index]));
-    }
-    return maximum;
-  }
-
   function idbdRateRatio(beta) {
     const rates = Array.from(beta, Math.exp);
     const irrelevant = rates.slice(1).sort(function (first, second) {
@@ -509,15 +522,12 @@
     document.getElementById("sgd-signal-loss-score").textContent = formatScore(noiselessSignalMse(state.sgdWeights));
     document.getElementById("idbd-signal-loss-score").textContent = formatScore(noiselessSignalMse(state.idbdWeights));
 
-    const lossBounds = logarithmicBoundsAcross(state.curves.sgdLoss, state.curves.idbdLoss);
-    const signalLossBounds = logarithmicBoundsAcross(state.curves.sgdSignalLoss, state.curves.idbdSignalLoss);
-    const weightMax = niceMaximum(maximumAbsolute(state.sgdWeights, state.idbdWeights) * 1.05);
-    drawLineChart("sgd-loss-chart", state.curves.steps, state.curves.sgdLoss, COLORS.sgd, COLORS.sgdFill, lossBounds, state.exampleCount);
-    drawLineChart("idbd-loss-chart", state.curves.steps, state.curves.idbdLoss, COLORS.idbd, COLORS.idbdFill, lossBounds, state.exampleCount);
-    drawLineChart("sgd-signal-loss-chart", state.curves.steps, state.curves.sgdSignalLoss, COLORS.sgd, COLORS.sgdFill, signalLossBounds, state.exampleCount);
-    drawLineChart("idbd-signal-loss-chart", state.curves.steps, state.curves.idbdSignalLoss, COLORS.idbd, COLORS.idbdFill, signalLossBounds, state.exampleCount);
-    drawWeights("sgd-weights-chart", state.sgdWeights, COLORS.sgd, weightMax);
-    drawWeights("idbd-weights-chart", state.idbdWeights, COLORS.idbd, weightMax);
+    drawLineChart("sgd-loss-chart", state.curves.steps, state.curves.sgdLoss, COLORS.sgd, COLORS.sgdFill, PREDICTION_LOSS_BOUNDS, state.exampleCount);
+    drawLineChart("idbd-loss-chart", state.curves.steps, state.curves.idbdLoss, COLORS.idbd, COLORS.idbdFill, PREDICTION_LOSS_BOUNDS, state.exampleCount);
+    drawLineChart("sgd-signal-loss-chart", state.curves.steps, state.curves.sgdSignalLoss, COLORS.sgd, COLORS.sgdFill, SIGNAL_LOSS_BOUNDS, state.exampleCount);
+    drawLineChart("idbd-signal-loss-chart", state.curves.steps, state.curves.idbdSignalLoss, COLORS.idbd, COLORS.idbdFill, SIGNAL_LOSS_BOUNDS, state.exampleCount);
+    drawWeights("sgd-weights-chart", state.sgdWeights, COLORS.sgd);
+    drawWeights("idbd-weights-chart", state.idbdWeights, COLORS.idbd);
   }
 
   function elapsedLabel(milliseconds) {

@@ -60,18 +60,18 @@ title: "Learning the learning rate"
         </div>
 
         <figure class="chart-block">
-          <figcaption><span>Prediction MSE</span><small>EMA over minibatches · logarithmic scale</small></figcaption>
-          <canvas id="sgd-loss-chart" role="img" aria-label="SGD prediction mean squared error over training examples on a logarithmic scale"></canvas>
+          <figcaption><span>Prediction MSE</span><small>fixed 0.1–100 · logarithmic scale</small></figcaption>
+          <canvas id="sgd-loss-chart" role="img" aria-label="SGD prediction mean squared error over training examples on a fixed logarithmic scale from 0.1 to 100"></canvas>
         </figure>
 
         <figure class="chart-block">
-          <figcaption><span>Loss against noiseless signal</span><small>exact population MSE · logarithmic scale</small></figcaption>
-          <canvas id="sgd-signal-loss-chart" role="img" aria-label="SGD exact mean squared error against the noiseless signal over training examples on a logarithmic scale"></canvas>
+          <figcaption><span>Loss against noiseless signal</span><small>fixed 10⁻⁴–1 · logarithmic scale</small></figcaption>
+          <canvas id="sgd-signal-loss-chart" role="img" aria-label="SGD exact mean squared error against the noiseless signal on a fixed logarithmic scale from 0.0001 to 1"></canvas>
         </figure>
 
         <figure class="chart-block model-chart">
-          <figcaption><span>The model</span><small>signed logarithmic scale · linear near zero</small></figcaption>
-          <canvas id="sgd-weights-chart" role="img" aria-label="SGD learned model coefficients on a signed logarithmic scale"></canvas>
+          <figcaption><span>The model</span><small>fixed −2–2 · signed log scale</small></figcaption>
+          <canvas id="sgd-weights-chart" role="img" aria-label="SGD learned model coefficients on a fixed signed logarithmic scale from minus 2 to 2"></canvas>
         </figure>
 
         <div class="method-controls" aria-label="SGD controls">
@@ -109,18 +109,18 @@ title: "Learning the learning rate"
         </div>
 
         <figure class="chart-block">
-          <figcaption><span>Prediction MSE</span><small>EMA over minibatches · logarithmic scale</small></figcaption>
-          <canvas id="idbd-loss-chart" role="img" aria-label="IDBD prediction mean squared error over training examples on a logarithmic scale"></canvas>
+          <figcaption><span>Prediction MSE</span><small>fixed 0.1–100 · logarithmic scale</small></figcaption>
+          <canvas id="idbd-loss-chart" role="img" aria-label="IDBD prediction mean squared error over training examples on a fixed logarithmic scale from 0.1 to 100"></canvas>
         </figure>
 
         <figure class="chart-block">
-          <figcaption><span>Loss against noiseless signal</span><small>exact population MSE · logarithmic scale</small></figcaption>
-          <canvas id="idbd-signal-loss-chart" role="img" aria-label="IDBD exact mean squared error against the noiseless signal over training examples on a logarithmic scale"></canvas>
+          <figcaption><span>Loss against noiseless signal</span><small>fixed 10⁻⁴–1 · logarithmic scale</small></figcaption>
+          <canvas id="idbd-signal-loss-chart" role="img" aria-label="IDBD exact mean squared error against the noiseless signal on a fixed logarithmic scale from 0.0001 to 1"></canvas>
         </figure>
 
         <figure class="chart-block model-chart">
-          <figcaption><span>The model</span><small>signed logarithmic scale · linear near zero</small></figcaption>
-          <canvas id="idbd-weights-chart" role="img" aria-label="IDBD learned model coefficients on a signed logarithmic scale"></canvas>
+          <figcaption><span>The model</span><small>fixed −2–2 · signed log scale</small></figcaption>
+          <canvas id="idbd-weights-chart" role="img" aria-label="IDBD learned model coefficients on a fixed signed logarithmic scale from minus 2 to 2"></canvas>
         </figure>
 
         <div class="method-controls idbd-method-controls" aria-label="IDBD controls">
@@ -190,7 +190,7 @@ title: "Learning the learning rate"
     </fieldset>
 
     <aside class="experiment-note">
-      <p><strong>Reading the experiment.</strong> The green bar is the only coefficient that should approach the reference line at 1. Every other coefficient should stay near zero. Prediction MSE is measured before each update against the noisy target; the curve is an exponential moving average over minibatches.</p>
+      <p><strong>Reading the experiment.</strong> The green bar is the only coefficient that should approach the reference line at 1. Every other coefficient should stay near zero. Prediction MSE is measured before each update against the noisy target; the curve is an exponential moving average over minibatches. Axes stay fixed between runs; red edge labels flag values outside their range.</p>
       <p id="batch-note"><strong>At batch size 1</strong>, this is classic online IDBD. Larger batches use a mean-gradient diagonal approximation and are best read as an exploration, not the original 1992 rule.</p>
     </aside>
   </section>
