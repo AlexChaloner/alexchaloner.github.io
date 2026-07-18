@@ -1,0 +1,173 @@
+---
+layout: default
+title: "Learning the learning rate"
+---
+
+<link rel="stylesheet" href="{{ '/assets/idbd-demo.css' | relative_url }}">
+
+<article class="idbd-post">
+  <header class="post-hero">
+    <p class="post-kicker">IDBD experiments <span aria-hidden="true">/</span> interactive draft</p>
+    <h1>Learning the learning rate</h1>
+    <p class="post-dek">What happens when every feature is allowed to decide how quickly it should learn?</p>
+    <div class="post-meta">
+      <span>Alex Chaloner</span>
+      <span>Draft · July 2026</span>
+      <span>8 min read</span>
+    </div>
+  </header>
+
+  <section class="prose intro-copy">
+    <p class="draft-note"><strong>Writer's note.</strong> This is placeholder copy for the eventual introduction. The interactive experiment below is functional; the surrounding argument and results are ready for your prose.</p>
+    <p>Stochastic gradient descent gives every feature the same learning rate. Incremental Delta-Bar-Delta (IDBD) starts there too, then adapts a separate rate for every feature using the history of its updates.</p>
+  </section>
+
+  <section class="experiment" id="idbd-playground" aria-labelledby="playground-title">
+    <div class="experiment-heading">
+      <div>
+        <p class="section-label">Interactive experiment 01</p>
+        <h2 id="playground-title">Can the optimiser ignore noise?</h2>
+      </div>
+      <p class="experiment-lede">One feature predicts the target. The other 63 are coincidences. Both learners receive the same noisy examples.</p>
+    </div>
+
+    <div class="controls" aria-label="Experiment controls">
+      <div class="control">
+        <div class="control-heading">
+          <label for="initial-rate">Initial learning rate</label>
+          <output id="initial-rate-value" for="initial-rate">0.0501</output>
+        </div>
+        <input id="initial-rate" type="range" min="-3" max="-0.5" step="0.05" value="-1.3" aria-describedby="initial-rate-help">
+        <div class="range-labels" aria-hidden="true"><span>0.001</span><span>0.316</span></div>
+        <p id="initial-rate-help">Fixed for SGD; the starting point for IDBD.</p>
+      </div>
+
+      <div class="control">
+        <div class="control-heading">
+          <label for="theta">Meta learning rate <span class="math">θ</span></label>
+          <output id="theta-value" for="theta">0.316</output>
+        </div>
+        <input id="theta" type="range" min="-3" max="0.5" step="0.05" value="-0.5" aria-describedby="theta-help">
+        <div class="range-labels" aria-hidden="true"><span>0.001</span><span>3.16</span></div>
+        <p id="theta-help">How quickly IDBD changes its per-feature rates.</p>
+      </div>
+
+      <div class="control">
+        <div class="control-heading">
+          <label for="batch-size">Batch size</label>
+          <output id="batch-size-value" for="batch-size">1</output>
+        </div>
+        <input id="batch-size" type="range" min="0" max="6" step="1" value="0" aria-describedby="batch-size-help">
+        <div class="range-labels" aria-hidden="true"><span>1</span><span>64</span></div>
+        <p id="batch-size-help">Examples combined into each update.</p>
+      </div>
+
+      <div class="stream-control">
+        <p><span class="status-dot" aria-hidden="true"></span><span id="run-status" aria-live="polite">Ready</span></p>
+        <button id="new-stream" type="button">New noise stream <span aria-hidden="true">↻</span></button>
+      </div>
+    </div>
+
+    <div class="shared-legend" aria-label="Chart legend">
+      <span><i class="legend-signal"></i> predictive feature</span>
+      <span><i class="legend-noise"></i> irrelevant features</span>
+      <span>4,096 examples</span>
+      <span>64 features</span>
+    </div>
+
+    <div class="comparison">
+      <section class="method-card sgd-card" aria-labelledby="sgd-title">
+        <div class="method-heading">
+          <div>
+            <p class="method-number">01</p>
+            <h3 id="sgd-title">SGD</h3>
+          </div>
+          <span class="method-pill">one fixed rate</span>
+        </div>
+
+        <div class="score-row">
+          <div class="primary-score">
+            <span>Final clean RMS</span>
+            <strong id="sgd-clean-score">—</strong>
+          </div>
+          <dl>
+            <div><dt>Stream loss</dt><dd id="sgd-loss-score">—</dd></div>
+            <div><dt>Signal weight</dt><dd id="sgd-signal-weight">—</dd></div>
+          </dl>
+        </div>
+
+        <figure class="chart-block">
+          <figcaption><span>Noisy-stream loss</span><small>prequential MSE · lower is better</small></figcaption>
+          <canvas id="sgd-loss-chart" role="img" aria-label="SGD noisy-stream loss over training examples"></canvas>
+        </figure>
+
+        <figure class="chart-block">
+          <figcaption><span>Clean RMS over steps</span><small>exact population score</small></figcaption>
+          <canvas id="sgd-clean-chart" role="img" aria-label="SGD clean RMS over training examples"></canvas>
+        </figure>
+
+        <figure class="chart-block model-chart">
+          <figcaption><span>The model</span><small>learned feature coefficients</small></figcaption>
+          <canvas id="sgd-weights-chart" role="img" aria-label="SGD learned model coefficients"></canvas>
+        </figure>
+      </section>
+
+      <section class="method-card idbd-card" aria-labelledby="idbd-title">
+        <div class="method-heading">
+          <div>
+            <p class="method-number">02</p>
+            <h3 id="idbd-title">IDBD</h3>
+          </div>
+          <span class="method-pill">one rate per feature</span>
+        </div>
+
+        <div class="score-row">
+          <div class="primary-score">
+            <span>Final clean RMS</span>
+            <strong id="idbd-clean-score">—</strong>
+          </div>
+          <dl>
+            <div><dt>Stream loss</dt><dd id="idbd-loss-score">—</dd></div>
+            <div><dt>Signal / noise rate</dt><dd id="idbd-rate-ratio">—</dd></div>
+          </dl>
+        </div>
+
+        <figure class="chart-block">
+          <figcaption><span>Noisy-stream loss</span><small>prequential MSE · lower is better</small></figcaption>
+          <canvas id="idbd-loss-chart" role="img" aria-label="IDBD noisy-stream loss over training examples"></canvas>
+        </figure>
+
+        <figure class="chart-block">
+          <figcaption><span>Clean RMS over steps</span><small>exact population score</small></figcaption>
+          <canvas id="idbd-clean-chart" role="img" aria-label="IDBD clean RMS over training examples"></canvas>
+        </figure>
+
+        <figure class="chart-block model-chart">
+          <figcaption><span>The model</span><small>learned feature coefficients</small></figcaption>
+          <canvas id="idbd-weights-chart" role="img" aria-label="IDBD learned model coefficients"></canvas>
+        </figure>
+      </section>
+    </div>
+
+    <aside class="experiment-note">
+      <p><strong>Reading the experiment.</strong> The green bar is the only coefficient that should approach 1. Every other coefficient should stay near zero. “Clean RMS” evaluates against the predictable target with the target noise removed.</p>
+      <p id="batch-note"><strong>At batch size 1</strong>, this is classic online IDBD. Larger batches use a mean-gradient diagonal approximation and are best read as an exploration, not the original 1992 rule.</p>
+    </aside>
+  </section>
+
+  <section class="prose writing-slot">
+    <p class="section-label">The mechanism</p>
+    <h2>What is IDBD actually changing?</h2>
+    <div class="copy-placeholder">
+      <p>Your explanation goes here. A useful bridge might be: persistent agreement between a feature's current gradient and its recent update history increases that feature's learning rate; oscillating evidence reduces it.</p>
+    </div>
+
+    <p class="section-label">Results</p>
+    <h2>From a toy stream to neural networks</h2>
+    <div class="copy-placeholder">
+      <p>Space for the experimental narrative, architecture diagrams, and the results from the larger runs.</p>
+    </div>
+  </section>
+</article>
+
+<script src="{{ '/assets/idbd-demo.js' | relative_url }}"></script>
