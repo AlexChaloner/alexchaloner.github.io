@@ -17,7 +17,12 @@
     speed: $("mnist-speed"), speedOutput: $("mnist-speed-output"),
     solverSteps: $("mnist-solver-steps"), solverStepsOutput: $("mnist-solver-steps-output"),
     temperature: $("mnist-temperature"), temperatureOutput: $("mnist-temperature-output"),
-    seed: $("mnist-seed"), regenerate: $("mnist-regenerate"), status: $("mnist-status")
+    seed: $("mnist-seed"), regenerate: $("mnist-regenerate"), status: $("mnist-status"),
+    journey: $("mnist-journey"), journeyLabel: $("mnist-journey-label"),
+    diffusionCurrent: $("mnist-diffusion-current"), flowCurrent: $("mnist-flow-current"),
+    diffusionFilm: $("mnist-diffusion-film"), flowFilm: $("mnist-flow-film"),
+    diffusionAction: $("mnist-diffusion-action"), flowAction: $("mnist-flow-action"),
+    pathChart: $("mnist-path-chart")
   };
 
   const D = data.latentDim;
@@ -213,6 +218,132 @@
     ctx.putImageData(image, 0, 0);
   }
 
+  function paintDigit(image, imageWidth, pixels, cellX, cellY, tint) {
+    for (let y = 0; y < 28; y += 1) {
+      for (let x = 0; x < 28; x += 1) {
+        const value = pixels[y * 28 + x] / 255;
+        const target = ((cellY + y) * imageWidth + cellX + x) * 4;
+        image.data[target] = Math.round(tint[0] * value);
+        image.data[target + 1] = Math.round(tint[1] * value);
+        image.data[target + 2] = Math.round(tint[2] * value);
+        image.data[target + 3] = 255;
+      }
+    }
+  }
+
+  function drawJourneyDigit(canvas, latent, tint) {
+    canvas.width = 28; canvas.height = 28;
+    const ctx = canvas.getContext("2d");
+    const image = ctx.createImageData(28, 28);
+    paintDigit(image, 28, decoder(latent), 0, 0, tint);
+    ctx.putImageData(image, 0, 0);
+  }
+
+  function drawFilmstrip(canvas, journey, tint, activeCheckpoint, highlight) {
+    const count = 6;
+    canvas.width = count * 28; canvas.height = 28;
+    const ctx = canvas.getContext("2d");
+    const image = ctx.createImageData(canvas.width, canvas.height);
+    for (let i = 0; i < count; i += 1) {
+      const index = Math.round((journey.length - 1) * i / (count - 1));
+      paintDigit(image, canvas.width, decoder(journey[index]), i * 28, 0, tint);
+    }
+    ctx.putImageData(image, 0, 0);
+    ctx.strokeStyle = highlight; ctx.lineWidth = 2;
+    ctx.strokeRect(activeCheckpoint * 28 + 1, 1, 26, 26);
+  }
+
+  function drawPathChart(canvas, diffusionJourney, flowJourney, activeIndex) {
+    const rect = canvas.getBoundingClientRect();
+    const dpr = Math.min(2, window.devicePixelRatio || 1);
+    canvas.width = Math.max(1, Math.round(rect.width * dpr));
+    canvas.height = Math.max(1, Math.round(rect.height * dpr));
+    const ctx = canvas.getContext("2d");
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    const w = rect.width, h = rect.height, pad = 22;
+    ctx.clearRect(0, 0, w, h);
+    ctx.fillStyle = "#fff"; ctx.fillRect(0, 0, w, h);
+
+    const project = (latent) => {
+      let x = 0, y = 0;
+      for (let j = 0; j < D; j += 1) {
+        x += latent[j] * Math.sin((j + 1) * 1.71);
+        y += latent[j] * Math.cos((j + 1) * 2.17);
+      }
+      return [x, y];
+    };
+    const diffusion = diffusionJourney.map(project), flow = flowJourney.map(project);
+    const points = diffusion.concat(flow);
+    let minX = Math.min.apply(null, points.map((p) => p[0]));
+    let maxX = Math.max.apply(null, points.map((p) => p[0]));
+    let minY = Math.min.apply(null, points.map((p) => p[1]));
+    let maxY = Math.max.apply(null, points.map((p) => p[1]));
+    if (maxX - minX < 0.2) { minX -= 0.1; maxX += 0.1; }
+    if (maxY - minY < 0.2) { minY -= 0.1; maxY += 0.1; }
+    const marginX = (maxX - minX) * 0.12, marginY = (maxY - minY) * 0.12;
+    minX -= marginX; maxX += marginX; minY -= marginY; maxY += marginY;
+    const screen = (p) => [pad + (w - pad * 2) * (p[0] - minX) / (maxX - minX), h - pad - (h - pad * 2) * (p[1] - minY) / (maxY - minY)];
+
+    ctx.strokeStyle = "#e2e7e3"; ctx.lineWidth = 1;
+    for (let i = 1; i < 5; i += 1) {
+      const x = pad + (w - pad * 2) * i / 5, y = pad + (h - pad * 2) * i / 5;
+      ctx.beginPath(); ctx.moveTo(x, pad); ctx.lineTo(x, h - pad); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(pad, y); ctx.lineTo(w - pad, y); ctx.stroke();
+    }
+
+    function path(pointsToDraw, color) {
+      ctx.strokeStyle = color; ctx.lineWidth = 2.5; ctx.lineJoin = "round"; ctx.lineCap = "round";
+      ctx.beginPath();
+      pointsToDraw.forEach((point, index) => {
+        const p = screen(point);
+        if (index === 0) ctx.moveTo(p[0], p[1]); else ctx.lineTo(p[0], p[1]);
+      });
+      ctx.stroke();
+    }
+    path(diffusion, "#7857b2"); path(flow, "#167d69");
+
+    const start = screen(diffusion[0]);
+    ctx.fillStyle = "#17211d"; ctx.beginPath(); ctx.arc(start[0], start[1], 4, 0, Math.PI * 2); ctx.fill();
+    ctx.font = "10px system-ui, sans-serif"; ctx.fillText("same noise", start[0] + 7, start[1] - 7);
+
+    [[diffusion, "#7857b2"], [flow, "#167d69"]].forEach(([journey, color]) => {
+      const selected = screen(journey[activeIndex]);
+      ctx.fillStyle = "#fff"; ctx.strokeStyle = color; ctx.lineWidth = 3;
+      ctx.beginPath(); ctx.arc(selected[0], selected[1], 6, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+      const end = screen(journey[journey.length - 1]);
+      ctx.fillStyle = color; ctx.beginPath(); ctx.arc(end[0], end[1], 3, 0, Math.PI * 2); ctx.fill();
+    });
+  }
+
+  function renderMicroscope() {
+    if (!state.diffusionJourney || !state.flowJourney) return;
+    const steps = state.diffusionJourney.length - 1;
+    const progress = Number(ui.journey.value) / 100;
+    const index = Math.round(progress * steps);
+    const checkpoint = Math.round(progress * 5);
+    drawJourneyDigit(ui.diffusionCurrent, state.diffusionJourney[index], [205, 184, 255]);
+    drawJourneyDigit(ui.flowCurrent, state.flowJourney[index], [163, 245, 215]);
+    drawFilmstrip(ui.diffusionFilm, state.diffusionJourney, [205, 184, 255], checkpoint, "#b99ae9");
+    drawFilmstrip(ui.flowFilm, state.flowJourney, [163, 245, 215], checkpoint, "#55b79e");
+    drawPathChart(ui.pathChart, state.diffusionJourney, state.flowJourney, index);
+
+    if (index === 0) {
+      ui.journeyLabel.textContent = "step 0 / " + steps + " · identical latent noise";
+      ui.diffusionAction.innerHTML = "<strong>Start:</strong> the decoder is looking at raw Gaussian latent noise.";
+      ui.flowAction.innerHTML = "<strong>Start:</strong> exactly the same Gaussian latent noise as diffusion.";
+    } else if (index === steps) {
+      ui.journeyLabel.textContent = "step " + steps + " / " + steps + " · final decoded states";
+      ui.diffusionAction.innerHTML = "<strong>Finish:</strong> repeated noise estimates have been converted into a low-noise digit latent.";
+      ui.flowAction.innerHTML = "<strong>Finish:</strong> integrated velocity updates have transported the noise to a digit latent.";
+    } else {
+      const tau = Math.max(0.02, 0.98 - index * 0.96 / steps);
+      const t = index / steps;
+      ui.journeyLabel.textContent = "step " + index + " / " + steps + " · synchronized model evaluations";
+      ui.diffusionAction.innerHTML = "<strong>Noise level τ = " + tau.toFixed(2) + ":</strong> estimate <i>ε̂</i>; the sampler algebraically turns it into the next cleaner latent.";
+      ui.flowAction.innerHTML = "<strong>Path time t = " + t.toFixed(2) + ":</strong> predict <i>v̂</i>; the solver moves the latent directly by <i>v̂ Δt</i>.";
+    }
+  }
+
   function drawLoss(canvas, history, color) {
     const rect = canvas.getBoundingClientRect();
     const dpr = Math.min(2, window.devicePixelRatio || 1);
@@ -250,6 +381,8 @@
     for (let i = 0; i < flow.length; i += 1) flow[i] = diffusion[i] = normal() * temperature;
     const hidden = new Float32Array(H), output = new Float32Array(D), point = new Float32Array(D);
     const steps = state.solverSteps;
+    const flowJourney = [new Float32Array(flow.subarray(0, D))];
+    const diffusionJourney = [new Float32Array(diffusion.subarray(0, D))];
     for (let step = 0; step < steps; step += 1) {
       const t = (step + 0.5) / steps;
       for (let n = 0; n < SAMPLE_COUNT; n += 1) {
@@ -258,6 +391,7 @@
         predict(state.flowNet, point, t, hidden, output);
         for (let j = 0; j < D; j += 1) flow[offset + j] += output[j] / steps;
       }
+      flowJourney.push(new Float32Array(flow.subarray(0, D)));
     }
     for (let step = 0; step < steps; step += 1) {
       const tau = 0.98 - step * 0.96 / steps;
@@ -273,15 +407,19 @@
           diffusion[offset + j] = Math.sqrt(1 - nextTau) * clean + Math.sqrt(nextTau) * output[j];
         }
       }
+      diffusionJourney.push(new Float32Array(diffusion.subarray(0, D)));
     }
     drawDigits(ui.diffusionSamples, diffusion, [205, 184, 255]);
     drawDigits(ui.flowSamples, flow, [163, 245, 215]);
+    state.diffusionJourney = diffusionJourney; state.flowJourney = flowJourney;
+    renderMicroscope();
   }
 
   const state = {
     diffusionNet: null, flowNet: null, indices: [], update: 0, budget: 1200, solverSteps: 24,
     running: false, frame: 0, trainingRng: null, trainingNormal: null,
-    diffusionEma: null, flowEma: null, diffusionHistory: [], flowHistory: []
+    diffusionEma: null, flowEma: null, diffusionHistory: [], flowHistory: [],
+    diffusionJourney: null, flowJourney: null
   };
 
   function setIndices() {
@@ -353,7 +491,8 @@
   ui.solverSteps.addEventListener("input", () => { state.solverSteps = 2 ** Number(ui.solverSteps.value) + 8; ui.solverStepsOutput.value = state.solverSteps; sampleModels(); });
   ui.temperature.addEventListener("input", () => { ui.temperatureOutput.value = Number(ui.temperature.value).toFixed(2); sampleModels(); });
   ui.regenerate.addEventListener("click", () => { let seed = Number(ui.seed.value); if (!Number.isFinite(seed)) seed = 20260719; ui.seed.value = (seed + 1) >>> 0; sampleModels(); ui.status.textContent = "Regenerated from a new shared noise draw"; });
-  window.addEventListener("resize", () => { drawLoss(ui.diffusionLossChart, state.diffusionHistory, "#7857b2"); drawLoss(ui.flowLossChart, state.flowHistory, "#167d69"); });
+  ui.journey.addEventListener("input", renderMicroscope);
+  window.addEventListener("resize", () => { drawLoss(ui.diffusionLossChart, state.diffusionHistory, "#7857b2"); drawLoss(ui.flowLossChart, state.flowHistory, "#167d69"); renderMicroscope(); });
 
   state.budget = Number(ui.updates.value);
   state.solverSteps = 2 ** Number(ui.solverSteps.value) + 8;

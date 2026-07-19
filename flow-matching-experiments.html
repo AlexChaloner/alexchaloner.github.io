@@ -226,6 +226,67 @@ title: "Learning to move probability"
       </div>
     </div>
 
+    <section class="mnist-microscope" aria-labelledby="mnist-microscope-title">
+      <header class="mnist-microscope-header">
+        <div>
+          <p class="fm-section-label">Generation microscope · one shared noise sample</p>
+          <h3 id="mnist-microscope-title">Same beginning, different journey</h3>
+        </div>
+        <p>Drag one scrubber through both generators. Their final digits may look alike because they learn the same data; the intermediate route reveals what each model actually does.</p>
+      </header>
+
+      <div class="mnist-micro-scrubber">
+        <label for="mnist-journey"><span>shared generation progress</span><strong id="mnist-journey-label">step 12 / 24 · synchronized model evaluations</strong></label>
+        <input id="mnist-journey" type="range" min="0" max="100" step="1" value="50">
+        <div aria-hidden="true"><span>noise</span><span>20%</span><span>40%</span><span>60%</span><span>80%</span><span>digit</span></div>
+      </div>
+
+      <div class="mnist-micro-lanes">
+        <article class="mnist-micro-lane mnist-micro-diffusion">
+          <header><strong>Diffusion journey</strong><span>estimate noise → denoise</span></header>
+          <div class="mnist-micro-images">
+            <figure class="mnist-micro-current">
+              <figcaption>Selected moment</figcaption>
+              <canvas id="mnist-diffusion-current" role="img" aria-label="Selected intermediate digit in the diffusion generation journey"></canvas>
+            </figure>
+            <figure class="mnist-micro-film">
+              <figcaption>Six checkpoints</figcaption>
+              <canvas id="mnist-diffusion-film" role="img" aria-label="Diffusion generation filmstrip from latent noise to a digit"></canvas>
+            </figure>
+          </div>
+          <p id="mnist-diffusion-action" class="mnist-micro-action"><strong>Start:</strong> the decoder is looking at raw Gaussian latent noise.</p>
+        </article>
+
+        <article class="mnist-micro-lane mnist-micro-flow">
+          <header><strong>Flow-matching journey</strong><span>predict velocity → move</span></header>
+          <div class="mnist-micro-images">
+            <figure class="mnist-micro-current">
+              <figcaption>Selected moment</figcaption>
+              <canvas id="mnist-flow-current" role="img" aria-label="Selected intermediate digit in the flow-matching generation journey"></canvas>
+            </figure>
+            <figure class="mnist-micro-film">
+              <figcaption>Six checkpoints</figcaption>
+              <canvas id="mnist-flow-film" role="img" aria-label="Flow-matching generation filmstrip from latent noise to a digit"></canvas>
+            </figure>
+          </div>
+          <p id="mnist-flow-action" class="mnist-micro-action"><strong>Start:</strong> exactly the same Gaussian latent noise as diffusion.</p>
+        </article>
+      </div>
+
+      <figure class="mnist-path-figure">
+        <figcaption>
+          <span><strong>The routes through latent space</strong> · a shared 2D view of the 12-number state</span>
+          <small>purple: diffusion path · green: flow path · ring: selected moment</small>
+        </figcaption>
+        <canvas id="mnist-path-chart" role="img" aria-label="Projected diffusion and flow-matching generation trajectories from the same latent noise"></canvas>
+      </figure>
+
+      <aside class="mnist-micro-note">
+        <strong>What to notice</strong>
+        <span>The purple model does not output the purple path directly: it predicts noise, and the sampler converts that prediction into each denoising step. The green model outputs the velocity used for each step directly. Neither method has a characteristic final-image style.</span>
+      </aside>
+    </section>
+
     <div class="mnist-lanes">
       <section class="mnist-lane mnist-diffusion-lane" aria-labelledby="mnist-diffusion-title">
         <header>

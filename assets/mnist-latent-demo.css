@@ -125,6 +125,189 @@
   background: var(--mnist-flow);
 }
 
+.mnist-microscope {
+  border: 1px solid var(--mnist-line);
+  border-bottom: 0;
+  background: #f7f9f5;
+}
+
+.mnist-microscope-header {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(280px, 0.9fr);
+  align-items: end;
+  gap: 2rem;
+  padding: 1rem;
+  border-bottom: 1px solid var(--mnist-line);
+}
+
+.mnist-microscope-header h3 {
+  margin: 0.15rem 0 0;
+  font-size: clamp(1.25rem, 2.5vw, 1.65rem);
+}
+
+.mnist-microscope-header > p {
+  margin: 0;
+  color: var(--mnist-muted);
+  font-size: 0.8rem;
+  line-height: 1.45;
+}
+
+.mnist-micro-scrubber {
+  padding: 0.85rem 1rem 0.65rem;
+  border-bottom: 1px solid var(--mnist-line);
+  background: var(--mnist-paper);
+}
+
+.mnist-micro-scrubber label {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.mnist-micro-scrubber label span {
+  color: var(--mnist-muted);
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.mnist-micro-scrubber label strong {
+  font: 0.76rem monospace;
+}
+
+.mnist-micro-scrubber input {
+  width: 100%;
+  margin: 0.65rem 0 0.15rem;
+  accent-color: var(--mnist-flow);
+}
+
+.mnist-micro-scrubber > div {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  color: var(--mnist-muted);
+  font: 0.64rem monospace;
+}
+
+.mnist-micro-scrubber > div span:not(:first-child):not(:last-child) { text-align: center; }
+.mnist-micro-scrubber > div span:last-child { text-align: right; }
+
+.mnist-micro-lanes {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.mnist-micro-lane {
+  min-width: 0;
+  background: var(--mnist-paper);
+}
+
+.mnist-micro-lane + .mnist-micro-lane {
+  border-left: 1px solid var(--mnist-line);
+}
+
+.mnist-micro-lane > header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.65rem 0.8rem;
+  border-bottom: 1px solid var(--mnist-line);
+  font-size: 0.78rem;
+}
+
+.mnist-micro-lane > header span {
+  color: var(--mnist-muted);
+  font-size: 0.68rem;
+}
+
+.mnist-micro-diffusion > header strong { color: var(--mnist-diffusion); }
+.mnist-micro-flow > header strong { color: var(--mnist-flow); }
+
+.mnist-micro-images {
+  display: grid;
+  grid-template-columns: 112px minmax(0, 1fr);
+  align-items: end;
+  gap: 0.8rem;
+  padding: 0.8rem;
+}
+
+.mnist-micro-images figure {
+  min-width: 0;
+  margin: 0;
+}
+
+.mnist-micro-images figcaption {
+  margin-bottom: 0.35rem;
+  color: var(--mnist-muted);
+  font-size: 0.67rem;
+}
+
+.mnist-micro-images canvas {
+  display: block;
+  width: 100%;
+  background: #0d1210;
+  image-rendering: pixelated;
+}
+
+.mnist-micro-current canvas { aspect-ratio: 1; }
+.mnist-micro-film canvas { aspect-ratio: 6 / 1; }
+
+.mnist-micro-action {
+  min-height: 3.35rem;
+  margin: 0;
+  padding: 0.65rem 0.8rem;
+  border-top: 1px solid var(--mnist-line);
+  color: var(--mnist-muted);
+  font-size: 0.73rem;
+  line-height: 1.45;
+}
+
+.mnist-micro-diffusion .mnist-micro-action strong { color: var(--mnist-diffusion); }
+.mnist-micro-flow .mnist-micro-action strong { color: var(--mnist-flow); }
+
+.mnist-path-figure {
+  margin: 0;
+  padding: 0.8rem;
+  border-top: 1px solid var(--mnist-line);
+  background: #f2f5f1;
+}
+
+.mnist-path-figure figcaption {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 0.45rem;
+  font-size: 0.76rem;
+}
+
+.mnist-path-figure figcaption small {
+  color: var(--mnist-muted);
+}
+
+.mnist-path-figure canvas {
+  display: block;
+  width: 100%;
+  height: 190px;
+  border: 1px solid #d5ddd7;
+  background: #fff;
+}
+
+.mnist-micro-note {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 0.75rem;
+  padding: 0.75rem 0.85rem;
+  border-top: 1px solid var(--mnist-line);
+  background: #e9efea;
+  font-size: 0.75rem;
+  line-height: 1.45;
+}
+
+.mnist-micro-note span { color: #435048; }
+
 .mnist-lanes {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -325,6 +508,9 @@
 @media (max-width: 800px) {
   .mnist-lab-header { grid-template-columns: 1fr; gap: 0.4rem; }
   .mnist-training-bar { grid-template-columns: 1fr; }
+  .mnist-microscope-header { grid-template-columns: 1fr; gap: 0.4rem; }
+  .mnist-micro-lanes { grid-template-columns: 1fr; }
+  .mnist-micro-lane + .mnist-micro-lane { border-top: 1px solid var(--mnist-line); border-left: 0; }
   .mnist-lanes { grid-template-columns: 1fr; }
   .mnist-lane + .mnist-lane { border-top: 1px solid var(--mnist-line); border-left: 0; }
   .mnist-controls { grid-template-columns: repeat(2, minmax(0, 1fr)); }
@@ -335,6 +521,13 @@
 @media (max-width: 520px) {
   .mnist-scope { grid-template-columns: 1fr; gap: 0.25rem; }
   .mnist-transport { display: grid; grid-template-columns: 1fr; }
+  .mnist-micro-scrubber label { display: block; }
+  .mnist-micro-scrubber label strong { display: block; margin-top: 0.2rem; }
+  .mnist-micro-images { grid-template-columns: 82px minmax(0, 1fr); gap: 0.55rem; padding: 0.65rem; }
+  .mnist-micro-lane > header { align-items: flex-start; flex-direction: column; gap: 0.15rem; }
+  .mnist-path-figure figcaption { display: block; }
+  .mnist-path-figure figcaption small { display: block; margin-top: 0.2rem; }
+  .mnist-micro-note { grid-template-columns: 1fr; gap: 0.2rem; }
   .mnist-controls { grid-template-columns: 1fr; }
   .mnist-controls > * { border-right: 0 !important; }
 }
