@@ -17,8 +17,6 @@
     ["Extend the optimizer", "Try weight decay or change how IDBD carries its trace through momentum.", "Add the decay trace", "clean"],
     ["Choose the decay trace", "Decide how weight decay participates in IDBD’s meta-gradient.", "Start over", "trace"]
   ];
-  const viewUnlocks = { stream: 1, loss: 2, clean: 5, rates: 5, trace: 5, model: 5 };
-  const tabUnlocks = { stream: 2, loss: 2, clean: 5, rates: 5, trace: 5, model: 5 };
   const unlockBundles = {
     2: [
       ["control", "sgd-rate", "Add learning rate"],
@@ -143,7 +141,7 @@
       '</nav>',
       '<div class="staged-learner-grid">',
       '  <section class="staged-learner staged-sgd-lane" aria-label="SGD lane"><div class="staged-lane-heading"></div><div class="staged-lane-score"></div><div class="staged-viewport"></div></section>',
-      '  <section class="staged-learner staged-idbd-lane" aria-label="IDBD lane"><div class="staged-lane-heading"></div><div class="staged-lane-score"></div><div class="staged-viewport"></div><div class="staged-lane-curtain"><button class="staged-unlock" type="button" data-next-stage="3">+ Add IDBD</button></div></section>',
+      '  <section class="staged-learner staged-idbd-lane" aria-label="IDBD lane"><div class="staged-lane-heading"></div><div class="staged-lane-score"></div><div class="staged-viewport"></div><div class="staged-lane-curtain"><button class="staged-unlock" type="button" data-next-stage="3" data-target-kind="lane" data-target-name="idbd">+ Add IDBD</button></div></section>',
       '</div>',
       '<section class="staged-control-dock" aria-label="Experiment controls">',
       '  <div class="staged-control-space">',
@@ -211,6 +209,8 @@
         const button = make("button", "staged-unlock", "+ " + target[2]);
         button.type = "button";
         button.dataset.nextStage = stage;
+        button.dataset.targetKind = target[0];
+        button.dataset.targetName = target[1];
         controls.querySelector('[data-slot="' + target[1] + '"]').appendChild(button);
       });
     });
@@ -252,7 +252,10 @@
     Object.keys(unlockBundles).forEach(function (stage) {
       unlockBundles[stage].forEach(function (target) {
         if (target[0] !== "view") return;
-        workbench.querySelector('.staged-view-tabs [data-view="' + target[1] + '"]').dataset.nextStage = stage;
+        const button = workbench.querySelector('.staged-view-tabs [data-view="' + target[1] + '"]');
+        button.dataset.nextStage = stage;
+        button.dataset.targetKind = target[0];
+        button.dataset.targetName = target[1];
       });
     });
     const unlockButtons = Array.from(workbench.querySelectorAll(".staged-unlock"));
@@ -261,9 +264,60 @@
     let currentView = "stream";
     let suppressProgress = false;
     const progress = {};
+    const addedTargets = new Set(["control:steps", "view:stream"]);
+    const targetStages = {};
+    const stageEntrances = {
+      2: "control:sgd-rate",
+      3: "control:idbd-rate",
+      4: "control:theta",
+      5: "control:batch",
+      6: "control:stream",
+      7: "control:momentum",
+      8: "control:decay",
+      9: "control:decay-mode"
+    };
+
+    Object.keys(unlockBundles).forEach(function (stage) {
+      unlockBundles[stage].forEach(function (target) {
+        targetStages[target[0] + ":" + target[1]] = Number(stage);
+      });
+    });
+
+    function targetKey(target) {
+      return target[0] + ":" + target[1];
+    }
+
+    function applyAddedTargets() {
+      workbench.querySelectorAll(".staged-control-slot").forEach(function (slot) {
+        slot.classList.toggle("is-unlocked", addedTargets.has("control:" + slot.dataset.slot));
+      });
+      workbench.querySelector(".staged-lock-slot").classList.toggle("is-unlocked", addedTargets.has("control:idbd-rate"));
+      workbench.querySelector(".staged-idbd-lane").classList.toggle("is-revealed", addedTargets.has("lane:idbd"));
+
+      const hasVisibleTabs = Array.from(addedTargets).some(function (key) { return key.startsWith("view:") && key !== "view:stream"; });
+      viewButtons.forEach(function (button) {
+        const added = addedTargets.has("view:" + button.dataset.view);
+        button.disabled = !added;
+        button.classList.toggle("is-unlocked", added && (button.dataset.view !== "stream" || hasVisibleTabs));
+      });
+      clone.querySelectorAll(".staged-lane-score dl").forEach(function (detailsList) {
+        detailsList.classList.toggle("is-unlocked", addedTargets.has("view:clean"));
+      });
+    }
+
+    function addTarget(target) {
+      addedTargets.add(targetKey(target));
+      applyAddedTargets();
+    }
+
+    function removeTargetsAfter(stage) {
+      Array.from(addedTargets).forEach(function (key) {
+        if (targetStages[key] > stage) addedTargets.delete(key);
+      });
+    }
 
     function setView(view, userInitiated) {
-      if (viewUnlocks[view] > currentStage) return;
+      if (!addedTargets.has("view:" + view)) return;
       currentView = view;
       viewButtons.forEach(function (button) { button.classList.toggle("is-active", button.dataset.view === view); });
       panels.forEach(function (panel) { panel.classList.toggle("is-active", panel.dataset.view === view); });
@@ -291,8 +345,27 @@
       viewButtons.forEach(function (button) { button.textContent = button.dataset.label; });
     }
 
+    function offerTarget(target) {
+      if (addedTargets.has(targetKey(target))) return;
+      if (target[0] === "control") {
+        workbench.querySelector('[data-slot="' + target[1] + '"]').classList.add("is-offering");
+      } else if (target[0] === "view") {
+        const button = workbench.querySelector('.staged-view-tabs [data-view="' + target[1] + '"]');
+        button.disabled = false;
+        button.textContent = "+ " + button.dataset.label;
+        button.classList.add("is-offering");
+      } else {
+        workbench.querySelector(".staged-lane-curtain").classList.add("is-offering");
+      }
+    }
+
     function updateOffer() {
       clearOffers();
+      Object.keys(unlockBundles).forEach(function (stage) {
+        if (Number(stage) > currentStage) return;
+        unlockBundles[stage].forEach(offerTarget);
+      });
+
       if (currentStage === stages.length) {
         navNext.textContent = (progress[currentStage] || 0) >= requiredProgress(currentStage) ? "Walkthrough complete" : gateHints[currentStage];
         return;
@@ -304,21 +377,11 @@
       }
       const nextStage = currentStage + 1;
       const targets = unlockBundles[nextStage];
-      navNext.textContent = targets.length === 1
-        ? "Ready: " + targets[0][2].toLowerCase()
-        : "Ready: " + String(targets.length) + " additions";
-      targets.forEach(function (target) {
-        if (target[0] === "control") {
-          workbench.querySelector('[data-slot="' + target[1] + '"]').classList.add("is-offering");
-        } else if (target[0] === "view") {
-          const button = workbench.querySelector('.staged-view-tabs [data-view="' + target[1] + '"]');
-          button.disabled = false;
-          button.textContent = "+ " + button.dataset.label;
-          button.classList.add("is-offering");
-        } else {
-          workbench.querySelector(".staged-lane-curtain").classList.add("is-offering");
-        }
-      });
+      const missing = targets.filter(function (target) { return !addedTargets.has(targetKey(target)); });
+      navNext.textContent = missing.length === 1
+        ? "Ready: " + missing[0][2].toLowerCase()
+        : "Ready: " + String(missing.length) + " additions";
+      missing.forEach(offerTarget);
     }
 
     function clearHiddenExtensions() {
@@ -337,6 +400,7 @@
     function setStage(stage, skipReplay, preserveView) {
       const previous = currentStage;
       currentStage = Math.max(1, Math.min(stages.length, stage));
+      if (currentStage < previous) removeTargetsAfter(currentStage);
       const details = stages[currentStage - 1];
       clearOffers();
       workbench.dataset.stage = String(currentStage);
@@ -346,21 +410,12 @@
       description.textContent = details[1];
       back.disabled = currentStage === 1;
       showAll.textContent = currentStage === stages.length ? "Start over" : "Open full lab";
-      workbench.querySelector(".staged-idbd-lane").classList.toggle("is-revealed", currentStage >= 3);
-      workbench.querySelectorAll("[data-unlock]").forEach(function (node) {
-        node.classList.toggle("is-unlocked", currentStage >= Number(node.dataset.unlock));
-      });
-      viewButtons.forEach(function (button) {
-        const available = currentStage >= viewUnlocks[button.dataset.view];
-        const visible = currentStage >= tabUnlocks[button.dataset.view];
-        button.disabled = !available;
-        button.classList.toggle("is-unlocked", visible);
-      });
-      clone.querySelectorAll(".staged-lane-score dl").forEach(function (detailsList) {
-        detailsList.classList.toggle("is-unlocked", currentStage >= 5);
-      });
+      applyAddedTargets();
       clearHiddenExtensions();
-      setView(preserveView && viewUnlocks[currentView] <= currentStage ? currentView : details[3], false);
+      const preferredView = preserveView && addedTargets.has("view:" + currentView)
+        ? currentView
+        : (addedTargets.has("view:" + details[3]) ? details[3] : "stream");
+      setView(preferredView, false);
       if (currentStage === 3 && previous < 3 && !skipReplay) actual.steps.dispatchEvent(new Event("input", { bubbles: true }));
       updateOffer();
     }
@@ -368,14 +423,24 @@
     viewButtons.forEach(function (button) {
       button.addEventListener("click", function () {
         if (button.classList.contains("is-offering")) {
-          setStage(Number(button.dataset.nextStage), false, true);
+          const target = [button.dataset.targetKind, button.dataset.targetName];
+          addTarget(target);
+          const nextStage = Number(button.dataset.nextStage);
+          if (stageEntrances[nextStage] === targetKey(target)) setStage(nextStage, false, true);
+          else updateOffer();
           return;
         }
         setView(button.dataset.view, true);
       });
     });
     unlockButtons.forEach(function (button) {
-      button.addEventListener("click", function () { setStage(Number(button.dataset.nextStage), false, true); });
+      button.addEventListener("click", function () {
+        const target = [button.dataset.targetKind, button.dataset.targetName];
+        addTarget(target);
+        const nextStage = Number(button.dataset.nextStage);
+        if (stageEntrances[nextStage] === targetKey(target)) setStage(nextStage, false, true);
+        else updateOffer();
+      });
     });
     [[actual.steps, 1], [actual.idbdRate, 3], [actual.theta, 4], [actual.batch, 5], [actual.momentum, 7], [actual.decay, 8]].forEach(function (entry) {
       entry[0].addEventListener("input", function () { if (!suppressProgress) markProgress(entry[1], 1); });
@@ -396,8 +461,14 @@
     showAll.addEventListener("click", function () {
       if (currentStage === stages.length) {
         Object.keys(progress).forEach(function (stage) { delete progress[stage]; });
+        addedTargets.clear();
+        addedTargets.add("control:steps");
+        addedTargets.add("view:stream");
         setStage(1, true);
-      } else setStage(stages.length, false, true);
+      } else {
+        Object.keys(unlockBundles).forEach(function (stage) { unlockBundles[stage].forEach(addTarget); });
+        setStage(stages.length, false, true);
+      }
     });
     new MutationObserver(syncStatus).observe(actual.status, { childList: true, subtree: true, characterData: true });
 
