@@ -46,21 +46,21 @@
     17: ["control", "decay-mode", "Add decay trace"]
   };
   const gateHints = {
-    1: "Change training steps twice",
-    2: "Try two SGD learning rates",
+    1: "Adjust training steps",
+    2: "Adjust the SGD learning rate",
     3: "Open the new Loss view",
     4: "Watch IDBD begin on the shared stream",
-    5: "Try two IDBD starting rates",
-    6: "Try two meta learning rates",
+    5: "Adjust the IDBD starting rate",
+    6: "Adjust the meta learning rate",
     7: "Open the new Clean loss view",
     8: "Open the new Rates view",
     9: "Open the new Rate history view",
     10: "Open the new h trace view",
     11: "Open the new Model view",
-    12: "Change the batch size",
+    12: "Adjust the batch size",
     13: "Generate a new noise stream",
-    14: "Turn momentum on",
-    15: "Turn weight decay on",
+    14: "Adjust momentum",
+    15: "Adjust weight decay",
     16: "Change the momentum trace",
     17: "Change the decay trace"
   };
@@ -166,20 +166,20 @@
       '</div>',
       '<section class="staged-control-dock" aria-label="Experiment controls">',
       '  <div class="staged-control-space">',
-      '    <div class="staged-control-slot" data-slot="steps" data-unlock="1"></div>',
-      '    <div class="staged-control-slot" data-slot="sgd-rate" data-unlock="2"></div>',
-      '    <div class="staged-control-slot" data-slot="idbd-rate" data-unlock="5"></div>',
-      '    <div class="staged-control-slot" data-slot="theta" data-unlock="6"></div>',
-      '    <div class="staged-control-slot" data-slot="batch" data-unlock="12"></div>',
-      '    <div class="staged-control-slot staged-stream-slot" data-slot="stream" data-unlock="13"></div>',
-      '    <div class="staged-control-slot" data-slot="momentum" data-unlock="14"></div>',
-      '    <div class="staged-control-slot" data-slot="decay" data-unlock="15"></div>',
-      '    <div class="staged-control-slot" data-slot="momentum-mode" data-unlock="16"></div>',
-      '    <div class="staged-control-slot" data-slot="decay-mode" data-unlock="17"></div>',
-      '    <div class="staged-lock-slot" data-unlock="5"></div>',
+      '    <div class="staged-control-slot" data-slot="steps" data-owner="shared" data-unlock="1"></div>',
+      '    <div class="staged-control-slot" data-slot="sgd-rate" data-owner="sgd" data-unlock="2"></div>',
+      '    <div class="staged-control-slot" data-slot="idbd-rate" data-owner="idbd" data-unlock="5"></div>',
+      '    <div class="staged-control-slot" data-slot="theta" data-owner="idbd" data-unlock="6"></div>',
+      '    <div class="staged-control-slot" data-slot="batch" data-owner="shared" data-unlock="12"></div>',
+      '    <div class="staged-control-slot staged-stream-slot" data-slot="stream" data-owner="shared" data-unlock="13"></div>',
+      '    <div class="staged-control-slot" data-slot="momentum" data-owner="shared" data-unlock="14"></div>',
+      '    <div class="staged-control-slot" data-slot="decay" data-owner="shared" data-unlock="15"></div>',
+      '    <div class="staged-control-slot" data-slot="momentum-mode" data-owner="idbd" data-unlock="16"></div>',
+      '    <div class="staged-control-slot" data-slot="decay-mode" data-owner="idbd" data-unlock="17"></div>',
+      '    <div class="staged-lock-slot" data-owner="bridge" data-unlock="5"></div>',
       '  </div>',
       '</section>',
-      '<nav class="staged-navigation" aria-label="Walkthrough stages"><button id="staged-back" type="button">Back</button><div><span id="staged-nav-stage">Stage 1 of 17</span><strong id="staged-nav-next">Change training steps twice</strong></div><button id="staged-show-all" class="staged-show-all" type="button">Open full lab</button></nav>'
+      '<nav class="staged-navigation" aria-label="Walkthrough stages"><button id="staged-back" type="button">Back</button><div><span id="staged-nav-stage">Stage 1 of 17</span><strong id="staged-nav-next">Adjust training steps (0/5)</strong></div><button id="staged-show-all" class="staged-show-all" type="button">Open full lab</button></nav>'
     ].join("");
     clone.querySelector(".experiment-heading").after(workbench);
 
@@ -303,7 +303,7 @@
     }
 
     function requiredProgress(stage) {
-      return [1, 2, 5, 6].includes(stage) ? 2 : 1;
+      return [1, 2, 5, 6, 12, 14, 15].includes(stage) ? 5 : 1;
     }
 
     function markProgress(stage, amount) {
@@ -324,7 +324,8 @@
         return;
       }
       if ((progress[currentStage] || 0) < requiredProgress(currentStage)) {
-        navNext.textContent = gateHints[currentStage];
+        const required = requiredProgress(currentStage);
+        navNext.textContent = gateHints[currentStage] + (required > 1 ? " (" + String(progress[currentStage] || 0) + "/" + String(required) + ")" : "");
         return;
       }
       const nextStage = currentStage + 1;
@@ -396,7 +397,7 @@
       });
     });
     unlockButtons.forEach(function (button) {
-      button.addEventListener("click", function () { setStage(Number(button.dataset.nextStage)); });
+      button.addEventListener("click", function () { setStage(Number(button.dataset.nextStage), false, true); });
     });
     [[actual.steps, 1], [actual.sgdRate, 2], [actual.idbdRate, 5], [actual.theta, 6], [actual.batch, 12], [actual.momentum, 14], [actual.decay, 15]].forEach(function (entry) {
       entry[0].addEventListener("change", function () { if (!suppressProgress) markProgress(entry[1], 1); });
@@ -411,7 +412,7 @@
       if (currentStage === stages.length) {
         Object.keys(progress).forEach(function (stage) { delete progress[stage]; });
         setStage(1, true);
-      } else setStage(stages.length);
+      } else setStage(stages.length, false, true);
     });
     new MutationObserver(syncStatus).observe(actual.status, { childList: true, subtree: true, characterData: true });
 
