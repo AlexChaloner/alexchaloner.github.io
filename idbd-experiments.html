@@ -4,6 +4,7 @@ title: "Learning the learning rate"
 ---
 
 <link rel="stylesheet" href="{{ '/assets/idbd-demo.css' | relative_url }}">
+<link rel="stylesheet" href="{{ '/assets/idbd-staged-demo.css' | relative_url }}">
 
 <article class="idbd-post">
   <header class="post-hero">
@@ -298,6 +299,18 @@ title: "Learning the learning rate"
       <li>Thomas Degris, Khurram Javed, Arsalan Sharifnassab, Yuxin Liu, and Richard Sutton, <a href="https://arxiv.org/abs/2401.17401">“Step-size Optimization for Continual Learning”</a> (2024).</li>
     </ul>
   </section>
+
+  <section class="staged-prototype" aria-labelledby="staged-prototype-title">
+    <header class="staged-prototype-intro">
+      <p class="section-label">Experimental walkthrough</p>
+      <h2 id="staged-prototype-title">The same experiment, revealed one idea at a time</h2>
+      <p>This disposable prototype keeps the full playground above intact. Use the controls below to step through a progressively disclosed version.</p>
+    </header>
+    <div id="staged-experiment-mount">
+      <p class="staged-loading">The staged experiment starts when it enters the viewport.</p>
+    </div>
+  </section>
 </article>
 
 <script src="{{ '/assets/idbd-demo.js' | relative_url }}"></script>
+<script src="{{ '/assets/idbd-staged-demo.js' | relative_url }}"></script>
