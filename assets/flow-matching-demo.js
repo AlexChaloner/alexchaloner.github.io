@@ -169,6 +169,20 @@
     ctx.restore();
   }
 
+  function noiseGlyph(ctx, from, vx, vy, vp, color, alpha, scale, width) {
+    const start = screen(from, vp);
+    const end = screen({ x: from.x + vx * scale, y: from.y + vy * scale }, vp);
+    if (Math.hypot(end.x - start.x, end.y - start.y) < 1) return;
+    ctx.save();
+    ctx.globalAlpha = alpha;
+    ctx.strokeStyle = color; ctx.fillStyle = color; ctx.lineWidth = width;
+    ctx.setLineDash([3, 2]);
+    ctx.beginPath(); ctx.moveTo(start.x, start.y); ctx.lineTo(end.x, end.y); ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.fillRect(end.x - 1.8, end.y - 1.8, 3.6, 3.6);
+    ctx.restore();
+  }
+
   function fieldAt(x, y, t, bandwidth) {
     const h2 = bandwidth * bandwidth;
     let sum = 0, vx = 0, vy = 0, spread = 0;
@@ -230,7 +244,8 @@
         if (f.confidence < 0.05 || mag < 0.03) continue;
         const cap = Math.min(0.33, 0.25 / Math.max(0.01, mag));
         const color = method === "diffusion" ? palette.sourceDark : palette.flowDark;
-        arrow(ctx, { x, y }, f.vx, f.vy, vp, color, 0.18 + f.confidence * 0.62, cap, 1.3);
+        if (method === "diffusion") noiseGlyph(ctx, { x, y }, f.vx, f.vy, vp, color, 0.18 + f.confidence * 0.62, cap, 1.3);
+        else arrow(ctx, { x, y }, f.vx, f.vy, vp, color, 0.18 + f.confidence * 0.62, cap, 1.3);
       }
     }
   }
@@ -260,7 +275,7 @@
     if (ui.targets.checked && t > 0.005) {
       for (let i = 0; i < state.trainingCount; i += 8) {
         const pair = state.pairs[i], p = diffusePair(pair, t);
-        arrow(ctx, p, pair.a.x, pair.a.y, vp, palette.source, state.stage === "fields" ? 0.2 : 0.55, 0.12, 1);
+        noiseGlyph(ctx, p, pair.a.x, pair.a.y, vp, palette.source, state.stage === "fields" ? 0.2 : 0.55, 0.12, 1);
       }
     }
 
@@ -382,14 +397,14 @@
     targets: {
       kicker: "Step 1 · Supervised learning targets", title: "The crucial difference is what appears after the arrow",
       description: "Diffusion predicts the exact Gaussian noise mixed into a data example. Flow matching predicts the velocity of a temporary noise–data path.",
-      diffusionHint: "Purple arrows are the exact added-noise ε targets.",
+      diffusionHint: "Purple line glyphs encode the exact added-noise ε targets—not directions of motion.",
       flowHint: "The highlighted random pair exists only to make a velocity label.",
       reading: "<strong>Same input signature, different answer:</strong> both models receive a point and a time. Diffusion is graded against added noise; flow matching is graded against motion."
     },
     fields: {
       kicker: "Step 2 · Evidence accumulates", title: "Many incompatible labels become one usable field",
       description: "Replay learning or scrub the example count. Diffusion averages noise targets into ε̂(x, τ); flow matching averages velocity targets into v̂(x, t).",
-      diffusionHint: "Purple arrows show the learned noise predictor ε̂(x, τ).",
+      diffusionHint: "Purple line glyphs show ε̂(x, τ). They are noise estimates, not a velocity field.",
       flowHint: "Green arrows show the learned velocity field v̂(x, t).",
       reading: "<strong>What has been learned:</strong> diffusion can turn ε̂ into a denoising update. Flow matching can use v̂ directly as the derivative of its sampling ODE."
     },

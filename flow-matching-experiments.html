@@ -55,13 +55,13 @@ title: "Learning to move probability"
       <section class="fm-method-lane fm-diffusion-lane" aria-labelledby="fm-diffusion-lane-title">
         <header>
           <div><p class="fm-section-label">Learner 01</p><h3 id="fm-diffusion-lane-title">Diffusion</h3></div>
-          <strong>learns noise <i>ε</i></strong>
+          <strong>learns noise <i>ε</i> · not motion</strong>
         </header>
         <p class="fm-lane-rule"><span>training path</span> data → noise <b>·</b> <span>generation</span> noise → data</p>
         <div class="fm-canvas-wrap">
           <canvas id="fm-sample-canvas" role="img" aria-label="Diffusion corruption targets, learned denoising field, and generated samples"></canvas>
           <div class="fm-time-badge"><span>corruption <i>τ</i></span><strong id="fm-diffusion-time-badge">0.55</strong></div>
-          <p class="fm-canvas-hint" id="fm-diffusion-hint">Purple arrows are the exact added-noise <i>ε</i> targets.</p>
+          <p class="fm-canvas-hint" id="fm-diffusion-hint">Purple line glyphs encode added noise <i>ε</i>; they are not motion.</p>
         </div>
         <dl class="fm-lane-readout">
           <div><dt>input</dt><dd>noisy <i>x</i><sub>τ</sub> + time <i>τ</i></dd></div>
