@@ -237,7 +237,7 @@
     const actual = {
       status: clone.querySelector("#staged-run-status"), pause: clone.querySelector("#staged-pause-training"), play: clone.querySelector("#staged-play-training"),
       steps: clone.querySelector("#staged-training-steps"), sgdRate: clone.querySelector("#staged-sgd-rate"), idbdRate: clone.querySelector("#staged-idbd-rate"),
-      theta: clone.querySelector("#staged-theta"), batch: clone.querySelector("#staged-batch-size"), newStream: clone.querySelector("#staged-new-stream"),
+      lockRates: clone.querySelector("#staged-lock-rates"), theta: clone.querySelector("#staged-theta"), batch: clone.querySelector("#staged-batch-size"), newStream: clone.querySelector("#staged-new-stream"),
       momentum: clone.querySelector("#staged-momentum"), decay: clone.querySelector("#staged-weight-decay"),
       momentumMode: clone.querySelector("#staged-momentum-mode"), decayMode: clone.querySelector("#staged-weight-decay-mode")
     };
@@ -384,8 +384,13 @@
     unlockButtons.forEach(function (button) {
       button.addEventListener("click", function () { setStage(Number(button.dataset.nextStage), false, true); });
     });
-    [[actual.steps, 1], [actual.sgdRate, 2], [actual.idbdRate, 5], [actual.theta, 6], [actual.batch, 11], [actual.momentum, 13], [actual.decay, 14]].forEach(function (entry) {
+    [[actual.steps, 1], [actual.idbdRate, 5], [actual.theta, 6], [actual.batch, 11], [actual.momentum, 13], [actual.decay, 14]].forEach(function (entry) {
       entry[0].addEventListener("input", function () { if (!suppressProgress) markProgress(entry[1], 1); });
+    });
+    actual.sgdRate.addEventListener("input", function () {
+      if (suppressProgress) return;
+      markProgress(2, 1);
+      if (actual.lockRates.checked) markProgress(5, 1);
     });
     actual.newStream.addEventListener("click", function () { markProgress(12, 1); });
     actual.momentumMode.addEventListener("change", function () { markProgress(15, 1); });
