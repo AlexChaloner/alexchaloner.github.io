@@ -18,9 +18,30 @@ title: "Learning the learning rate"
     </div>
   </header>
 
-  <section class="prose intro-copy">
+  <section class="prose intro-copy" id="what-is-idbd" aria-labelledby="what-is-idbd-title">
+    <p class="section-label">1 · Introduction</p>
+    <h2 id="what-is-idbd-title">What is IDBD?</h2>
     <p class="draft-note"><strong>Writer's note.</strong> This is placeholder copy for the eventual introduction. The interactive experiment below is functional; the surrounding argument and results are ready for your prose.</p>
     <p>Stochastic gradient descent gives every feature the same learning rate. Incremental Delta-Bar-Delta (IDBD) starts there too, then adapts a separate rate for every feature using the history of its updates.</p>
+  </section>
+
+  <section class="staged-prototype" id="interactive-play" aria-labelledby="staged-prototype-title">
+    <header class="staged-prototype-intro">
+      <p class="section-label">2 · Interactive play</p>
+      <h2 id="staged-prototype-title">Interactive play</h2>
+      <p>Start with SGD on a stream, then reveal IDBD and its diagnostics one idea at a time. The complete playgrounds remain later in the post for unrestricted exploration.</p>
+    </header>
+    <div id="staged-experiment-mount">
+      <p class="staged-loading">The staged experiment starts when it enters the viewport.</p>
+    </div>
+  </section>
+
+  <section class="prose chapter-intro" id="noise-resistance" aria-labelledby="noise-resistance-title">
+    <p class="section-label">3 · Experiment</p>
+    <h2 id="noise-resistance-title">Noise Resistance of IDBD</h2>
+    <div class="copy-placeholder">
+      <p>Space for the argument that feature-specific learning rates help IDBD retain a recurring signal while suppressing irrelevant features.</p>
+    </div>
   </section>
 
   <section class="experiment" id="idbd-playground" aria-labelledby="playground-title">
@@ -271,12 +292,21 @@ title: "Learning the learning rate"
     </aside>
   </section>
 
-  <section class="prose extension-intro" aria-labelledby="extension-intro-title">
-    <p class="section-label">Optimizer extensions</p>
-    <h2 id="extension-intro-title">Giving both learners a modern optimizer ladder</h2>
+  <section class="prose extension-intro" id="extending-idbd" aria-labelledby="extension-intro-title">
+    <p class="section-label">4 · Optimizer extensions</p>
+    <h2 id="extension-intro-title">Extending IDBD</h2>
+    <p><strong>Giving both learners a modern optimizer ladder.</strong></p>
     <p>The second playground repeats the same experiment, then gives both SGD and IDBD the momentum and weight-decay mechanisms from our optimizer modification experiments. IDBD also exposes the choices needed to carry its meta-gradient trace through those updates. With both shared additions switched off, it is an exact duplicate of the first.</p>
   </section>
   <div id="extended-experiment-mount"></div>
+
+  <section class="prose chapter-intro" id="studies-on-idbd" aria-labelledby="studies-on-idbd-title">
+    <p class="section-label">5 · Evidence</p>
+    <h2 id="studies-on-idbd-title">Studies on IDBD</h2>
+    <div class="copy-placeholder">
+      <p>Space for the literature, larger experiments, and evidence about where IDBD succeeds or fails.</p>
+    </div>
+  </section>
 
   <section class="prose writing-slot">
     <p class="section-label">The mechanism</p>
@@ -300,14 +330,11 @@ title: "Learning the learning rate"
     </ul>
   </section>
 
-  <section class="staged-prototype" aria-labelledby="staged-prototype-title">
-    <header class="staged-prototype-intro">
-      <p class="section-label">Experimental walkthrough</p>
-      <h2 id="staged-prototype-title">The same experiment, revealed one idea at a time</h2>
-      <p>This disposable prototype keeps the full playground above intact. Use the controls below to step through a progressively disclosed version.</p>
-    </header>
-    <div id="staged-experiment-mount">
-      <p class="staged-loading">The staged experiment starts when it enters the viewport.</p>
+  <section class="prose chapter-intro" id="oak-lab-interest" aria-labelledby="oak-lab-interest-title">
+    <p class="section-label">6 · Motivation</p>
+    <h2 id="oak-lab-interest-title">Why is Oak Lab interested in IDBD?</h2>
+    <div class="copy-placeholder">
+      <p>Space for the connection between IDBD, learning from experience, continual adaptation, and Oak Lab's research agenda.</p>
     </div>
   </section>
 </article>
