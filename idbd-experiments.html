@@ -23,6 +23,39 @@ title: "Learning the learning rate"
     <h2 id="what-is-idbd-title">What is IDBD?</h2>
     <p class="draft-note"><strong>Writer's note.</strong> This is placeholder copy for the eventual introduction. The interactive experiment below is functional; the surrounding argument and results are ready for your prose.</p>
     <p>Stochastic gradient descent gives every feature the same learning rate. Incremental Delta-Bar-Delta (IDBD) starts there too, then adapts a separate rate for every feature using the history of its updates.</p>
+
+    <div class="algorithm-comparison" aria-label="SGD and IDBD algorithm comparison">
+      <article class="algorithm-card algorithm-sgd">
+        <header>
+          <p class="algorithm-number">01</p>
+          <h3>SGD</h3>
+          <p>One global learning rate, <span class="math">α</span>.</p>
+        </header>
+        <ol class="algorithm-steps">
+          <li><code>ŷ ← wᵀx</code></li>
+          <li><code>δ ← y − ŷ</code></li>
+          <li><code>w<sub>i</sub> ← w<sub>i</sub> + α δ x<sub>i</sub></code></li>
+        </ol>
+      </article>
+
+      <article class="algorithm-card algorithm-idbd">
+        <header>
+          <p class="algorithm-number">02</p>
+          <h3>IDBD</h3>
+          <p>SGD plus a learning rate for every feature.</p>
+        </header>
+        <ol class="algorithm-steps">
+          <li><code>ŷ ← wᵀx</code></li>
+          <li><code>δ ← y − ŷ</code></li>
+          <li class="algorithm-added algorithm-rate"><code>β<sub>i</sub> ← β<sub>i</sub> + <span class="token-theta">θ</span> δ x<sub>i</sub> <span class="token-trace">h<sub>i</sub></span></code></li>
+          <li class="algorithm-added algorithm-rate"><code>α<sub>i</sub> ← exp(β<sub>i</sub>)</code></li>
+          <li><code>w<sub>i</sub> ← w<sub>i</sub> + α<sub>i</sub> δ x<sub>i</sub></code></li>
+          <li class="algorithm-added algorithm-trace"><code><span class="token-trace">h<sub>i</sub></span> ← <span class="token-trace">h<sub>i</sub></span> [1 − α<sub>i</sub>x<sub>i</sub><sup>2</sup>]<sub>+</sub> + α<sub>i</sub>δx<sub>i</sub></code></li>
+        </ol>
+      </article>
+    </div>
+
+    <p class="algorithm-colour-key"><span class="key-rate">Per-feature rate</span><span class="key-theta">Meta learning rate θ</span><span class="key-trace">Sensitivity trace h</span></p>
   </section>
 
   <section class="staged-prototype" id="interactive-play" aria-labelledby="staged-prototype-title">

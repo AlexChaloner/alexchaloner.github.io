@@ -28,6 +28,7 @@
     sgdFill: "rgba(73, 73, 73, 0.12)",
     idbd: "#1b5eaa",
     idbdFill: "rgba(27, 94, 170, 0.11)",
+    trace: "#71409a",
     signal: "#287a45",
     noise: "#999999",
     alert: "#b42318"
@@ -919,7 +920,7 @@
   }
 
   function drawIdbdTrace(canvasId, trace) {
-    drawSignedParameterValues(canvasId, trace, COLORS.idbd, {
+    drawSignedParameterValues(canvasId, trace, COLORS.trace, {
       extent: TRACE_EXTENT,
       minimumTickExponent: -3,
       linearThreshold: 0.0001
