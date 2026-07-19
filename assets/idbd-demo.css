@@ -456,6 +456,49 @@
   border: 1px solid #aaa;
 }
 
+.idbd-diagnostics {
+  margin-top: 1rem;
+  border: 1px solid #aaa;
+}
+
+.diagnostics-heading {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(280px, 0.8fr);
+  align-items: end;
+  gap: 2rem;
+  padding: 0.75rem;
+  border-bottom: 1px solid #ccc;
+  background: #f5f5f5;
+}
+
+.diagnostics-heading h3 {
+  margin: 0.15rem 0 0;
+}
+
+.diagnostics-heading > p {
+  margin: 0;
+  color: #555;
+  font-size: 0.8rem;
+  line-height: 1.4;
+}
+
+.diagnostic-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.diagnostic-grid > * + * {
+  border-left: 1px solid #ccc;
+}
+
+.diagnostic-grid .chart-block {
+  border-bottom: 0;
+}
+
+.diagnostic-grid canvas {
+  height: 190px;
+}
+
 .method-heading {
   display: flex;
   align-items: center;
@@ -637,6 +680,11 @@
     grid-template-columns: 1fr;
   }
 
+  .diagnostics-heading {
+    grid-template-columns: 1fr;
+    gap: 0.35rem;
+  }
+
   .learning-controls {
     grid-template-columns: 1fr;
   }
@@ -706,8 +754,14 @@
   .chart-block figcaption,
   .stream-preview-heading,
   .stream-preview-grid,
-  .experiment-note {
+  .experiment-note,
+  .diagnostic-grid {
     display: block;
+  }
+
+  .diagnostic-grid > * + * {
+    border-top: 1px solid #ccc;
+    border-left: 0;
   }
 
   .stream-preview-heading > p {

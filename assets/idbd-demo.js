@@ -11,6 +11,7 @@
   const SIGNAL_LOSS_BOUNDS = Object.freeze({ minimum: 0.00001, maximum: 100 });
   const LEARNING_RATE_BOUNDS = Object.freeze({ minimum: 0.00001, maximum: 10 });
   const MODEL_WEIGHT_EXTENT = 2;
+  const TRACE_EXTENT = 2;
   const PREVIEW_LENGTH = 500;
   const LOG_ONE_MINUS_FEATURE_PROBABILITY = Math.log(1 - FEATURE_PROBABILITY);
   const STEP_OPTIONS = [
@@ -131,8 +132,9 @@
     return Math.min(maximum, Math.max(minimum, value));
   }
 
-  function symmetricLog(value) {
-    return Math.sign(value) * Math.log10(1 + Math.abs(value) / WEIGHT_LINEAR_THRESHOLD);
+  function symmetricLog(value, linearThreshold) {
+    const threshold = linearThreshold || WEIGHT_LINEAR_THRESHOLD;
+    return Math.sign(value) * Math.log10(1 + Math.abs(value) / threshold);
   }
 
   function noiselessSignalMse(weights) {
@@ -215,7 +217,9 @@
         sgdLoss: [null],
         idbdLoss: [null],
         sgdSignalLoss: [FEATURE_PROBABILITY],
-        idbdSignalLoss: [FEATURE_PROBABILITY]
+        idbdSignalLoss: [FEATURE_PROBABILITY],
+        idbdSignalRate: [idbdInitialRate],
+        idbdMedianNoiseRate: [idbdInitialRate]
       },
       sgdLossEma: null,
       idbdLossEma: null,
@@ -331,6 +335,9 @@
       state.curves.idbdLoss.push(state.idbdLossEma);
       state.curves.sgdSignalLoss.push(noiselessSignalMse(state.sgdWeights));
       state.curves.idbdSignalLoss.push(noiselessSignalMse(state.idbdWeights));
+      const rateSummary = idbdRateSummary(state.beta);
+      state.curves.idbdSignalRate.push(rateSummary.signal);
+      state.curves.idbdMedianNoiseRate.push(rateSummary.medianNoise);
     }
     state.batchIndex += 1;
   }
@@ -607,6 +614,111 @@
     }
   }
 
+  function drawLogSeriesChart(canvasId, steps, series, bounds, exampleCount) {
+    const canvas = byId(canvasId);
+    const surface = setupCanvas(canvas);
+    const context = surface.context;
+    const width = surface.width;
+    const height = surface.height;
+    const margins = { top: 10, right: 10, bottom: 27, left: 42 };
+    const plotWidth = width - margins.left - margins.right;
+    const plotHeight = height - margins.top - margins.bottom;
+    const minimum = bounds.minimum;
+    const maximum = bounds.maximum;
+    const logMinimum = Math.log10(minimum);
+    const logMaximum = Math.log10(maximum);
+    const logRange = logMaximum - logMinimum;
+    let observedMaximum = -Infinity;
+    let observedMinimum = Infinity;
+    let unstable = false;
+
+    function valueY(value) {
+      const logValue = Math.log10(clamp(value, minimum, maximum));
+      return margins.top + (1 - (logValue - logMinimum) / logRange) * plotHeight;
+    }
+
+    context.fillStyle = "#fcfcfc";
+    context.fillRect(margins.left, margins.top, plotWidth, plotHeight);
+    context.font = "11px serif";
+    context.lineWidth = 1;
+    context.textBaseline = "middle";
+    for (let exponent = Math.ceil(logMinimum); exponent <= Math.floor(logMaximum); exponent += 1) {
+      const value = Math.pow(10, exponent);
+      const y = valueY(value);
+      context.strokeStyle = COLORS.grid;
+      context.beginPath();
+      context.moveTo(margins.left, y);
+      context.lineTo(width - margins.right, y);
+      context.stroke();
+      context.fillStyle = COLORS.muted;
+      context.textAlign = "right";
+      const label = exponent === 0 ? "1" : exponent > 0 ? "10" : "1e−" + String(Math.abs(exponent));
+      context.fillText(label, margins.left - 7, y);
+    }
+
+    context.strokeStyle = "#aaa";
+    context.beginPath();
+    context.moveTo(margins.left, margins.top);
+    context.lineTo(margins.left, margins.top + plotHeight);
+    context.lineTo(width - margins.right, margins.top + plotHeight);
+    context.stroke();
+
+    context.fillStyle = COLORS.muted;
+    context.textBaseline = "alphabetic";
+    context.textAlign = "left";
+    context.fillText("0", margins.left, height - 5);
+    context.textAlign = "right";
+    context.fillText(formatInteger(exampleCount) + " examples", width - margins.right, height - 5);
+
+    context.save();
+    context.beginPath();
+    context.rect(margins.left, margins.top, plotWidth, plotHeight);
+    context.clip();
+    series.forEach(function (item) {
+      context.beginPath();
+      let drawing = false;
+      let lastPoint = null;
+      for (let index = 0; index < item.values.length; index += 1) {
+        const value = item.values[index];
+        if (!Number.isFinite(value) || value <= 0) {
+          if (value !== null) unstable = true;
+          drawing = false;
+          continue;
+        }
+        observedMaximum = Math.max(observedMaximum, value);
+        observedMinimum = Math.min(observedMinimum, value);
+        const point = {
+          x: margins.left + steps[index] / exampleCount * plotWidth,
+          y: valueY(value)
+        };
+        if (drawing) context.lineTo(point.x, point.y);
+        else context.moveTo(point.x, point.y);
+        drawing = true;
+        lastPoint = point;
+      }
+      context.strokeStyle = item.color;
+      context.lineWidth = item.width || 2;
+      context.lineJoin = "round";
+      context.setLineDash(item.dash || []);
+      context.stroke();
+      if (lastPoint) {
+        context.setLineDash([]);
+        context.beginPath();
+        context.arc(lastPoint.x, lastPoint.y, 3, 0, Math.PI * 2);
+        context.fillStyle = item.color;
+        context.fill();
+      }
+    });
+    context.restore();
+
+    if (unstable || observedMaximum > maximum) {
+      drawEdgeWarning(context, width - margins.right, margins.top + 10, "↑ max " + formatScore(unstable ? Infinity : observedMaximum) + " (limit " + String(maximum) + ")");
+    }
+    if (observedMinimum < minimum) {
+      drawEdgeWarning(context, width - margins.right, margins.top + plotHeight - 10, "↓ min " + formatScore(observedMinimum) + " (limit " + String(minimum) + ")");
+    }
+  }
+
   function drawLearningRates(canvasId, color, rateAt) {
     const canvas = byId(canvasId);
     const surface = setupCanvas(canvas);
@@ -692,7 +804,7 @@
     }
   }
 
-  function drawWeights(canvasId, weights, color) {
+  function drawSignedParameterValues(canvasId, values, color, options) {
     const canvas = byId(canvasId);
     const surface = setupCanvas(canvas);
     const context = surface.context;
@@ -701,8 +813,9 @@
     const margins = { top: 11, right: 9, bottom: 34, left: 42 };
     const plotWidth = width - margins.left - margins.right;
     const plotHeight = height - margins.top - margins.bottom;
-    const extent = MODEL_WEIGHT_EXTENT;
-    const transformedExtent = symmetricLog(extent);
+    const extent = options.extent;
+    const linearThreshold = options.linearThreshold || WEIGHT_LINEAR_THRESHOLD;
+    const transformedExtent = symmetricLog(extent, linearThreshold);
     const zeroY = margins.top + plotHeight / 2;
     const barStep = plotWidth / FEATURE_COUNT;
     let aboveScale = false;
@@ -710,14 +823,14 @@
     let observedMaximum = -Infinity;
     let observedMinimum = Infinity;
 
-    function weightY(value) {
-      return zeroY - symmetricLog(clamp(value, -extent, extent)) /
+    function valueY(value) {
+      return zeroY - symmetricLog(clamp(value, -extent, extent), linearThreshold) /
         transformedExtent * (plotHeight / 2);
     }
 
     const ticks = [0];
     const largestExponent = Math.ceil(Math.log10(extent));
-    for (let exponent = -2; exponent <= largestExponent; exponent += 1) {
+    for (let exponent = options.minimumTickExponent; exponent <= largestExponent; exponent += 1) {
       const magnitude = Math.pow(10, exponent);
       if (magnitude <= extent * 1.000001) {
         ticks.push(-magnitude, magnitude);
@@ -727,7 +840,7 @@
 
     context.font = "11px serif";
     ticks.forEach(function (tick) {
-      const y = weightY(tick);
+      const y = valueY(tick);
       context.strokeStyle = tick === 0 ? COLORS.noise : COLORS.grid;
       context.beginPath();
       context.moveTo(margins.left, y);
@@ -736,12 +849,16 @@
       context.fillStyle = COLORS.muted;
       context.textAlign = "right";
       context.textBaseline = "middle";
-      const label = tick < 0 ? "−" + String(Math.abs(tick)) : String(tick);
+      const magnitude = Math.abs(tick);
+      const magnitudeLabel = magnitude !== 0 && magnitude < 0.001
+        ? magnitude.toExponential(0).replace("e-", "e−")
+        : String(magnitude);
+      const label = tick < 0 ? "−" + magnitudeLabel : magnitudeLabel;
       context.fillText(label, margins.left - 7, y);
     });
 
-    if (extent >= 1) {
-      const referenceY = weightY(1);
+    if (options.referenceValue !== undefined) {
+      const referenceY = valueY(options.referenceValue);
       context.save();
       context.setLineDash([4, 3]);
       context.strokeStyle = COLORS.signal;
@@ -753,24 +870,24 @@
       context.restore();
       context.fillStyle = COLORS.signal;
       context.textAlign = "right";
-      context.fillText("target = 1", width - margins.right, referenceY - 8);
+      context.fillText(options.referenceLabel, width - margins.right, referenceY - 8);
     }
 
-    for (let index = 0; index < weights.length; index += 1) {
-      if (!Number.isFinite(weights[index])) {
+    for (let index = 0; index < values.length; index += 1) {
+      if (!Number.isFinite(values[index])) {
         aboveScale = true;
         observedMaximum = Infinity;
       } else {
-        observedMaximum = Math.max(observedMaximum, weights[index]);
-        observedMinimum = Math.min(observedMinimum, weights[index]);
-        if (weights[index] > extent) aboveScale = true;
-        if (weights[index] < -extent) belowScale = true;
+        observedMaximum = Math.max(observedMaximum, values[index]);
+        observedMinimum = Math.min(observedMinimum, values[index]);
+        if (values[index] > extent) aboveScale = true;
+        if (values[index] < -extent) belowScale = true;
       }
-      const value = clamp(weights[index], -extent, extent);
-      const valueY = weightY(value);
-      const valueHeight = Math.abs(valueY - zeroY);
+      const value = clamp(values[index], -extent, extent);
+      const yValue = valueY(value);
+      const valueHeight = Math.abs(yValue - zeroY);
       const x = margins.left + index * barStep + Math.max(0.5, barStep * 0.12);
-      const y = Math.min(valueY, zeroY);
+      const y = Math.min(yValue, zeroY);
       context.fillStyle = index === 0 ? COLORS.signal : color;
       context.globalAlpha = index === 0 ? 1 : 0.62;
       context.fillRect(x, y, Math.max(1, barStep * 0.72), valueHeight);
@@ -790,6 +907,23 @@
     if (belowScale) {
       drawEdgeWarning(context, width - margins.right, margins.top + plotHeight - 10, "↓ min −" + formatScore(Math.abs(observedMinimum)) + " (limit −" + String(extent) + ")");
     }
+  }
+
+  function drawWeights(canvasId, weights, color) {
+    drawSignedParameterValues(canvasId, weights, color, {
+      extent: MODEL_WEIGHT_EXTENT,
+      minimumTickExponent: -2,
+      referenceValue: 1,
+      referenceLabel: "target = 1"
+    });
+  }
+
+  function drawIdbdTrace(canvasId, trace) {
+    drawSignedParameterValues(canvasId, trace, COLORS.idbd, {
+      extent: TRACE_EXTENT,
+      minimumTickExponent: -3,
+      linearThreshold: 0.0001
+    });
   }
 
   function updateBatchNote(batchSize) {
@@ -841,12 +975,20 @@
     byId("example-count-label").textContent = formatInteger(values.exampleCount) + " examples";
   }
 
-  function idbdRateRatio(beta) {
+  function idbdRateSummary(beta) {
     const rates = Array.from(beta, Math.exp);
     const irrelevant = rates.slice(1).sort(function (first, second) {
       return first - second;
     });
-    return rates[0] / Math.max(irrelevant[Math.floor(irrelevant.length / 2)], 1e-12);
+    return {
+      signal: rates[0],
+      medianNoise: irrelevant[Math.floor(irrelevant.length / 2)]
+    };
+  }
+
+  function idbdRateRatio(beta) {
+    const summary = idbdRateSummary(beta);
+    return summary.signal / Math.max(summary.medianNoise, 1e-12);
   }
 
   function drawTrainingState(state) {
@@ -877,6 +1019,11 @@
     drawLineChart("idbd-loss-chart", state.curves.steps, state.curves.idbdLoss, COLORS.idbd, COLORS.idbdFill, PREDICTION_LOSS_BOUNDS, state.exampleCount);
     drawLineChart("sgd-signal-loss-chart", state.curves.steps, state.curves.sgdSignalLoss, COLORS.sgd, COLORS.sgdFill, SIGNAL_LOSS_BOUNDS, state.exampleCount);
     drawLineChart("idbd-signal-loss-chart", state.curves.steps, state.curves.idbdSignalLoss, COLORS.idbd, COLORS.idbdFill, SIGNAL_LOSS_BOUNDS, state.exampleCount);
+    drawLogSeriesChart("idbd-rate-history-chart", state.curves.steps, [
+      { values: state.curves.idbdSignalRate, color: COLORS.signal, width: 2.4 },
+      { values: state.curves.idbdMedianNoiseRate, color: COLORS.noise, width: 2, dash: [5, 3] }
+    ], LEARNING_RATE_BOUNDS, state.exampleCount);
+    drawIdbdTrace("idbd-trace-chart", state.trace);
     drawLearningRates("sgd-rates-chart", COLORS.sgd, function () { return state.sgdRate; });
     drawLearningRates("idbd-rates-chart", COLORS.idbd, function (index) { return Math.exp(state.beta[index]); });
     drawWeights("sgd-weights-chart", state.sgdWeights, COLORS.sgd);

@@ -154,6 +154,26 @@ title: "Learning the learning rate"
       </section>
     </div>
 
+    <section class="idbd-diagnostics" aria-labelledby="idbd-diagnostics-title">
+      <div class="diagnostics-heading">
+        <div>
+          <p class="section-label">Inside IDBD</p>
+          <h3 id="idbd-diagnostics-title">How the learning rates separate</h3>
+        </div>
+        <p>The rate history shows what IDBD learns; the sensitivity trace shows the signal that lets it learn.</p>
+      </div>
+      <div class="diagnostic-grid">
+        <figure class="chart-block rate-history-chart">
+          <figcaption><span>Signal rate vs median noise rate</span><small>green signal · dashed noise · fixed 10⁻⁵–10 log scale</small></figcaption>
+          <canvas id="idbd-rate-history-chart" role="img" aria-label="IDBD predictive-feature learning rate and median irrelevant-feature learning rate over training examples on a fixed logarithmic scale from 0.00001 to 10"></canvas>
+        </figure>
+        <figure class="chart-block trace-parameter-chart">
+          <figcaption><span>Sensitivity trace <span class="math">h = ∂w/∂β</span></span><small>current value per parameter · fixed −2–2 signed log scale</small></figcaption>
+          <canvas id="idbd-trace-chart" role="img" aria-label="IDBD sensitivity trace h for each parameter on a fixed signed logarithmic scale from minus 2 to 2"></canvas>
+        </figure>
+      </div>
+    </section>
+
     <section class="learning-controls" aria-label="Learning-rate controls">
       <div class="method-controls sgd-method-controls" aria-label="SGD controls">
         <p class="control-group-title">SGD control</p>
@@ -245,7 +265,7 @@ title: "Learning the learning rate"
     </fieldset>
 
     <aside class="experiment-note">
-      <p><strong>Reading the experiment.</strong> The learning-rate and model panels use the same feature order, with the predictive feature first in green. In the model panel, that green coefficient should approach the reference line at 1 while every other coefficient stays near zero. Prediction MSE is measured before each update against the noisy target; the curve is an exponential moving average over minibatches. Axes stay fixed between runs; red edge labels flag values outside their range.</p>
+      <p><strong>Reading the experiment.</strong> The rate-history panel follows the predictive feature against the median of the 63 irrelevant features. The learning-rate, trace, and model panels use the same feature order, with the predictive feature first in green. In the model panel, that green coefficient should approach the reference line at 1 while every other coefficient stays near zero. Prediction MSE is measured before each update against the noisy target; the curve is an exponential moving average over minibatches. Axes stay fixed between runs; red edge labels flag values outside their range.</p>
       <p id="batch-note"><strong>At batch size 1</strong>, this is classic online IDBD. Larger batches use a mean-gradient diagonal approximation and are best read as an exploration, not the original 1992 rule.</p>
     </aside>
   </section>
