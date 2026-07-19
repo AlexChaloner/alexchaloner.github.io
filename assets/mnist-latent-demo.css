@@ -1,0 +1,340 @@
+.mnist-lab,
+.mnist-lab * {
+  box-sizing: border-box;
+}
+
+.mnist-lab {
+  --mnist-ink: #17211d;
+  --mnist-muted: #5f6d66;
+  --mnist-line: #b9c5be;
+  --mnist-paper: #fbfcf8;
+  --mnist-soft: #edf2ed;
+  --mnist-diffusion: #7857b2;
+  --mnist-flow: #167d69;
+  width: min(1120px, calc(100vw - 2rem));
+  margin: 5rem 0 2rem;
+  border-top: 3px double var(--mnist-ink);
+  border-bottom: 1px solid var(--mnist-line);
+  color: var(--mnist-ink);
+}
+
+.mnist-lab-header {
+  display: grid;
+  grid-template-columns: minmax(0, 1.1fr) minmax(280px, 0.9fr);
+  align-items: end;
+  gap: 2rem;
+  padding: 1.35rem 0;
+}
+
+.mnist-lab-header h2 {
+  margin: 0.25rem 0 0;
+  font-size: clamp(1.55rem, 3vw, 2.2rem);
+  line-height: 1.1;
+}
+
+.mnist-lab-header > p {
+  margin: 0;
+  color: var(--mnist-muted);
+  line-height: 1.45;
+}
+
+.mnist-scope {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 0.8rem;
+  padding: 0.75rem 0.9rem;
+  border: 1px solid var(--mnist-line);
+  background: var(--mnist-soft);
+  font-size: 0.78rem;
+  line-height: 1.4;
+}
+
+.mnist-scope span {
+  color: #435048;
+}
+
+.mnist-training-bar {
+  display: grid;
+  grid-template-columns: minmax(190px, auto) minmax(180px, 1fr) auto;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.8rem;
+  border-right: 1px solid var(--mnist-line);
+  border-left: 1px solid var(--mnist-line);
+  background: var(--mnist-paper);
+}
+
+.mnist-training-bar > div:first-child span,
+.mnist-training-bar > div:first-child strong {
+  display: block;
+}
+
+.mnist-training-bar > div:first-child span {
+  color: var(--mnist-muted);
+  font-size: 0.66rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.mnist-training-bar > div:first-child strong {
+  margin-top: 0.15rem;
+  font: 0.8rem monospace;
+}
+
+.mnist-training-bar progress {
+  width: 100%;
+  accent-color: var(--mnist-flow);
+}
+
+.mnist-transport {
+  display: flex;
+  gap: 0.4rem;
+}
+
+.mnist-lab button,
+.mnist-lab select,
+.mnist-lab input {
+  font: inherit;
+}
+
+.mnist-lab button {
+  padding: 0.5rem 0.65rem;
+  border: 1px solid var(--mnist-line);
+  color: var(--mnist-ink);
+  background: var(--mnist-paper);
+  cursor: pointer;
+}
+
+.mnist-lab button:hover:not(:disabled) {
+  background: var(--mnist-soft);
+}
+
+.mnist-lab button:disabled {
+  cursor: default;
+  opacity: 0.42;
+}
+
+.mnist-lab .mnist-primary {
+  border-color: #095c4d;
+  color: #fff;
+  background: #095c4d;
+}
+
+.mnist-lab .mnist-primary:hover:not(:disabled) {
+  background: var(--mnist-flow);
+}
+
+.mnist-lanes {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  border: 1px solid var(--mnist-line);
+}
+
+.mnist-lane {
+  display: grid;
+  grid-template-rows: auto auto auto auto 1fr;
+  min-width: 0;
+}
+
+.mnist-lane + .mnist-lane {
+  border-left: 1px solid var(--mnist-line);
+}
+
+.mnist-lane > header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.75rem 0.85rem;
+  background: var(--mnist-paper);
+}
+
+.mnist-lane > header h3 {
+  margin: 0.12rem 0 0;
+  font-size: 1.25rem;
+}
+
+.mnist-lane > header > span {
+  padding: 0.35rem 0.5rem;
+  border: 1px solid currentColor;
+  font-size: 0.72rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.mnist-diffusion-lane > header > span { color: var(--mnist-diffusion); background: #f5f0fc; }
+.mnist-flow-lane > header > span { color: var(--mnist-flow); background: #edf8f5; }
+
+.mnist-score {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.55rem 0.85rem;
+  border-top: 1px solid var(--mnist-line);
+  border-bottom: 1px solid var(--mnist-line);
+  background: #f7f9f5;
+}
+
+.mnist-score span {
+  color: var(--mnist-muted);
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.mnist-score strong {
+  font: 0.85rem monospace;
+}
+
+.mnist-samples,
+.mnist-loss-figure {
+  margin: 0;
+  padding: 0.7rem;
+}
+
+.mnist-samples figcaption,
+.mnist-loss-figure figcaption {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-bottom: 0.4rem;
+  font-size: 0.76rem;
+}
+
+.mnist-samples figcaption small,
+.mnist-loss-figure figcaption small {
+  color: var(--mnist-muted);
+}
+
+.mnist-samples canvas,
+.mnist-loss-figure canvas {
+  display: block;
+  width: 100%;
+  background: #0d1210;
+}
+
+.mnist-samples canvas {
+  aspect-ratio: 4 / 3;
+  image-rendering: pixelated;
+}
+
+.mnist-loss-figure {
+  border-top: 1px solid var(--mnist-line);
+}
+
+.mnist-loss-figure canvas {
+  height: 92px;
+  background: #f7f9f5;
+}
+
+.mnist-lane-note {
+  margin: 0;
+  padding: 0.75rem 0.85rem;
+  border-top: 1px solid var(--mnist-line);
+  color: var(--mnist-muted);
+  background: var(--mnist-paper);
+  font-size: 0.75rem;
+  line-height: 1.45;
+}
+
+.mnist-controls {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  border-right: 1px solid var(--mnist-line);
+  border-left: 1px solid var(--mnist-line);
+  background: var(--mnist-paper);
+}
+
+.mnist-control,
+.mnist-seed-control {
+  min-width: 0;
+  padding: 0.85rem;
+  border-right: 1px solid var(--mnist-line);
+  border-bottom: 1px solid var(--mnist-line);
+}
+
+.mnist-controls > *:nth-child(3n) {
+  border-right: 0;
+}
+
+.mnist-control > div:first-child {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.mnist-control label,
+.mnist-seed-control > label {
+  display: block;
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.mnist-control output {
+  font: 0.75rem monospace;
+}
+
+.mnist-control input[type="range"] {
+  width: 100%;
+  margin: 0.7rem 0 0;
+  accent-color: var(--mnist-flow);
+}
+
+.mnist-control select {
+  width: 100%;
+  margin-top: 0.6rem;
+  padding: 0.45rem;
+  border: 1px solid var(--mnist-line);
+  background: #fff;
+}
+
+.mnist-control p,
+.mnist-seed-control p {
+  margin: 0.5rem 0 0;
+  color: var(--mnist-muted);
+  font-size: 0.72rem;
+  line-height: 1.4;
+}
+
+.mnist-seed-control > div {
+  display: flex;
+  gap: 0.35rem;
+  margin-top: 0.55rem;
+}
+
+.mnist-seed-control input {
+  min-width: 0;
+  width: 100%;
+  padding: 0.45rem;
+  border: 1px solid var(--mnist-line);
+  font: 0.75rem monospace;
+}
+
+.mnist-seed-control button {
+  white-space: nowrap;
+}
+
+#mnist-status {
+  font-family: monospace;
+}
+
+@media (max-width: 800px) {
+  .mnist-lab-header { grid-template-columns: 1fr; gap: 0.4rem; }
+  .mnist-training-bar { grid-template-columns: 1fr; }
+  .mnist-lanes { grid-template-columns: 1fr; }
+  .mnist-lane + .mnist-lane { border-top: 1px solid var(--mnist-line); border-left: 0; }
+  .mnist-controls { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .mnist-controls > *:nth-child(3n) { border-right: 1px solid var(--mnist-line); }
+  .mnist-controls > *:nth-child(2n) { border-right: 0; }
+}
+
+@media (max-width: 520px) {
+  .mnist-scope { grid-template-columns: 1fr; gap: 0.25rem; }
+  .mnist-transport { display: grid; grid-template-columns: 1fr; }
+  .mnist-controls { grid-template-columns: 1fr; }
+  .mnist-controls > * { border-right: 0 !important; }
+}
