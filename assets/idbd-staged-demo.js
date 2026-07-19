@@ -7,36 +7,23 @@
   if (!api || !mount || !source) return;
 
   const stages = [
-    {
-      title: "Watch SGD learn",
-      description: "One learner follows a recurring signal through a noisy stream. For now, its learning rate and horizon are fixed.",
-      next: "Control the learner"
-    },
-    {
-      title: "Control SGD",
-      description: "Change how quickly SGD updates and how much experience it receives. Every change restarts the same deterministic stream.",
-      next: "Introduce IDBD"
-    },
-    {
-      title: "Meet IDBD",
-      description: "The same stream now trains two learners. SGD keeps one rate; IDBD adapts a separate rate for every feature.",
-      next: "Look inside IDBD"
-    },
-    {
-      title: "Look inside IDBD",
-      description: "The rates, sensitivity trace, and coefficients reveal how IDBD decides what to retain and what to ignore.",
-      next: "Extend the optimizers"
-    },
-    {
-      title: "Extend the optimizer",
-      description: "Momentum and weight decay now apply to both learners, while IDBD exposes how its meta-gradient trace follows them.",
-      next: "Start over"
-    }
+    ["Watch SGD learn", "One learner follows a recurring signal through noise.", "Set its learning rate", "stream"],
+    ["Set the learning rate", "Choose how far SGD moves after each gradient estimate.", "Choose the horizon", "stream"],
+    ["Choose the horizon", "Decide how much experience SGD receives, then watch its loss over time.", "Add IDBD", "loss"],
+    ["Add IDBD", "A second learner enters the same fixed spatial lane and replays the identical stream.", "Set IDBD’s initial rate", "stream"],
+    ["Set a fair starting point", "Give IDBD an initial rate, or lock both learners to the same starting value.", "Enable adaptation", "stream"],
+    ["Enable adaptation", "Theta controls how quickly IDBD changes each feature’s learning rate.", "Judge the clean signal", "loss"],
+    ["Judge the clean signal", "Remove observation noise from the score and compare what each learner retained.", "Inspect every rate", "clean"],
+    ["Inspect every rate", "The predictive feature is green; the 63 irrelevant features occupy the same positions in both lanes.", "Watch the rates separate", "rates"],
+    ["Watch the rates separate", "Compare the predictive-feature rate with the typical irrelevant-feature rate over time.", "Inspect the trace", "history"],
+    ["Inspect the sensitivity trace", "IDBD’s signed h trace is the information SGD does not maintain.", "Inspect the model", "trace"],
+    ["Inspect the model", "The predictive coefficient should approach one while irrelevant coefficients stay near zero.", "Open the optimizer lab", "model"],
+    ["Open the optimizer lab", "Use the same fixed dock for run settings, momentum, decay, and IDBD trace variants.", "Start over", "model"]
   ];
-
+  const viewUnlocks = { stream: 1, loss: 3, clean: 7, rates: 8, history: 9, trace: 10, model: 11 };
   let initialized = false;
 
-  function element(tagName, className, html) {
+  function make(tagName, className, html) {
     const node = document.createElement(tagName);
     if (className) node.className = className;
     if (html !== undefined) node.innerHTML = html;
@@ -44,27 +31,27 @@
   }
 
   function addOptimizerControls(clone) {
-    const sharedGrafts = element("div", "optimizer-graft-controls shared-optimizer-controls");
-    sharedGrafts.innerHTML = [
+    const shared = make("div", "optimizer-graft-controls shared-optimizer-controls");
+    shared.innerHTML = [
       '<p class="graft-controls-title">Shared optimizer additions · SGD + IDBD</p>',
       '<div class="control">',
       '  <div class="control-heading"><label for="staged-momentum">Momentum <span class="math">μ</span></label><output id="staged-momentum-value" for="staged-momentum">0.00</output></div>',
       '  <input id="staged-momentum" type="range" min="0" max="0.99" step="0.01" value="0" aria-describedby="staged-momentum-help">',
       '  <div class="range-labels" aria-hidden="true"><span>off</span><span>0.99</span></div>',
-      '  <p id="staged-momentum-help">The same EMA momentum coefficient and update direction for both learners.</p>',
+      '  <p id="staged-momentum-help">The same EMA momentum coefficient for both learners.</p>',
       '</div>',
       '<div class="control">',
       '  <div class="control-heading"><label for="staged-weight-decay">Weight decay <span class="math">λ</span></label><output id="staged-weight-decay-value" for="staged-weight-decay">off</output></div>',
       '  <input id="staged-weight-decay" type="range" min="0" max="7" step="1" value="0" aria-describedby="staged-weight-decay-help">',
       '  <div class="range-labels" aria-hidden="true"><span>off</span><span>1.0</span></div>',
-      '  <p id="staged-weight-decay-help">The same decay strength for both; each learner scales it by its own learning rate.</p>',
+      '  <p id="staged-weight-decay-help">The same decay strength for both learners.</p>',
       '</div>'
     ].join("");
     const sharedControls = clone.querySelector(".shared-controls");
-    sharedControls.insertBefore(sharedGrafts, sharedControls.querySelector(".shared-control-grid"));
+    sharedControls.insertBefore(shared, sharedControls.querySelector(".shared-control-grid"));
 
-    const traceControls = element("div", "idbd-trace-controls");
-    traceControls.innerHTML = [
+    const trace = make("div", "idbd-trace-controls");
+    trace.innerHTML = [
       '<p class="graft-controls-title">IDBD trace treatment</p>',
       '<div class="control">',
       '  <label class="mode-label" for="staged-momentum-mode">With momentum</label>',
@@ -72,88 +59,39 @@
       '  <p>Derived mode carries p = dm/dβ.</p>',
       '</div>',
       '<div class="control">',
-      '  <label class="mode-label" for="staged-weight-decay-mode">Decay mechanism</label>',
+      '  <label class="mode-label" for="staged-weight-decay-mode">With decay</label>',
       '  <select id="staged-weight-decay-mode"><option value="traced" selected>Traced α-coupled</option><option value="alpha_coupled">α-coupled</option><option value="fixed">Fixed-rate</option></select>',
-      '  <p>Traced mode includes decay’s β-derivative in h.</p>',
+      '  <p>Traced mode includes decay’s β-derivative.</p>',
       '</div>'
     ].join("");
-    clone.querySelector(".idbd-method-controls").appendChild(traceControls);
+    clone.querySelector(".idbd-method-controls").appendChild(trace);
   }
 
-  function addWalkthroughPanel(clone) {
-    const panel = element("section", "staged-walkthrough-panel");
-    panel.setAttribute("aria-labelledby", "staged-walkthrough-title");
-    panel.innerHTML = [
-      '<div class="staged-stage-heading">',
-      '  <p id="staged-stage-count" class="section-label">Stage 1 of 5</p>',
-      '  <h3 id="staged-walkthrough-title">Watch SGD learn</h3>',
-      '  <p id="staged-stage-description"></p>',
-      '</div>',
-      '<div class="staged-live-row">',
-      '  <figure class="staged-stream-chart">',
-      '    <figcaption><span>SGD on the stream</span><small>faint noisy target · dashed clean signal · solid prediction</small></figcaption>',
-      '    <canvas id="staged-walkthrough-chart" role="img" aria-label="SGD prediction, clean signal, and noisy target on a shared sample stream"></canvas>',
-      '  </figure>',
-      '  <aside class="staged-live-status">',
-      '    <span>Recent prediction MSE</span>',
-      '    <strong id="staged-walkthrough-loss">—</strong>',
-      '    <p id="staged-walkthrough-status" aria-live="polite">Preparing…</p>',
-      '    <div>',
-      '      <button id="staged-walkthrough-pause" type="button">Pause</button>',
-      '      <button id="staged-walkthrough-play" type="button">Play</button>',
-      '    </div>',
-      '  </aside>',
-      '</div>',
-      '<div class="staged-stage-two">',
-      '  <div class="staged-proxy-controls">',
-      '    <div class="control">',
-      '      <div class="control-heading"><label for="staged-proxy-rate">Learning rate</label><output id="staged-proxy-rate-value" for="staged-proxy-rate">0.0100</output></div>',
-      '      <input id="staged-proxy-rate" type="range" min="-3" max="1" step="0.05" value="-2">',
-      '      <div class="range-labels" aria-hidden="true"><span>0.001</span><span>10.0</span></div>',
-      '      <p>How far SGD moves after each gradient estimate.</p>',
-      '    </div>',
-      '    <div class="control">',
-      '      <div class="control-heading"><label for="staged-proxy-steps">Total steps</label><output id="staged-proxy-steps-value" for="staged-proxy-steps">100,000</output></div>',
-      '      <input id="staged-proxy-steps" type="range" min="0" max="18" step="1" value="9">',
-      '      <div class="range-labels" aria-hidden="true"><span>256</span><span>100,000,000</span></div>',
-      '      <p>How much of the stream the learner experiences.</p>',
-      '    </div>',
-      '  </div>',
-      '  <figure class="chart-block staged-walkthrough-loss">',
-      '    <figcaption><span>SGD prediction MSE</span><small>fixed 0.1–100 · logarithmic scale</small></figcaption>',
-      '    <canvas id="staged-walkthrough-loss-chart" role="img" aria-label="SGD prediction mean squared error over training examples"></canvas>',
-      '  </figure>',
-      '</div>'
+  function streamFigure(id, learner) {
+    const figure = make("figure", "chart-block staged-panel");
+    figure.dataset.view = "stream";
+    figure.innerHTML = [
+      '<figcaption><span>' + learner + ' on the stream</span><small>faint target · dashed clean signal · solid prediction</small></figcaption>',
+      '<canvas id="' + id + '" role="img" aria-label="' + learner + ' prediction, clean signal, and noisy target on a shared sample stream"></canvas>'
     ].join("");
-    clone.querySelector(".experiment-heading").after(panel);
+    return figure;
   }
 
-  function addNavigation(clone) {
-    const navigation = element("nav", "staged-navigation");
-    navigation.setAttribute("aria-label", "Walkthrough stages");
-    navigation.innerHTML = [
-      '<button id="staged-back" type="button">Back</button>',
-      '<div><span id="staged-nav-stage">Stage 1 of 5</span><strong id="staged-nav-next">Next: control the learner</strong></div>',
-      '<button id="staged-continue" class="staged-continue" type="button" disabled>Continue</button>',
-      '<button id="staged-show-all" class="staged-show-all" type="button">Show full experiment</button>'
+  function historyFigure() {
+    const figure = make("figure", "chart-block staged-panel");
+    figure.dataset.view = "history";
+    figure.innerHTML = [
+      '<figcaption><span>Fixed learning rate</span><small>one rate for every feature · 10⁻⁵–10 log scale</small></figcaption>',
+      '<canvas id="staged-sgd-rate-history-chart" role="img" aria-label="SGD fixed learning rate over training examples"></canvas>'
     ].join("");
-    clone.appendChild(navigation);
+    return figure;
   }
 
-  function annotateFigures(clone) {
-    [
-      "sgd-loss-chart", "idbd-loss-chart",
-      "sgd-signal-loss-chart", "idbd-signal-loss-chart"
-    ].forEach(function (id) {
-      clone.querySelector("#staged-" + id).closest("figure").classList.add("staged-stage-three-chart");
-    });
-    [
-      "sgd-prediction-chart", "idbd-prediction-chart",
-      "sgd-rates-chart", "idbd-rates-chart",
-      "sgd-weights-chart", "idbd-weights-chart"
-    ].forEach(function (id) {
-      clone.querySelector("#staged-" + id).closest("figure").classList.add("staged-stage-four-chart");
-    });
+  function emptyTracePanel() {
+    const panel = make("div", "staged-panel staged-empty-panel");
+    panel.dataset.view = "trace";
+    panel.innerHTML = '<div><span>SGD</span><strong>No meta-gradient trace</strong><p>A fixed learning rate does not require <span class="math">h = ∂w/∂β</span>.</p></div>';
+    return panel;
   }
 
   function resetInputs(clone) {
@@ -165,191 +103,203 @@
       "staged-training-steps": "9",
       "staged-stream-seed": "20260713"
     };
-    Object.keys(values).forEach(function (id) {
-      clone.querySelector("#" + id).value = values[id];
-    });
+    Object.keys(values).forEach(function (id) { clone.querySelector("#" + id).value = values[id]; });
     clone.querySelector("#staged-lock-rates").checked = true;
+  }
+
+  function buildWorkbench(clone) {
+    const workbench = make("div", "staged-workbench");
+    workbench.innerHTML = [
+      '<header class="staged-workbench-heading">',
+      '  <div><p id="staged-stage-count" class="section-label">Stage 1 of 12</p><h3 id="staged-stage-title">Watch SGD learn</h3><p id="staged-stage-description"></p></div>',
+      '  <div class="staged-transport"><span id="staged-workbench-status" aria-live="polite">Preparing…</span><button id="staged-workbench-pause" type="button">Pause</button><button id="staged-workbench-play" type="button">Play</button></div>',
+      '</header>',
+      '<nav class="staged-view-tabs" aria-label="Visible measurement">',
+      '  <button type="button" data-view="stream">Stream</button><button type="button" data-view="loss">Loss</button><button type="button" data-view="clean">Clean loss</button><button type="button" data-view="rates">Rates</button><button type="button" data-view="history">Rate history</button><button type="button" data-view="trace">h trace</button><button type="button" data-view="model">Model</button>',
+      '</nav>',
+      '<div class="staged-learner-grid">',
+      '  <section class="staged-learner staged-sgd-lane" aria-label="SGD lane"><div class="staged-lane-heading"></div><div class="staged-lane-score"></div><div class="staged-viewport"></div></section>',
+      '  <section class="staged-learner staged-idbd-lane" aria-label="IDBD lane"><div class="staged-lane-heading"></div><div class="staged-lane-score"></div><div class="staged-viewport"></div><div class="staged-lane-curtain" aria-hidden="true"></div></section>',
+      '</div>',
+      '<section class="staged-control-dock" aria-label="Experiment controls">',
+      '  <nav class="staged-control-tabs" aria-label="Control groups"><button type="button" data-page="basic">Learning</button><button type="button" data-page="run">Run settings</button><button type="button" data-page="extensions">Extensions</button></nav>',
+      '  <div class="staged-control-page staged-basic-page" data-page="basic"><div class="staged-control-slot" data-slot="sgd-rate" data-unlock="2"></div><div class="staged-control-slot" data-slot="idbd-rate" data-unlock="5"></div><div class="staged-control-slot" data-slot="theta" data-unlock="6"></div><div class="staged-control-slot" data-slot="steps" data-unlock="3"></div><div class="staged-lock-slot" data-unlock="5"></div></div>',
+      '  <div class="staged-control-page staged-run-page" data-page="run"><div data-slot="batch"></div><div data-slot="stream"></div></div>',
+      '  <div class="staged-control-page staged-extension-page" data-page="extensions"><div data-slot="momentum"></div><div data-slot="decay"></div><div data-slot="momentum-mode"></div><div data-slot="decay-mode"></div></div>',
+      '</section>',
+      '<nav class="staged-navigation" aria-label="Walkthrough stages"><button id="staged-back" type="button">Back</button><div><span id="staged-nav-stage">Stage 1 of 12</span><strong id="staged-nav-next">Next: set its learning rate</strong></div><button id="staged-continue" class="staged-continue" type="button" disabled>Continue</button><button id="staged-show-all" class="staged-show-all" type="button">Open full lab</button></nav>'
+    ].join("");
+    clone.querySelector(".experiment-heading").after(workbench);
+
+    const sgdLane = workbench.querySelector(".staged-sgd-lane");
+    const idbdLane = workbench.querySelector(".staged-idbd-lane");
+    sgdLane.querySelector(".staged-lane-heading").appendChild(clone.querySelector(".sgd-card .method-heading"));
+    sgdLane.querySelector(".staged-lane-score").appendChild(clone.querySelector(".sgd-card .score-row"));
+    idbdLane.querySelector(".staged-lane-heading").appendChild(clone.querySelector(".idbd-card .method-heading"));
+    idbdLane.querySelector(".staged-lane-score").appendChild(clone.querySelector(".idbd-card .score-row"));
+
+    const sgdViewport = sgdLane.querySelector(".staged-viewport");
+    const idbdViewport = idbdLane.querySelector(".staged-viewport");
+    sgdViewport.appendChild(streamFigure("staged-walkthrough-sgd-chart", "SGD"));
+    idbdViewport.appendChild(streamFigure("staged-walkthrough-idbd-chart", "IDBD"));
+
+    function moveFigure(canvasId, view, viewport) {
+      const figure = clone.querySelector("#staged-" + canvasId).closest("figure");
+      figure.classList.add("staged-panel");
+      figure.dataset.view = view;
+      viewport.appendChild(figure);
+    }
+    moveFigure("sgd-loss-chart", "loss", sgdViewport);
+    moveFigure("idbd-loss-chart", "loss", idbdViewport);
+    moveFigure("sgd-signal-loss-chart", "clean", sgdViewport);
+    moveFigure("idbd-signal-loss-chart", "clean", idbdViewport);
+    moveFigure("sgd-rates-chart", "rates", sgdViewport);
+    moveFigure("idbd-rates-chart", "rates", idbdViewport);
+    sgdViewport.appendChild(historyFigure());
+    moveFigure("idbd-rate-history-chart", "history", idbdViewport);
+    sgdViewport.appendChild(emptyTracePanel());
+    moveFigure("idbd-trace-chart", "trace", idbdViewport);
+    moveFigure("sgd-weights-chart", "model", sgdViewport);
+    moveFigure("idbd-weights-chart", "model", idbdViewport);
+
+    const basic = workbench.querySelector(".staged-basic-page");
+    basic.querySelector('[data-slot="sgd-rate"]').appendChild(clone.querySelector("#staged-sgd-rate").closest(".control"));
+    basic.querySelector('[data-slot="idbd-rate"]').appendChild(clone.querySelector("#staged-idbd-rate").closest(".control"));
+    basic.querySelector('[data-slot="theta"]').appendChild(clone.querySelector("#staged-theta").closest(".control"));
+    basic.querySelector('[data-slot="steps"]').appendChild(clone.querySelector("#staged-training-steps").closest(".control"));
+    basic.querySelector(".staged-lock-slot").appendChild(clone.querySelector(".rate-lock-control"));
+
+    const run = workbench.querySelector(".staged-run-page");
+    run.querySelector('[data-slot="batch"]').appendChild(clone.querySelector("#staged-batch-size").closest(".control"));
+    run.querySelector('[data-slot="stream"]').appendChild(clone.querySelector(".stream-control"));
+
+    const extension = workbench.querySelector(".staged-extension-page");
+    extension.querySelector('[data-slot="momentum"]').appendChild(clone.querySelector("#staged-momentum").closest(".control"));
+    extension.querySelector('[data-slot="decay"]').appendChild(clone.querySelector("#staged-weight-decay").closest(".control"));
+    extension.querySelector('[data-slot="momentum-mode"]').appendChild(clone.querySelector("#staged-momentum-mode").closest(".control"));
+    extension.querySelector('[data-slot="decay-mode"]').appendChild(clone.querySelector("#staged-weight-decay-mode").closest(".control"));
+    return workbench;
   }
 
   function initialize() {
     if (initialized) return;
     initialized = true;
-
     const clone = source.cloneNode(true);
     clone.id = "staged-idbd-playground";
-    clone.classList.add("staged-experiment", "stage-1");
+    clone.classList.add("staged-experiment");
     api.prefixCloneIds(clone, "staged");
     resetInputs(clone);
-    addWalkthroughPanel(clone);
     addOptimizerControls(clone);
-    annotateFigures(clone);
-    addNavigation(clone);
+    const workbench = buildWorkbench(clone);
     mount.replaceChildren(clone);
 
     const actual = {
-      rate: clone.querySelector("#staged-sgd-rate"),
-      rateOutput: clone.querySelector("#staged-sgd-rate-value"),
-      steps: clone.querySelector("#staged-training-steps"),
-      stepsOutput: clone.querySelector("#staged-training-steps-value"),
-      status: clone.querySelector("#staged-run-status"),
-      pause: clone.querySelector("#staged-pause-training"),
-      play: clone.querySelector("#staged-play-training"),
-      momentum: clone.querySelector("#staged-momentum"),
-      decay: clone.querySelector("#staged-weight-decay")
+      status: clone.querySelector("#staged-run-status"), pause: clone.querySelector("#staged-pause-training"), play: clone.querySelector("#staged-play-training"),
+      steps: clone.querySelector("#staged-training-steps"), momentum: clone.querySelector("#staged-momentum"), decay: clone.querySelector("#staged-weight-decay")
     };
-    const proxy = {
-      rate: clone.querySelector("#staged-proxy-rate"),
-      rateOutput: clone.querySelector("#staged-proxy-rate-value"),
-      steps: clone.querySelector("#staged-proxy-steps"),
-      stepsOutput: clone.querySelector("#staged-proxy-steps-value"),
-      status: clone.querySelector("#staged-walkthrough-status"),
-      pause: clone.querySelector("#staged-walkthrough-pause"),
-      play: clone.querySelector("#staged-walkthrough-play")
-    };
-    const stageCount = clone.querySelector("#staged-stage-count");
-    const title = clone.querySelector("#staged-walkthrough-title");
-    const description = clone.querySelector("#staged-stage-description");
-    const back = clone.querySelector("#staged-back");
-    const continueButton = clone.querySelector("#staged-continue");
-    const showAll = clone.querySelector("#staged-show-all");
-    const navStage = clone.querySelector("#staged-nav-stage");
-    const navNext = clone.querySelector("#staged-nav-next");
-    const sgdPill = clone.querySelector(".sgd-card .method-pill");
-    const idbdPill = clone.querySelector(".idbd-card .method-pill");
-    const scope = clone.querySelector(".simulation-scope");
-    const walkthroughChart = clone.querySelector("#staged-walkthrough-chart");
-    const walkthroughCaption = clone.querySelector(".staged-stream-chart figcaption small");
-    const walkthroughScoreLabel = clone.querySelector(".staged-live-status > span");
-    const batchControl = clone.querySelector("#staged-batch-size");
-    const batchNote = clone.querySelector("#staged-batch-note");
+    const status = workbench.querySelector("#staged-workbench-status");
+    const pause = workbench.querySelector("#staged-workbench-pause");
+    const play = workbench.querySelector("#staged-workbench-play");
+    const back = workbench.querySelector("#staged-back");
+    const next = workbench.querySelector("#staged-continue");
+    const showAll = workbench.querySelector("#staged-show-all");
+    const stageCount = workbench.querySelector("#staged-stage-count");
+    const title = workbench.querySelector("#staged-stage-title");
+    const description = workbench.querySelector("#staged-stage-description");
+    const navStage = workbench.querySelector("#staged-nav-stage");
+    const navNext = workbench.querySelector("#staged-nav-next");
+    const viewButtons = Array.from(workbench.querySelectorAll(".staged-view-tabs button"));
+    const controlButtons = Array.from(workbench.querySelectorAll(".staged-control-tabs button"));
+    const panels = Array.from(workbench.querySelectorAll(".staged-panel"));
+    const controlPages = Array.from(workbench.querySelectorAll(".staged-control-page"));
     let currentStage = 1;
-    let readinessTimer = null;
+    let currentView = "stream";
+    let readyTimer = null;
 
-    function syncProxyOutputs() {
-      proxy.rate.value = actual.rate.value;
-      proxy.steps.value = actual.steps.value;
-      proxy.rateOutput.value = actual.rateOutput.value;
-      proxy.stepsOutput.value = actual.stepsOutput.value;
+    function setView(view) {
+      if (viewUnlocks[view] > currentStage) return;
+      currentView = view;
+      viewButtons.forEach(function (button) { button.classList.toggle("is-active", button.dataset.view === view); });
+      panels.forEach(function (panel) { panel.classList.toggle("is-active", panel.dataset.view === view); });
+      window.dispatchEvent(new Event("resize"));
     }
 
-    function markReadySoon() {
-      window.clearTimeout(readinessTimer);
-      continueButton.disabled = true;
-      readinessTimer = window.setTimeout(function () {
-        continueButton.disabled = false;
-      }, 700);
+    function setControlPage(page) {
+      controlButtons.forEach(function (button) { button.classList.toggle("is-active", button.dataset.page === page); });
+      controlPages.forEach(function (panel) { panel.classList.toggle("is-active", panel.dataset.page === page); });
+      window.dispatchEvent(new Event("resize"));
     }
 
     function syncStatus() {
+      status.textContent = actual.status.textContent;
+      pause.disabled = actual.pause.disabled;
+      play.disabled = actual.play.disabled;
       const text = actual.status.textContent;
-      proxy.status.textContent = text;
-      proxy.pause.disabled = actual.pause.disabled;
-      proxy.play.disabled = actual.play.disabled;
-      if (text.startsWith("Complete") || (text.startsWith("Training") && !text.includes("0 /"))) {
-        continueButton.disabled = false;
-      }
+      if (text.startsWith("Complete") || (text.startsWith("Training") && !text.includes("0 /"))) next.disabled = false;
     }
 
-    function restartSameStream() {
-      actual.steps.dispatchEvent(new Event("input", { bubbles: true }));
+    function readySoon() {
+      window.clearTimeout(readyTimer);
+      next.disabled = true;
+      readyTimer = window.setTimeout(function () { next.disabled = false; }, 550);
     }
 
-    function clearHiddenExtensions() {
+    function clearExtensions() {
       let changed = false;
-      if (actual.momentum.value !== "0") {
-        actual.momentum.value = "0";
-        changed = true;
-      }
-      if (actual.decay.value !== "0") {
-        actual.decay.value = "0";
-        changed = true;
-      }
+      if (actual.momentum.value !== "0") { actual.momentum.value = "0"; changed = true; }
+      if (actual.decay.value !== "0") { actual.decay.value = "0"; changed = true; }
       if (changed) actual.momentum.dispatchEvent(new Event("input", { bubbles: true }));
     }
 
-    function syncBatchNote() {
-      const batchSize = Math.pow(2, Number(batchControl.value));
-      if (currentStage < 5) {
-        batchNote.innerHTML = batchSize === 1
-          ? "<strong>At batch size 1</strong>, this is classic online IDBD. Larger batches use a mean-gradient diagonal approximation."
-          : "<strong>At batch size " + String(batchSize) + "</strong>, IDBD uses a mean-gradient diagonal approximation; the batch-size-one setting is the original online rule.";
-        return;
-      }
-      batchNote.innerHTML = batchSize === 1
-        ? "<strong>At batch size 1</strong>, the gradient stream is online. Momentum or decay changes both learners’ updates and IDBD’s trace."
-        : "<strong>At batch size " + String(batchSize) + "</strong>, both learners use the shared optimizer settings on the same mean-gradient batch.";
-    }
-
-    function setStage(stage, options) {
-      const previousStage = currentStage;
+    function setStage(stage, skipReplay) {
+      const previous = currentStage;
       currentStage = Math.max(1, Math.min(stages.length, stage));
       const details = stages[currentStage - 1];
-      clone.classList.remove("stage-1", "stage-2", "stage-3", "stage-4", "stage-5");
-      clone.classList.add("stage-" + String(currentStage));
+      workbench.dataset.stage = String(currentStage);
       stageCount.textContent = "Stage " + String(currentStage) + " of " + String(stages.length);
-      title.textContent = details.title;
-      description.textContent = details.description;
       navStage.textContent = stageCount.textContent;
-      navNext.textContent = currentStage === stages.length ? "The complete staged experiment" : "Next: " + details.next.toLowerCase();
-      continueButton.textContent = currentStage === stages.length ? "Start over" : "Continue";
+      title.textContent = details[0];
+      description.textContent = details[1];
+      navNext.textContent = currentStage === stages.length ? "The complete optimizer lab" : "Next: " + details[2].toLowerCase();
+      next.textContent = currentStage === stages.length ? "Start over" : "Continue";
       back.disabled = currentStage === 1;
       showAll.hidden = currentStage === stages.length;
-
-      const extended = currentStage === stages.length;
-      walkthroughChart.dataset.showIdbd = currentStage >= 3 ? "true" : "false";
-      walkthroughCaption.textContent = currentStage >= 3
-        ? "faint target · dashed signal · solid grey SGD · solid blue IDBD"
-        : "faint noisy target · dashed clean signal · solid prediction";
-      walkthroughScoreLabel.textContent = currentStage >= 3 ? "SGD recent prediction MSE" : "Recent prediction MSE";
-      sgdPill.textContent = extended ? "fixed rate + shared grafts" : "one fixed rate";
-      idbdPill.textContent = extended ? "one rate per feature + grafts" : "one rate per feature";
-      scope.innerHTML = extended
-        ? "<strong>Independent live simulation.</strong> Momentum and weight decay are shared by both learners; the trace mechanism choices apply only to IDBD."
-        : "<strong>Computed live in this browser.</strong> Both learners receive the same deterministic stream; changing a setting cancels and restarts the current run.";
-
-      if (currentStage < 5) clearHiddenExtensions();
-      syncBatchNote();
-      if (currentStage === 3 && previousStage < 3 && !(options && options.noRestart)) {
-        restartSameStream();
-      }
-      syncProxyOutputs();
-      markReadySoon();
-      window.requestAnimationFrame(function () {
-        window.dispatchEvent(new Event("resize"));
-        const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-        clone.querySelector(".staged-walkthrough-panel").scrollIntoView({ behavior: reducedMotion ? "auto" : "smooth", block: "start" });
+      workbench.querySelector(".staged-idbd-lane").classList.toggle("is-revealed", currentStage >= 4);
+      workbench.querySelectorAll("[data-unlock]").forEach(function (node) {
+        node.classList.toggle("is-unlocked", currentStage >= Number(node.dataset.unlock));
       });
+      viewButtons.forEach(function (button) {
+        const unlocked = currentStage >= viewUnlocks[button.dataset.view];
+        button.disabled = !unlocked;
+        button.classList.toggle("is-unlocked", unlocked);
+      });
+      controlButtons.forEach(function (button) {
+        const unlocked = button.dataset.page === "basic" || currentStage >= 12;
+        button.disabled = !unlocked;
+        button.classList.toggle("is-unlocked", unlocked);
+      });
+      clone.querySelectorAll(".staged-lane-score dl").forEach(function (detailsList) {
+        detailsList.classList.toggle("is-unlocked", currentStage >= 7);
+      });
+      if (currentStage < 12) clearExtensions();
+      setControlPage(currentStage === 12 ? "extensions" : "basic");
+      setView(details[3]);
+      if (currentStage === 4 && previous < 4 && !skipReplay) actual.steps.dispatchEvent(new Event("input", { bubbles: true }));
+      readySoon();
     }
 
-    proxy.rate.addEventListener("input", function () {
-      actual.rate.value = proxy.rate.value;
-      actual.rate.dispatchEvent(new Event("input", { bubbles: true }));
-      syncProxyOutputs();
-      markReadySoon();
-    });
-    proxy.steps.addEventListener("input", function () {
-      actual.steps.value = proxy.steps.value;
-      actual.steps.dispatchEvent(new Event("input", { bubbles: true }));
-      syncProxyOutputs();
-      markReadySoon();
-    });
-    proxy.pause.addEventListener("click", function () { actual.pause.click(); });
-    proxy.play.addEventListener("click", function () { actual.play.click(); });
-    continueButton.addEventListener("click", function () {
-      setStage(currentStage === stages.length ? 1 : currentStage + 1);
-    });
+    viewButtons.forEach(function (button) { button.addEventListener("click", function () { setView(button.dataset.view); }); });
+    controlButtons.forEach(function (button) { button.addEventListener("click", function () { setControlPage(button.dataset.page); }); });
+    pause.addEventListener("click", function () { actual.pause.click(); });
+    play.addEventListener("click", function () { actual.play.click(); });
     back.addEventListener("click", function () { setStage(currentStage - 1); });
+    next.addEventListener("click", function () { setStage(currentStage === stages.length ? 1 : currentStage + 1); });
     showAll.addEventListener("click", function () { setStage(stages.length); });
-
     new MutationObserver(syncStatus).observe(actual.status, { childList: true, subtree: true, characterData: true });
-    actual.rate.addEventListener("input", syncProxyOutputs);
-    actual.steps.addEventListener("input", syncProxyOutputs);
-    batchControl.addEventListener("input", syncBatchNote);
 
     api.createExperiment("staged", true);
-    syncProxyOutputs();
     syncStatus();
-    setStage(1, { noRestart: true });
+    setStage(1, true);
   }
 
   if ("IntersectionObserver" in window) {
@@ -357,9 +307,7 @@
       if (!entries.some(function (entry) { return entry.isIntersecting; })) return;
       observer.disconnect();
       initialize();
-    }, { rootMargin: "500px 0px" });
+    }, { rootMargin: "400px 0px" });
     observer.observe(mount);
-  } else {
-    initialize();
-  }
+  } else initialize();
 }());

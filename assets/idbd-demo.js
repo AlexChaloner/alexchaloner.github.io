@@ -998,23 +998,21 @@
     byId("idbd-rate-ratio").textContent = formatScore(idbdRateRatio(state.beta)) + "×";
     byId("sgd-signal-loss-score").textContent = formatScore(noiselessSignalMse(state.sgdWeights));
     byId("idbd-signal-loss-score").textContent = formatScore(noiselessSignalMse(state.idbdWeights));
-    const walkthroughLoss = byId("walkthrough-loss");
-    if (walkthroughLoss) {
-      walkthroughLoss.textContent = state.sgdLossEma === null ? "—" : formatScore(state.sgdLossEma);
-    }
 
     updatePreviewPredictions(state.preview, state.sgdWeights, state.idbdWeights);
-    const walkthroughChart = byId("walkthrough-chart");
-    if (walkthroughChart) {
-      const walkthroughSeries = [
+    if (byId("walkthrough-sgd-chart")) {
+      drawTraceChart("walkthrough-sgd-chart", [
         { values: state.preview.noisyTarget, color: "rgba(73, 73, 73, 0.28)", width: 0.8 },
         { values: state.preview.cleanTarget, color: COLORS.signal, width: 1.2, dash: [4, 3] },
         { values: state.preview.sgdPrediction, color: COLORS.sgd, width: 2 }
-      ];
-      if (walkthroughChart.dataset.showIdbd === "true") {
-        walkthroughSeries.push({ values: state.preview.idbdPrediction, color: COLORS.idbd, width: 1.8 });
-      }
-      drawTraceChart("walkthrough-chart", walkthroughSeries, { minimum: -10, maximum: 10 }, [-10, 0, 1, 10]);
+      ], { minimum: -10, maximum: 10 }, [-10, 0, 1, 10]);
+    }
+    if (byId("walkthrough-idbd-chart")) {
+      drawTraceChart("walkthrough-idbd-chart", [
+        { values: state.preview.noisyTarget, color: "rgba(73, 73, 73, 0.28)", width: 0.8 },
+        { values: state.preview.cleanTarget, color: COLORS.signal, width: 1.2, dash: [4, 3] },
+        { values: state.preview.idbdPrediction, color: COLORS.idbd, width: 2 }
+      ], { minimum: -10, maximum: 10 }, [-10, 0, 1, 10]);
     }
     drawTraceChart("feature-stream-chart", [
       { values: state.preview.cleanTarget, color: COLORS.signal, width: 1.6 }
@@ -1035,8 +1033,10 @@
     drawLineChart("idbd-loss-chart", state.curves.steps, state.curves.idbdLoss, COLORS.idbd, COLORS.idbdFill, PREDICTION_LOSS_BOUNDS, state.exampleCount);
     drawLineChart("sgd-signal-loss-chart", state.curves.steps, state.curves.sgdSignalLoss, COLORS.sgd, COLORS.sgdFill, SIGNAL_LOSS_BOUNDS, state.exampleCount);
     drawLineChart("idbd-signal-loss-chart", state.curves.steps, state.curves.idbdSignalLoss, COLORS.idbd, COLORS.idbdFill, SIGNAL_LOSS_BOUNDS, state.exampleCount);
-    if (byId("walkthrough-loss-chart")) {
-      drawLineChart("walkthrough-loss-chart", state.curves.steps, state.curves.sgdLoss, COLORS.sgd, COLORS.sgdFill, PREDICTION_LOSS_BOUNDS, state.exampleCount);
+    if (byId("sgd-rate-history-chart")) {
+      drawLogSeriesChart("sgd-rate-history-chart", state.curves.steps, [
+        { values: state.curves.steps.map(function () { return state.sgdRate; }), color: COLORS.sgd, width: 2.2 }
+      ], LEARNING_RATE_BOUNDS, state.exampleCount);
     }
     drawLogSeriesChart("idbd-rate-history-chart", state.curves.steps, [
       { values: state.curves.idbdSignalRate, color: COLORS.signal, width: 2.4 },
