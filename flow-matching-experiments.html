@@ -33,80 +33,123 @@ title: "Learning to move probability"
     <header class="fm-lab-header">
       <div>
         <p class="fm-section-label">Interactive comparison 01</p>
-        <h2 id="fm-lab-title">From diffusion to flow matching</h2>
+        <h2 id="fm-lab-title">Two ways to learn noise → data</h2>
       </div>
-      <p>Begin with the familiar diffusion recipe, then change only what the model is asked to learn.</p>
+      <p>The learners receive the same data and Gaussian noise. Keep both columns in view as their targets, learned fields, and generated samples change.</p>
     </header>
 
     <nav class="fm-tabs" aria-label="Flow matching walkthrough">
-      <button type="button" class="is-active" data-stage="diffuse" aria-pressed="true"><span>01</span> Diffuse the data</button>
-      <button type="button" data-stage="bridge" aria-pressed="false"><span>02</span> Match a flow</button>
-      <button type="button" data-stage="regress" aria-pressed="false"><span>03</span> Average the arrows</button>
-      <button type="button" data-stage="sample" aria-pressed="false"><span>04</span> Generate</button>
+      <button type="button" class="is-active" data-stage="targets" aria-pressed="true"><span>01</span> Construct targets</button>
+      <button type="button" data-stage="fields" aria-pressed="false"><span>02</span> Learn the fields</button>
+      <button type="button" data-stage="sample" aria-pressed="false"><span>03</span> Generate together</button>
     </nav>
 
     <div class="fm-stage-copy" aria-live="polite">
-      <p class="fm-section-label" id="fm-stage-kicker">Baseline · Forward diffusion</p>
-      <h3 id="fm-stage-title">Destroy the data in a way we can learn to undo</h3>
-      <p id="fm-stage-description">Each orange data point is mixed with a known Gaussian-noise sample. Scrub corruption time from clean data to pure noise.</p>
+      <p class="fm-section-label" id="fm-stage-kicker">Step 1 · Supervised learning targets</p>
+      <h3 id="fm-stage-title">The crucial difference is what appears after the arrow</h3>
+      <p id="fm-stage-description">Diffusion predicts the exact Gaussian noise mixed into a data example. Flow matching predicts the velocity of a temporary noise–data path.</p>
     </div>
 
-    <div class="fm-workbench">
-      <div class="fm-canvas-column">
-        <div class="fm-canvas-wrap" id="fm-main-wrap">
-          <canvas id="fm-main-canvas" role="img" aria-label="Noise points interpolating toward a target distribution, with conditional velocities and a learned velocity field"></canvas>
-          <div class="fm-time-badge"><span>time</span><strong id="fm-time-badge">0.35</strong></div>
-          <p class="fm-canvas-hint" id="fm-canvas-hint">Generation runs in the opposite direction: noise → data.</p>
+    <div class="fm-dual-workbench">
+      <section class="fm-method-lane fm-diffusion-lane" aria-labelledby="fm-diffusion-lane-title">
+        <header>
+          <div><p class="fm-section-label">Learner 01</p><h3 id="fm-diffusion-lane-title">Diffusion</h3></div>
+          <strong>learns noise <i>ε</i></strong>
+        </header>
+        <p class="fm-lane-rule"><span>training path</span> data → noise <b>·</b> <span>generation</span> noise → data</p>
+        <div class="fm-canvas-wrap">
+          <canvas id="fm-sample-canvas" role="img" aria-label="Diffusion corruption targets, learned denoising field, and generated samples"></canvas>
+          <div class="fm-time-badge"><span>corruption <i>τ</i></span><strong id="fm-diffusion-time-badge">0.55</strong></div>
+          <p class="fm-canvas-hint" id="fm-diffusion-hint">Purple arrows are the exact added-noise <i>ε</i> targets.</p>
         </div>
+        <dl class="fm-lane-readout">
+          <div><dt>input</dt><dd>noisy <i>x</i><sub>τ</sub> + time <i>τ</i></dd></div>
+          <div><dt>target</dt><dd>added noise <i>ε</i></dd></div>
+        </dl>
+      </section>
 
-        <div class="fm-time-control">
-          <button id="fm-play" type="button" aria-label="Play interpolation">Play</button>
-          <label for="fm-time"><b id="fm-time-start">data</b> <span><i id="fm-time-symbol">τ</i> = <output id="fm-time-output" for="fm-time">0.55</output></span> <b id="fm-time-end">noise</b></label>
-          <input id="fm-time" type="range" min="0" max="1" step="0.005" value="0.55">
+      <section class="fm-method-lane fm-flow-lane" aria-labelledby="fm-flow-lane-title">
+        <header>
+          <div><p class="fm-section-label">Learner 02</p><h3 id="fm-flow-lane-title">Flow matching</h3></div>
+          <strong>learns velocity <i>v</i></strong>
+        </header>
+        <p class="fm-lane-rule"><span>training path</span> noise → data <b>·</b> <span>generation</span> noise → data</p>
+        <div class="fm-canvas-wrap" id="fm-main-wrap">
+          <canvas id="fm-main-canvas" role="img" aria-label="Flow-matching velocity targets, learned velocity field, and generated samples"></canvas>
+          <div class="fm-time-badge"><span>path time <i>t</i></span><strong id="fm-time-badge">0.55</strong></div>
+          <p class="fm-canvas-hint" id="fm-canvas-hint">The highlighted random pair exists only to make a label.</p>
         </div>
+        <dl class="fm-lane-readout">
+          <div><dt>input</dt><dd>position <i>x</i><sub>t</sub> + time <i>t</i></dd></div>
+          <div><dt>target</dt><dd>velocity <i>x</i><sub>data</sub> − <i>x</i><sub>noise</sub></dd></div>
+        </dl>
+      </section>
+    </div>
+
+    <div class="fm-time-control" id="fm-path-controls">
+      <button id="fm-play" type="button" aria-label="Play both probability paths once">Play once</button>
+      <label for="fm-time"><b>path progress</b> <span><output id="fm-time-output" for="fm-time">0.55</output></span> <b>endpoint</b></label>
+      <input id="fm-time" type="range" min="0.005" max="0.995" step="0.005" value="0.55">
+    </div>
+
+    <section class="fm-learning-controls" aria-label="Shared comparison controls">
+      <fieldset>
+        <legend>Target distribution</legend>
+        <div class="fm-choice-grid" id="fm-shape-choices">
+          <button type="button" class="is-active" data-shape="eight">Eight modes</button>
+          <button type="button" data-shape="moons">Two moons</button>
+          <button type="button" data-shape="spiral">Spiral</button>
+        </div>
+      </fieldset>
+
+      <div class="fm-control fm-training-control">
+        <div><label for="fm-training-count">Training examples seen</label><output id="fm-training-count-output" for="fm-training-count">420 / 420</output></div>
+        <input id="fm-training-count" type="range" min="20" max="420" step="4" value="420">
+        <button id="fm-train" type="button">Replay learning</button>
+        <p>Both local regressors receive the same growing set of endpoint pairs.</p>
       </div>
 
-      <aside class="fm-controls" aria-label="Flow matching controls">
-        <fieldset>
-          <legend>Target distribution</legend>
-          <div class="fm-choice-grid" id="fm-shape-choices">
-            <button type="button" class="is-active" data-shape="eight">Eight modes</button>
-            <button type="button" data-shape="moons">Two moons</button>
-            <button type="button" data-shape="spiral">Spiral</button>
-          </div>
-        </fieldset>
+      <div class="fm-control">
+        <div><label for="fm-bandwidth">Model smoothness</label><output id="fm-bandwidth-output" for="fm-bandwidth">0.34</output></div>
+        <input id="fm-bandwidth" type="range" min="0.18" max="1.1" step="0.01" value="0.34">
+        <p id="fm-bandwidth-help">The width of the neighbourhood each learner averages.</p>
+      </div>
 
-        <div class="fm-pair-control" id="fm-pair-control" hidden>
-          <p><span>Training coupling</span><strong>independent · random</strong></p>
-          <button id="fm-trace-pair" type="button">Trace another pair</button>
-          <p>Pair <output id="fm-pair-number">1</output> is highlighted. This connection exists only to create a training label; the model is never told its destination.</p>
-        </div>
+      <fieldset>
+        <legend>Overlays</legend>
+        <label class="fm-check"><input id="fm-show-paths" type="checkbox" checked> paired paths</label>
+        <label class="fm-check"><input id="fm-show-targets" type="checkbox" checked> per-example targets</label>
+        <label class="fm-check"><input id="fm-show-field" type="checkbox"> learned fields</label>
+      </fieldset>
 
-        <fieldset>
-          <legend>What to draw</legend>
-          <label class="fm-check"><input id="fm-show-paths" type="checkbox" checked> <span id="fm-paths-label">corruption paths</span></label>
-          <label class="fm-check"><input id="fm-show-targets" type="checkbox" checked> <span id="fm-targets-label">derived denoising directions</span></label>
-          <label class="fm-check"><input id="fm-show-field" type="checkbox"> <span id="fm-field-label">averaged denoiser</span></label>
-        </fieldset>
+      <div class="fm-pair-control" id="fm-pair-control">
+        <p><span>Flow coupling</span><strong>independent · random</strong></p>
+        <button id="fm-trace-pair" type="button">Trace another flow pair</button>
+        <p>Pair <output id="fm-pair-number">1</output> is highlighted only in the flow lane. Its endpoint is hidden from the learner.</p>
+      </div>
 
-        <div class="fm-control">
-          <div><label for="fm-bandwidth">Neighbourhood width</label><output id="fm-bandwidth-output" for="fm-bandwidth">0.34</output></div>
-          <input id="fm-bandwidth" type="range" min="0.18" max="1.1" step="0.01" value="0.34">
-          <p id="fm-bandwidth-help">How locally the demo averages denoising targets. It plays the role of model smoothness.</p>
-        </div>
+      <div class="fm-seed-control">
+        <label for="fm-seed">Experiment seed</label>
+        <div><input id="fm-seed" type="number" min="0" max="4294967295" value="20260719"><button id="fm-reseed" type="button">New pairs</button></div>
+      </div>
+    </section>
 
-        <div class="fm-seed-control">
-          <label for="fm-seed">Experiment seed</label>
-          <div><input id="fm-seed" type="number" min="0" max="4294967295" value="20260719"><button id="fm-reseed" type="button">New pairs</button></div>
-        </div>
-      </aside>
-    </div>
+    <section class="fm-generation-controls" id="fm-generation-controls" hidden aria-label="Generation controls">
+      <div class="fm-control">
+        <div><label for="fm-steps">Solver steps</label><output id="fm-steps-output" for="fm-steps">16</output></div>
+        <input id="fm-steps" type="range" min="1" max="6" step="1" value="4">
+        <div class="fm-range-labels"><span>2</span><span>64</span></div>
+      </div>
+      <button id="fm-generate" class="fm-primary" type="button">Generate both from the same noise</button>
+      <button id="fm-reset-samples" type="button">Reset samples</button>
+      <p class="fm-sample-status" id="fm-sample-status" aria-live="polite">Ready · 180 shared noise points</p>
+    </section>
 
     <div class="fm-readout" aria-live="polite">
-      <div><span>visible training pairs</span><strong id="fm-pair-count">420</strong></div>
-      <div><span id="fm-stat-a-label">corruption level</span><strong id="fm-stat-a">55%</strong></div>
-      <div><span id="fm-stat-b-label">direction at generation</span><strong id="fm-stat-b">← reverse</strong></div>
-      <p id="fm-reading"><strong>What diffusion learns:</strong> from a noisy point and its noise level, predict the noise component. Removing that estimate a little at a time reveals data.</p>
+      <div><span>training examples</span><strong id="fm-pair-count">420</strong></div>
+      <div><span id="fm-stat-a-label">diffusion target</span><strong id="fm-stat-a">noise ε</strong></div>
+      <div><span id="fm-stat-b-label">flow target</span><strong id="fm-stat-b">velocity v</strong></div>
+      <p id="fm-reading"><strong>Same input signature, different answer:</strong> both models receive a point and a time. Diffusion is graded against added noise; flow matching is graded against motion.</p>
     </div>
   </section>
 
@@ -142,35 +185,6 @@ title: "Learning to move probability"
     <h2 id="fm-ambiguity-title">One location can receive conflicting instructions</h2>
     <p>Random paths cross. Near a crossing, one pair may say “up” while another says “down”. A deterministic model cannot emit both answers, so squared-error regression learns their conditional average. That average is the <em>marginal velocity field</em>: the single vector field whose probability flow has the same intermediate distributions as all those conditional paths.</p>
     <p>The second view lets you click anywhere to inspect this averaging. Thin arrows are nearby training targets; the heavy arrow is their weighted mean.</p>
-  </section>
-
-  <section class="fm-sampler" aria-labelledby="fm-sampler-title">
-    <header>
-      <div>
-        <p class="fm-section-label">Interactive experiment 02</p>
-        <h2 id="fm-sampler-title">Does the learned field generate data?</h2>
-      </div>
-      <p>Fresh points never see a paired destination. They know only their current position, the current time, and the fitted velocity field.</p>
-    </header>
-
-    <div class="fm-sample-grid">
-      <div class="fm-sample-canvas-wrap">
-        <canvas id="fm-sample-canvas" role="img" aria-label="Fresh noise particles being integrated through the learned velocity field toward the target distribution"></canvas>
-        <div class="fm-sample-legend" aria-hidden="true"><span><i class="fm-dot-reference"></i> target reference</span><span><i class="fm-dot-generated"></i> generated</span></div>
-      </div>
-      <div class="fm-sample-controls">
-        <div class="fm-control">
-          <div><label for="fm-steps">Euler steps</label><output id="fm-steps-output" for="fm-steps">16</output></div>
-          <input id="fm-steps" type="range" min="1" max="6" step="1" value="4">
-          <div class="fm-range-labels"><span>2</span><span>64</span></div>
-          <p>More, smaller steps follow a curved field more faithfully.</p>
-        </div>
-        <button id="fm-generate" class="fm-primary" type="button">Generate from fresh noise</button>
-        <button id="fm-reset-samples" type="button">Reset samples</button>
-        <p class="fm-sample-status" id="fm-sample-status" aria-live="polite">Ready · 180 fresh noise points</p>
-        <p class="fm-method-note"><strong>This is a deliberately small model.</strong> The field is a Gaussian-kernel regression over the visible pairs, not a neural network. The objective and ODE are the same; the local regressor makes the averaging inspectable.</p>
-      </div>
-    </div>
   </section>
 
   <section class="fm-prose fm-takeaways" aria-labelledby="fm-takeaways-title">

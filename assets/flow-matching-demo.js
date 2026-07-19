@@ -8,12 +8,14 @@
   const $ = (id) => document.getElementById(id);
   const ui = {
     time: $("fm-time"), timeOutput: $("fm-time-output"), timeBadge: $("fm-time-badge"), play: $("fm-play"),
-    timeStart: $("fm-time-start"), timeEnd: $("fm-time-end"), timeSymbol: $("fm-time-symbol"),
+    pathControls: $("fm-path-controls"),
+    diffusionTimeBadge: $("fm-diffusion-time-badge"), diffusionHint: $("fm-diffusion-hint"),
     paths: $("fm-show-paths"), targets: $("fm-show-targets"), field: $("fm-show-field"),
-    pathsLabel: $("fm-paths-label"), targetsLabel: $("fm-targets-label"), fieldLabel: $("fm-field-label"),
     bandwidth: $("fm-bandwidth"), bandwidthOutput: $("fm-bandwidth-output"), seed: $("fm-seed"), reseed: $("fm-reseed"),
     bandwidthHelp: $("fm-bandwidth-help"),
     pairControl: $("fm-pair-control"), tracePair: $("fm-trace-pair"), pairNumber: $("fm-pair-number"),
+    trainingCount: $("fm-training-count"), trainingCountOutput: $("fm-training-count-output"), train: $("fm-train"),
+    generationControls: $("fm-generation-controls"),
     stageKicker: $("fm-stage-kicker"), stageTitle: $("fm-stage-title"), stageDescription: $("fm-stage-description"),
     hint: $("fm-canvas-hint"), pairCount: $("fm-pair-count"), statALabel: $("fm-stat-a-label"), statA: $("fm-stat-a"),
     statBLabel: $("fm-stat-b-label"), statB: $("fm-stat-b"), reading: $("fm-reading"),
@@ -21,12 +23,13 @@
     sampleStatus: $("fm-sample-status")
   };
 
-  const palette = { ink: "#17211d", grid: "#dfe6e0", source: "#7857b2", target: "#e36d3d", flow: "#167d69", flowDark: "#095c4d", paper: "#fbfcf8" };
+  const palette = { ink: "#17211d", grid: "#dfe6e0", source: "#7857b2", sourceDark: "#58388d", target: "#e36d3d", flow: "#167d69", flowDark: "#095c4d", paper: "#fbfcf8" };
   const state = {
-    seed: 20260719, shape: "eight", stage: "diffuse", t: 0.55, bandwidth: 0.34,
-    diffusionT: 0.55, flowT: 0.35,
+    seed: 20260719, shape: "eight", stage: "targets", t: 0.55, bandwidth: 0.34, trainingCount: 420,
     pairs: [], targetReference: [], selected: { x: 0, y: 0 }, highlightedPair: 0, playing: false, playFrame: 0,
-    sampleOrigin: [], samples: [], sampleTime: 0, sampleStep: 0, sampleSteps: 16, sampleFrame: 0, sampling: false
+    training: false, trainingFrame: 0,
+    sampleOrigin: [], samples: [], diffusionSamples: [], sampleTime: 0, diffusionTime: 0.995,
+    sampleStep: 0, sampleSteps: 16, sampleFrame: 0, sampling: false
   };
 
   function mulberry32(seed) {
@@ -81,7 +84,7 @@
       state.pairs.push({ a, b, vx: b.x - a.x, vy: b.y - a.y });
       state.targetReference.push(b);
     }
-    state.highlightedPair = state.seed % state.pairs.length;
+    state.highlightedPair = state.seed % state.trainingCount;
     ui.pairNumber.value = state.highlightedPair + 1;
     resetSamples();
     updateStats();
@@ -170,7 +173,8 @@
     const h2 = bandwidth * bandwidth;
     let sum = 0, vx = 0, vy = 0, spread = 0;
     const nearby = [];
-    for (let i = 0; i < state.pairs.length; i += 1) {
+    const limit = Math.min(state.trainingCount, state.pairs.length);
+    for (let i = 0; i < limit; i += 1) {
       const pair = state.pairs[i];
       const p = lerpPair(pair, t);
       const dx = p.x - x, dy = p.y - y;
@@ -193,14 +197,15 @@
     const h2 = bandwidth * bandwidth;
     let sum = 0, vx = 0, vy = 0, spread = 0;
     const nearby = [];
-    for (let i = 0; i < state.pairs.length; i += 1) {
+    const limit = Math.min(state.trainingCount, state.pairs.length);
+    for (let i = 0; i < limit; i += 1) {
       const pair = state.pairs[i];
       const p = diffusePair(pair, t);
       const dx = p.x - x, dy = p.y - y;
       const d2 = dx * dx + dy * dy;
       if (d2 > h2 * 12) continue;
       const weight = Math.exp(-d2 / (2 * h2));
-      const targetX = pair.b.x - p.x, targetY = pair.b.y - p.y;
+      const targetX = pair.a.x, targetY = pair.a.y;
       sum += weight; vx += weight * targetX; vy += weight * targetY;
       nearby.push({ pair, p, weight, d2, targetX, targetY });
     }
@@ -213,18 +218,19 @@
     return { vx, vy, confidence: Math.min(1, sum / 7), spread: Math.sqrt(spread / sum), nearby };
   }
 
-  function drawField(ctx, vp, t) {
+  function drawField(ctx, vp, t, method) {
     const count = vp.size < 440 ? 10 : 13;
     const gap = (vp.max - vp.min) / count;
     for (let iy = 0; iy <= count; iy += 1) {
       for (let ix = 0; ix <= count; ix += 1) {
         const x = vp.min + gap * (ix + 0.5), y = vp.min + gap * (iy + 0.5);
         if (x > vp.max || y > vp.max) continue;
-        const f = state.stage === "diffuse" ? denoiserAt(x, y, t, state.bandwidth) : fieldAt(x, y, t, state.bandwidth);
+        const f = method === "diffusion" ? denoiserAt(x, y, t, state.bandwidth) : fieldAt(x, y, t, state.bandwidth);
         const mag = Math.hypot(f.vx, f.vy);
         if (f.confidence < 0.05 || mag < 0.03) continue;
         const cap = Math.min(0.33, 0.25 / Math.max(0.01, mag));
-        arrow(ctx, { x, y }, f.vx, f.vy, vp, palette.flowDark, 0.18 + f.confidence * 0.62, cap, 1.3);
+        const color = method === "diffusion" ? palette.sourceDark : palette.flowDark;
+        arrow(ctx, { x, y }, f.vx, f.vy, vp, color, 0.18 + f.confidence * 0.62, cap, 1.3);
       }
     }
   }
@@ -233,7 +239,7 @@
     if (ui.paths.checked) {
       ctx.strokeStyle = "rgba(92, 105, 98, 0.16)";
       ctx.lineWidth = 0.65;
-      for (let i = 0; i < state.pairs.length; i += 4) {
+      for (let i = 0; i < state.trainingCount; i += 4) {
         ctx.beginPath();
         for (let step = 0; step <= 12; step += 1) {
           const p = screen(diffusePair(state.pairs[i], step / 12), vp);
@@ -250,18 +256,18 @@
     });
     ctx.globalAlpha = 1;
 
-    if (ui.field.checked) drawField(ctx, vp, t);
+    if (ui.field.checked || state.stage === "fields") drawField(ctx, vp, t, "diffusion");
     if (ui.targets.checked && t > 0.005) {
-      for (let i = 0; i < state.pairs.length; i += 8) {
+      for (let i = 0; i < state.trainingCount; i += 8) {
         const pair = state.pairs[i], p = diffusePair(pair, t);
-        arrow(ctx, p, pair.b.x - p.x, pair.b.y - p.y, vp, palette.target, 0.52, 0.12, 1);
+        arrow(ctx, p, pair.a.x, pair.a.y, vp, palette.source, state.stage === "fields" ? 0.2 : 0.55, 0.12, 1);
       }
     }
 
     const pointColor = t < 0.5 ? palette.target : palette.source;
     ctx.fillStyle = pointColor;
     ctx.globalAlpha = 0.8;
-    state.pairs.forEach((pair) => {
+    state.pairs.slice(0, state.trainingCount).forEach((pair) => {
       const p = screen(diffusePair(pair, t), vp); ctx.beginPath(); ctx.arc(p.x, p.y, 2.15, 0, Math.PI * 2); ctx.fill();
     });
     ctx.globalAlpha = 1;
@@ -291,75 +297,61 @@
     const { ctx, w, h } = resizeCanvas(mainCanvas);
     const vp = viewport(w, h);
     const t = state.t;
-    const label = state.stage === "diffuse" ? "forward diffusion · generation runs in reverse" : state.stage === "regress" ? "click to inspect the local regression target" : "x-space";
-    drawBackground(ctx, w, h, vp, label);
-
-    if (state.stage === "diffuse") {
-      drawDiffusion(ctx, vp, t);
-      return;
-    }
+    if (state.stage === "sample") { drawGenerated(ctx, w, h, vp, state.samples, "flow ODE · t = " + state.sampleTime.toFixed(2), palette.flow); return; }
+    drawBackground(ctx, w, h, vp, state.stage === "fields" ? "learned velocity v(x, t)" : "conditional velocity targets");
 
     if (ui.paths.checked) {
       ctx.lineWidth = 0.65;
-      for (let i = 0; i < state.pairs.length; i += 3) {
+      for (let i = 0; i < state.trainingCount; i += 3) {
         const pair = state.pairs[i], a = screen(pair.a, vp), b = screen(pair.b, vp);
         ctx.strokeStyle = "rgba(92, 105, 98, 0.18)";
         ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke();
       }
     }
 
-    if (ui.field.checked || state.stage === "regress") drawField(ctx, vp, t);
+    if (ui.field.checked || state.stage === "fields") drawField(ctx, vp, t, "flow");
 
     if (ui.targets.checked) {
-      const stride = state.stage === "regress" ? 5 : 8;
-      for (let i = 0; i < state.pairs.length; i += stride) {
+      const stride = state.stage === "fields" ? 5 : 8;
+      for (let i = 0; i < state.trainingCount; i += stride) {
         const pair = state.pairs[i], p = lerpPair(pair, t);
-        arrow(ctx, p, pair.vx, pair.vy, vp, palette.target, state.stage === "regress" ? 0.23 : 0.54, 0.105, 1);
+        arrow(ctx, p, pair.vx, pair.vy, vp, palette.target, state.stage === "fields" ? 0.2 : 0.54, 0.105, 1);
       }
     }
 
     const pointColor = t < 0.5 ? palette.source : palette.target;
     ctx.fillStyle = pointColor;
     ctx.globalAlpha = 0.78;
-    for (let i = 0; i < state.pairs.length; i += 1) {
+    for (let i = 0; i < state.trainingCount; i += 1) {
       const p = screen(lerpPair(state.pairs[i], t), vp);
       ctx.beginPath(); ctx.arc(p.x, p.y, 2.15, 0, Math.PI * 2); ctx.fill();
     }
     ctx.globalAlpha = 1;
 
-    if (state.stage === "bridge") drawHighlightedPair(ctx, vp, t);
-    if (state.stage === "regress") drawInspector(ctx, vp);
-  }
-
-  function drawInspector(ctx, vp) {
-    const selected = state.selected;
-    const f = fieldAt(selected.x, selected.y, state.t, state.bandwidth);
-    const ordered = f.nearby.slice().sort((a, b) => a.d2 - b.d2).slice(0, 14);
-    ctx.save();
-    ctx.strokeStyle = "rgba(22, 125, 105, 0.24)";
-    ctx.fillStyle = "rgba(22, 125, 105, 0.06)";
-    const s = screen(selected, vp);
-    const radius = state.bandwidth * vp.size / (vp.max - vp.min) * 1.8;
-    ctx.beginPath(); ctx.arc(s.x, s.y, radius, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
-    ordered.forEach((item) => arrow(ctx, selected, item.pair.vx, item.pair.vy, vp, palette.target, 0.32, 0.13, 1));
-    arrow(ctx, selected, f.vx, f.vy, vp, palette.flowDark, 1, 0.2, 3.2);
-    ctx.fillStyle = palette.paper; ctx.strokeStyle = palette.flowDark; ctx.lineWidth = 2;
-    ctx.beginPath(); ctx.arc(s.x, s.y, 5, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
-    ctx.restore();
+    if (state.stage === "targets") drawHighlightedPair(ctx, vp, t);
   }
 
   function drawSample() {
     const { ctx, w, h } = resizeCanvas(sampleCanvas);
     const vp = viewport(w, h);
-    drawBackground(ctx, w, h, vp, "fresh samples · t = " + state.sampleTime.toFixed(2));
+    if (state.stage === "sample") {
+      drawGenerated(ctx, w, h, vp, state.diffusionSamples, "reverse diffusion · τ = " + state.diffusionTime.toFixed(2), palette.sourceDark);
+      return;
+    }
+    drawBackground(ctx, w, h, vp, state.stage === "fields" ? "predicted noise ε̂(x, τ)" : "exact added-noise ε targets");
+    drawDiffusion(ctx, vp, state.t);
+  }
+
+  function drawGenerated(ctx, w, h, vp, samples, label, color) {
+    drawBackground(ctx, w, h, vp, label);
     ctx.fillStyle = palette.target;
     ctx.globalAlpha = 0.18;
     state.targetReference.forEach((p) => {
       const s = screen(p, vp); ctx.beginPath(); ctx.arc(s.x, s.y, 2.4, 0, Math.PI * 2); ctx.fill();
     });
     ctx.globalAlpha = 0.82;
-    ctx.fillStyle = palette.flow;
-    state.samples.forEach((p) => {
+    ctx.fillStyle = color;
+    samples.forEach((p) => {
       const s = screen(p, vp); ctx.beginPath(); ctx.arc(s.x, s.y, 2.8, 0, Math.PI * 2); ctx.fill();
     });
     ctx.globalAlpha = 1;
@@ -370,84 +362,74 @@
   function updateStats() {
     ui.timeOutput.value = state.t.toFixed(2);
     ui.timeBadge.textContent = state.t.toFixed(2);
+    ui.diffusionTimeBadge.textContent = state.t.toFixed(2);
     ui.bandwidthOutput.value = state.bandwidth.toFixed(2);
-    const meanLength = state.pairs.reduce((sum, p) => sum + Math.hypot(p.vx, p.vy), 0) / state.pairs.length;
-    const local = fieldAt(state.selected.x, state.selected.y, state.t, state.bandwidth);
-    if (state.stage === "diffuse") {
-      ui.statALabel.textContent = "corruption level"; ui.statA.textContent = Math.round(state.t * 100) + "%";
-      ui.statBLabel.textContent = "direction at generation"; ui.statB.textContent = "← reverse";
-    } else if (state.stage === "regress") {
-      ui.statALabel.textContent = "local target spread"; ui.statA.textContent = local.spread.toFixed(2);
-      ui.statBLabel.textContent = "averaged speed"; ui.statB.textContent = Math.hypot(local.vx, local.vy).toFixed(2);
+    ui.trainingCountOutput.value = state.trainingCount + " / 420";
+    ui.pairCount.textContent = state.trainingCount;
+    if (state.stage === "fields") {
+      ui.statALabel.textContent = "diffusion estimate"; ui.statA.textContent = "predicted ε̂";
+      ui.statBLabel.textContent = "flow estimate"; ui.statB.textContent = "predicted v̂";
+    } else if (state.stage === "sample") {
+      ui.statALabel.textContent = "diffusion sampling"; ui.statA.textContent = "reverse noise";
+      ui.statBLabel.textContent = "flow sampling"; ui.statB.textContent = "follow velocity";
     } else {
-      ui.statALabel.textContent = "mean path length"; ui.statA.textContent = meanLength.toFixed(2);
-      ui.statBLabel.textContent = "mean speed"; ui.statB.textContent = meanLength.toFixed(2);
+      ui.statALabel.textContent = "diffusion target"; ui.statA.textContent = "noise ε";
+      ui.statBLabel.textContent = "flow target"; ui.statB.textContent = "velocity v";
     }
   }
 
   const stageCopy = {
-    diffuse: {
-      kicker: "Baseline · Forward diffusion", title: "Destroy the data in a way we can learn to undo",
-      description: "Each orange data point is mixed with a known Gaussian-noise sample. Scrub corruption time from clean data to pure noise.",
-      hint: "Generation runs in the opposite direction: noise → data.",
-      reading: "<strong>What diffusion learns:</strong> from a noisy point and its noise level, predict the noise component. Removing that estimate a little at a time reveals data."
+    targets: {
+      kicker: "Step 1 · Supervised learning targets", title: "The crucial difference is what appears after the arrow",
+      description: "Diffusion predicts the exact Gaussian noise mixed into a data example. Flow matching predicts the velocity of a temporary noise–data path.",
+      diffusionHint: "Purple arrows are the exact added-noise ε targets.",
+      flowHint: "The highlighted random pair exists only to make a velocity label.",
+      reading: "<strong>Same input signature, different answer:</strong> both models receive a point and a time. Diffusion is graded against added noise; flow matching is graded against motion."
     },
-    bridge: {
-      kicker: "Flow matching · Conditional paths", title: "Replace corruption with a route",
-      description: "Yes, each pairing is arbitrary: independently draw noise and data, then connect them only to manufacture a velocity label.",
-      hint: "Random connections are training scaffolding. They are discarded before generation.",
-      reading: "<strong>No point chooses a mode.</strong> The model sees only current position and time—not the highlighted endpoint—and learns the average velocity across many random pairings."
-    },
-    regress: {
-      kicker: "Flow matching · Marginal field", title: "Average conflicting instructions",
-      description: "Click anywhere in the plot. Orange arrows show nearby conditional targets; the thick green arrow is their kernel-weighted regression target.",
-      hint: "Click or drag to move the regression microscope.",
-      reading: "<strong>Read this view:</strong> the fitted field is smoother than the paired arrows because squared-error regression averages targets that meet at the same place and time."
+    fields: {
+      kicker: "Step 2 · Evidence accumulates", title: "Many incompatible labels become one usable field",
+      description: "Replay learning or scrub the example count. Diffusion averages noise targets into ε̂(x, τ); flow matching averages velocity targets into v̂(x, t).",
+      diffusionHint: "Purple arrows show the learned noise predictor ε̂(x, τ).",
+      flowHint: "Green arrows show the learned velocity field v̂(x, t).",
+      reading: "<strong>What has been learned:</strong> diffusion can turn ε̂ into a denoising update. Flow matching can use v̂ directly as the derivative of its sampling ODE."
     },
     sample: {
-      kicker: "Flow matching · Probability-flow ODE", title: "Release particles into the field",
-      description: "The paths have done their job: they supplied training labels. New noise can now move without knowing any destination.",
-      hint: "Use the generator below to integrate fresh noise.",
-      reading: "<strong>Read this view:</strong> at generation time there are no pairs and no target examples—only the learned velocity field."
+      kicker: "Step 3 · Generation", title: "Release the same fresh noise into both learners",
+      description: "Diffusion repeatedly removes predicted noise. Flow matching repeatedly follows predicted velocity. Neither sampler receives a paired destination.",
+      diffusionHint: "Reverse diffusion repeatedly uses ε̂ to step toward clean data.",
+      flowHint: "The flow solver repeatedly follows v̂ from noise to data.",
+      reading: "<strong>Generation uses the predictions differently:</strong> diffusion converts noise estimates into reverse denoising steps; flow matching integrates velocity as an ODE."
     }
   };
 
   function setStage(stage) {
-    const wasDiffusion = state.stage === "diffuse";
-    if (wasDiffusion) state.diffusionT = state.t; else state.flowT = state.t;
     state.stage = stage;
-    state.t = stage === "diffuse" ? state.diffusionT : state.flowT;
-    ui.time.value = state.t;
     document.querySelectorAll(".fm-tabs button").forEach((button) => {
       const active = button.dataset.stage === stage;
       button.classList.toggle("is-active", active); button.setAttribute("aria-pressed", String(active));
     });
     const copy = stageCopy[stage];
     ui.stageKicker.textContent = copy.kicker; ui.stageTitle.textContent = copy.title;
-    ui.stageDescription.textContent = copy.description; ui.hint.textContent = copy.hint; ui.reading.innerHTML = copy.reading;
-    const diffusion = stage === "diffuse";
-    ui.timeStart.textContent = diffusion ? "data" : "noise";
-    ui.timeEnd.textContent = diffusion ? "noise" : "data";
-    ui.timeSymbol.textContent = diffusion ? "τ" : "t";
-    ui.pathsLabel.textContent = diffusion ? "corruption paths" : "paired paths";
-    ui.targetsLabel.textContent = diffusion ? "derived denoising directions" : "training arrows";
-    ui.fieldLabel.textContent = diffusion ? "averaged denoiser" : "fitted velocity field";
-    ui.bandwidthHelp.textContent = diffusion ? "How locally the demo averages denoising targets. It plays the role of model smoothness." : "How locally the demo averages velocity targets. It plays the role of model smoothness.";
-    ui.pairControl.hidden = stage !== "bridge";
-    ui.play.textContent = state.t >= 0.999 ? "Replay" : "Play";
-    if (stage === "regress") { ui.field.checked = true; ui.targets.checked = true; }
-    if (stage === "sample") document.querySelector(".fm-sampler").scrollIntoView({ behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth", block: "start" });
-    updateStats(); drawMain();
+    ui.stageDescription.textContent = copy.description; ui.diffusionHint.innerHTML = copy.diffusionHint;
+    ui.hint.textContent = copy.flowHint; ui.reading.innerHTML = copy.reading;
+    ui.pathControls.hidden = stage === "sample";
+    ui.timeBadge.parentElement.hidden = stage === "sample";
+    ui.diffusionTimeBadge.parentElement.hidden = stage === "sample";
+    ui.generationControls.hidden = stage !== "sample";
+    ui.pairControl.hidden = stage !== "targets";
+    if (stage === "fields") { ui.field.checked = true; ui.targets.checked = true; }
+    if (stage === "sample") resetSamples();
+    updateStats(); drawAll();
   }
 
   function stopPlay(completed) {
-    state.playing = false; ui.play.textContent = completed || state.t >= 0.999 ? "Replay" : "Play"; clearTimeout(state.playFrame);
+    state.playing = false; ui.play.textContent = completed || state.t >= 0.994 ? "Replay" : "Play once"; clearTimeout(state.playFrame);
   }
 
   function togglePlay() {
     if (state.playing) { stopPlay(); return; }
-    if (state.t >= 0.999) {
-      state.t = 0; ui.time.value = 0; updateStats(); drawMain();
+    if (state.t >= 0.994) {
+      state.t = 0.005; ui.time.value = state.t; updateStats(); drawAll();
     }
     state.playing = true; ui.play.textContent = "Pause";
     let previous = performance.now();
@@ -456,9 +438,9 @@
       const now = performance.now();
       const delta = Math.min(0.04, (now - previous) / 1000); previous = now;
       state.t += delta * 0.28;
-      if (state.t >= 1) state.t = 1;
-      ui.time.value = state.t; updateStats(); drawMain();
-      if (state.t >= 1) { stopPlay(true); return; }
+      if (state.t >= 0.995) state.t = 0.995;
+      ui.time.value = state.t; updateStats(); drawAll();
+      if (state.t >= 0.995) { stopPlay(true); return; }
       state.playFrame = window.setTimeout(tick, 16);
     }
     state.playFrame = window.setTimeout(tick, 16);
@@ -466,21 +448,24 @@
 
   function resetSamples() {
     clearTimeout(state.sampleFrame);
-    state.sampling = false; state.sampleTime = 0; state.sampleStep = 0;
+    state.sampling = false; state.sampleTime = 0; state.diffusionTime = 0.995; state.sampleStep = 0;
     const rng = mulberry32((state.seed ^ 0x9E3779B9) >>> 0);
-    state.sampleOrigin = []; state.samples = [];
+    state.sampleOrigin = []; state.samples = []; state.diffusionSamples = [];
     for (let i = 0; i < 180; i += 1) {
-      const p = sourcePoint(rng); state.sampleOrigin.push({ x: p.x, y: p.y }); state.samples.push({ x: p.x, y: p.y });
+      const p = sourcePoint(rng);
+      state.sampleOrigin.push({ x: p.x, y: p.y });
+      state.samples.push({ x: p.x, y: p.y }); state.diffusionSamples.push({ x: p.x, y: p.y });
     }
-    ui.generate.disabled = false; ui.sampleStatus.textContent = "Ready · 180 fresh noise points";
-    drawSample();
+    ui.generate.disabled = false; ui.sampleStatus.textContent = "Ready · 180 shared noise points";
+    if (state.stage === "sample") drawAll();
   }
 
   function generate() {
     if (state.sampling) return;
     state.samples = state.sampleOrigin.map((p) => ({ x: p.x, y: p.y }));
-    state.sampleStep = 0; state.sampleTime = 0; state.sampling = true; ui.generate.disabled = true;
-    const steps = state.sampleSteps, dt = 1 / steps;
+    state.diffusionSamples = state.sampleOrigin.map((p) => ({ x: p.x, y: p.y }));
+    state.sampleStep = 0; state.sampleTime = 0; state.diffusionTime = 0.995; state.sampling = true; ui.generate.disabled = true;
+    const steps = state.sampleSteps, dt = 1 / steps, diffusionDt = 0.99 / steps;
     function animate() {
       if (!state.sampling) return;
       const t = Math.min(1, state.sampleStep * dt);
@@ -488,16 +473,49 @@
         const f = fieldAt(p.x, p.y, t, state.bandwidth);
         return { x: p.x + dt * f.vx, y: p.y + dt * f.vy };
       });
+      const tau = Math.max(0.005, 0.995 - state.sampleStep * diffusionDt);
+      const nextTau = Math.max(0.005, tau - diffusionDt);
+      state.diffusionSamples = state.diffusionSamples.map((p) => {
+        const eps = denoiserAt(p.x, p.y, tau, state.bandwidth);
+        const dataScale = Math.sqrt(Math.max(0.005, 1 - tau));
+        const noiseScale = Math.sqrt(tau);
+        const cleanX = Math.max(-4, Math.min(4, (p.x - noiseScale * eps.vx) / dataScale));
+        const cleanY = Math.max(-4, Math.min(4, (p.y - noiseScale * eps.vy) / dataScale));
+        return {
+          x: Math.sqrt(1 - nextTau) * cleanX + Math.sqrt(nextTau) * eps.vx,
+          y: Math.sqrt(1 - nextTau) * cleanY + Math.sqrt(nextTau) * eps.vy
+        };
+      });
       state.sampleStep += 1; state.sampleTime = Math.min(1, state.sampleStep * dt);
-      ui.sampleStatus.textContent = "Integrating · step " + state.sampleStep + " of " + steps + " · t = " + state.sampleTime.toFixed(2);
-      drawSample();
+      state.diffusionTime = nextTau;
+      ui.sampleStatus.textContent = "Generating both · step " + state.sampleStep + " of " + steps;
+      drawAll();
       if (state.sampleStep < steps) state.sampleFrame = window.setTimeout(animate, 70);
       else {
         state.sampling = false; ui.generate.disabled = false;
-        ui.sampleStatus.textContent = "Complete · " + steps + " Euler steps · no paired destinations used";
+        ui.sampleStatus.textContent = "Complete · " + steps + " steps each · same starting noise";
       }
     }
     state.sampleFrame = window.setTimeout(animate, 0);
+  }
+
+  function stopTraining(completed) {
+    state.training = false; clearTimeout(state.trainingFrame);
+    ui.train.textContent = completed || state.trainingCount >= 420 ? "Replay learning" : "Continue learning";
+  }
+
+  function replayTraining() {
+    if (state.training) { stopTraining(false); return; }
+    if (state.trainingCount >= 420) state.trainingCount = 20;
+    state.training = true; ui.train.textContent = "Pause learning";
+    function tick() {
+      if (!state.training) return;
+      state.trainingCount = Math.min(420, state.trainingCount + 4);
+      ui.trainingCount.value = state.trainingCount; updateStats(); drawAll();
+      if (state.trainingCount >= 420) { stopTraining(true); return; }
+      state.trainingFrame = window.setTimeout(tick, 24);
+    }
+    updateStats(); drawAll(); state.trainingFrame = window.setTimeout(tick, 24);
   }
 
   document.querySelectorAll(".fm-tabs button").forEach((button) => button.addEventListener("click", () => setStage(button.dataset.stage)));
@@ -507,11 +525,17 @@
     rebuild();
   }));
   ui.time.addEventListener("input", () => {
-    stopPlay(); state.t = Number(ui.time.value); ui.play.textContent = state.t >= 0.999 ? "Replay" : "Play"; updateStats(); drawMain();
+    stopPlay(); state.t = Number(ui.time.value); ui.play.textContent = state.t >= 0.994 ? "Replay" : "Play once"; updateStats(); drawAll();
   });
   ui.play.addEventListener("click", togglePlay);
-  [ui.paths, ui.targets, ui.field].forEach((input) => input.addEventListener("change", drawMain));
+  [ui.paths, ui.targets, ui.field].forEach((input) => input.addEventListener("change", drawAll));
   ui.bandwidth.addEventListener("input", () => { state.bandwidth = Number(ui.bandwidth.value); updateStats(); drawAll(); });
+  ui.trainingCount.addEventListener("input", () => {
+    stopTraining(false); state.trainingCount = Number(ui.trainingCount.value);
+    state.highlightedPair %= state.trainingCount; ui.pairNumber.value = state.highlightedPair + 1;
+    updateStats(); drawAll();
+  });
+  ui.train.addEventListener("click", replayTraining);
   ui.reseed.addEventListener("click", () => {
     let seed = Number(ui.seed.value);
     if (!Number.isFinite(seed)) seed = 20260719;
@@ -519,7 +543,7 @@
     state.seed = seed >>> 0; ui.seed.value = state.seed; rebuild();
   });
   ui.tracePair.addEventListener("click", () => {
-    state.highlightedPair = (state.highlightedPair + 37) % state.pairs.length;
+    state.highlightedPair = (state.highlightedPair + 37) % state.trainingCount;
     ui.pairNumber.value = state.highlightedPair + 1;
     drawMain();
   });
@@ -528,18 +552,6 @@
   });
   ui.generate.addEventListener("click", generate);
   ui.resetSamples.addEventListener("click", resetSamples);
-
-  function moveInspector(event) {
-    if (state.stage !== "regress") return;
-    const rect = mainCanvas.getBoundingClientRect();
-    const vp = viewport(rect.width, rect.height);
-    const p = world(event.clientX - rect.left, event.clientY - rect.top, vp);
-    state.selected.x = Math.max(vp.min, Math.min(vp.max, p.x));
-    state.selected.y = Math.max(vp.min, Math.min(vp.max, p.y));
-    updateStats(); drawMain();
-  }
-  mainCanvas.addEventListener("pointerdown", (event) => { mainCanvas.setPointerCapture(event.pointerId); moveInspector(event); });
-  mainCanvas.addEventListener("pointermove", (event) => { if (mainCanvas.hasPointerCapture(event.pointerId)) moveInspector(event); });
 
   let resizeFrame = 0;
   window.addEventListener("resize", () => { cancelAnimationFrame(resizeFrame); resizeFrame = requestAnimationFrame(drawAll); });
@@ -550,5 +562,6 @@
 
   state.bandwidth = Number(ui.bandwidth.value);
   state.sampleSteps = 2 ** Number(ui.steps.value);
+  state.trainingCount = Number(ui.trainingCount.value);
   rebuild();
 }());
