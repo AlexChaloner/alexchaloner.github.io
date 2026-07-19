@@ -13,7 +13,6 @@
 .staged-prototype {
   --staged-unlock-colour: #a20d5c;
   --staged-unlock-hover: #790642;
-  --staged-unlock-wash: #ffe4f2;
   float: right;
   width: min(584px, calc(100% - 760px));
   margin: 0 0 2rem 40px;
@@ -148,10 +147,10 @@
 .staged-view-tabs button.is-offering {
   visibility: visible;
   border: 2px solid var(--staged-unlock-colour);
-  color: #fff;
-  background: var(--staged-unlock-colour);
+  color: var(--staged-unlock-colour);
+  background: #fff;
   font-weight: bold;
-  animation: staged-offer-blink 1250ms step-end 1 both;
+  animation: staged-offer-blink 600ms step-end 1 both;
 }
 
 .staged-view-tabs button.is-active,
@@ -348,7 +347,7 @@
 }
 
 .staged-control-slot.is-offering {
-  background: var(--staged-unlock-wash);
+  background: #fafafa;
 }
 
 .staged-control-slot.is-unlocked[data-owner="shared"] {
@@ -396,8 +395,8 @@
 .staged-unlock {
   display: none;
   border: 2px solid var(--staged-unlock-colour) !important;
-  color: #fff !important;
-  background: var(--staged-unlock-colour) !important;
+  color: var(--staged-unlock-colour) !important;
+  background: #fff !important;
   font-size: 0.76rem !important;
   font-weight: bold;
   letter-spacing: 0.01em;
@@ -413,7 +412,7 @@
 .staged-control-slot.is-offering > .staged-unlock,
 .staged-lane-curtain.is-offering > .staged-unlock {
   display: block;
-  animation: staged-offer-blink 1250ms step-end 1 both;
+  animation: staged-offer-blink 600ms step-end 1 both;
 }
 
 .staged-unlock:hover {
@@ -422,11 +421,11 @@
 }
 
 @keyframes staged-offer-blink {
-  0%, 7%, 37%, 44%, 60%, 67%, 74%, 81% {
+  0%, 6%, 40%, 46%, 65%, 71%, 80%, 86% {
     opacity: 0.12;
   }
 
-  8%, 36%, 45%, 59%, 68%, 73%, 82%, 100% {
+  7%, 39%, 47%, 64%, 72%, 79%, 87%, 100% {
     opacity: 1;
   }
 }
