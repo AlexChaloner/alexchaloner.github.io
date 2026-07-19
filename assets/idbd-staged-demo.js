@@ -8,8 +8,8 @@
 
   const stages = [
     ["Watch SGD learn", "One learner follows a recurring signal through noise.", "Set its learning rate", "stream"],
-    ["Set the learning rate", "Choose how far SGD moves after each gradient estimate.", "Choose the horizon", "stream"],
-    ["Choose the horizon", "Decide how much experience SGD receives, then watch its loss over time.", "Add IDBD", "loss"],
+    ["Set the learning rate", "Choose how far SGD moves after each gradient estimate.", "See the loss curve", "stream"],
+    ["See the loss curve", "Switch from the latest prediction to SGD’s progress over the full run.", "Add IDBD", "loss"],
     ["Add IDBD", "A second learner enters the same fixed spatial lane and replays the identical stream.", "Set IDBD’s initial rate", "stream"],
     ["Set a fair starting point", "Give IDBD an initial rate, or lock both learners to the same starting value.", "Enable adaptation", "stream"],
     ["Enable adaptation", "Theta controls how quickly IDBD changes each feature’s learning rate.", "Judge the clean signal", "loss"],
@@ -21,6 +21,7 @@
     ["Open the optimizer lab", "Use the same fixed dock for run settings, momentum, decay, and IDBD trace variants.", "Start over", "model"]
   ];
   const viewUnlocks = { stream: 1, loss: 3, clean: 7, rates: 8, history: 9, trace: 10, model: 11 };
+  const tabUnlocks = { stream: 3, loss: 3, clean: 7, rates: 8, history: 9, trace: 10, model: 11 };
   let initialized = false;
 
   function make(tagName, className, html) {
@@ -123,7 +124,7 @@
       '</div>',
       '<section class="staged-control-dock" aria-label="Experiment controls">',
       '  <nav class="staged-control-tabs" aria-label="Control groups"><button type="button" data-page="basic">Learning</button><button type="button" data-page="run">Run settings</button><button type="button" data-page="extensions">Extensions</button></nav>',
-      '  <div class="staged-control-page staged-basic-page" data-page="basic"><div class="staged-control-slot" data-slot="sgd-rate" data-unlock="2"></div><div class="staged-control-slot" data-slot="idbd-rate" data-unlock="5"></div><div class="staged-control-slot" data-slot="theta" data-unlock="6"></div><div class="staged-control-slot" data-slot="steps" data-unlock="3"></div><div class="staged-lock-slot" data-unlock="5"></div></div>',
+      '  <div class="staged-control-page staged-basic-page" data-page="basic"><div class="staged-control-slot" data-slot="sgd-rate" data-unlock="2"></div><div class="staged-control-slot" data-slot="idbd-rate" data-unlock="5"></div><div class="staged-control-slot" data-slot="theta" data-unlock="6"></div><div class="staged-control-slot" data-slot="steps" data-unlock="1"></div><div class="staged-lock-slot" data-unlock="5"></div></div>',
       '  <div class="staged-control-page staged-run-page" data-page="run"><div data-slot="batch"></div><div data-slot="stream"></div></div>',
       '  <div class="staged-control-page staged-extension-page" data-page="extensions"><div data-slot="momentum"></div><div data-slot="decay"></div><div data-slot="momentum-mode"></div><div data-slot="decay-mode"></div></div>',
       '</section>',
@@ -269,14 +270,15 @@
         node.classList.toggle("is-unlocked", currentStage >= Number(node.dataset.unlock));
       });
       viewButtons.forEach(function (button) {
-        const unlocked = currentStage >= viewUnlocks[button.dataset.view];
-        button.disabled = !unlocked;
-        button.classList.toggle("is-unlocked", unlocked);
+        const available = currentStage >= viewUnlocks[button.dataset.view];
+        const visible = currentStage >= tabUnlocks[button.dataset.view];
+        button.disabled = !available;
+        button.classList.toggle("is-unlocked", visible);
       });
       controlButtons.forEach(function (button) {
-        const unlocked = button.dataset.page === "basic" || currentStage >= 12;
-        button.disabled = !unlocked;
-        button.classList.toggle("is-unlocked", unlocked);
+        const available = button.dataset.page !== "extensions" || currentStage >= 12;
+        button.disabled = !available;
+        button.classList.add("is-unlocked");
       });
       clone.querySelectorAll(".staged-lane-score dl").forEach(function (detailsList) {
         detailsList.classList.toggle("is-unlocked", currentStage >= 7);
