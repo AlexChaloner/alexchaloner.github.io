@@ -11,6 +11,9 @@
 }
 
 .staged-prototype {
+  --staged-unlock-colour: #a20d5c;
+  --staged-unlock-hover: #790642;
+  --staged-unlock-wash: #ffe4f2;
   float: right;
   width: min(584px, calc(100% - 760px));
   margin: 0 0 2rem 40px;
@@ -144,11 +147,11 @@
 
 .staged-view-tabs button.is-offering {
   visibility: visible;
-  border: 2px solid #064f9d;
+  border: 2px solid var(--staged-unlock-colour);
   color: #fff;
-  background: #064f9d;
+  background: var(--staged-unlock-colour);
   font-weight: bold;
-  animation: staged-offer-pulse 850ms ease-in-out 4;
+  animation: staged-offer-blink 1250ms step-end 1 both;
 }
 
 .staged-view-tabs button.is-active,
@@ -345,7 +348,7 @@
 }
 
 .staged-control-slot.is-offering {
-  background: #dcecff;
+  background: var(--staged-unlock-wash);
 }
 
 .staged-control-slot.is-unlocked[data-owner="shared"] {
@@ -392,9 +395,9 @@
 
 .staged-unlock {
   display: none;
-  border: 2px solid #064f9d !important;
+  border: 2px solid var(--staged-unlock-colour) !important;
   color: #fff !important;
-  background: #064f9d !important;
+  background: var(--staged-unlock-colour) !important;
   font-size: 0.76rem !important;
   font-weight: bold;
   letter-spacing: 0.01em;
@@ -410,21 +413,21 @@
 .staged-control-slot.is-offering > .staged-unlock,
 .staged-lane-curtain.is-offering > .staged-unlock {
   display: block;
-  animation: staged-offer-pulse 850ms ease-in-out 4;
+  animation: staged-offer-blink 1250ms step-end 1 both;
 }
 
 .staged-unlock:hover {
   color: #fff !important;
-  background: #063d79 !important;
+  background: var(--staged-unlock-hover) !important;
 }
 
-@keyframes staged-offer-pulse {
-  0%, 100% {
-    box-shadow: 0 0 0 0 rgb(6 79 157 / 0);
+@keyframes staged-offer-blink {
+  0%, 7%, 37%, 44%, 60%, 67%, 74%, 81% {
+    opacity: 0.12;
   }
 
-  50% {
-    box-shadow: 0 0 0 6px rgb(6 79 157 / 0.32);
+  8%, 36%, 45%, 59%, 68%, 73%, 82%, 100% {
+    opacity: 1;
   }
 }
 
