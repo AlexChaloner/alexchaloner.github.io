@@ -97,7 +97,7 @@
   overflow: hidden;
   color: #555;
   font-size: 0.75rem;
-  text-align: right;
+  text-align: left;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -129,10 +129,13 @@
 
 .staged-view-tabs button {
   min-width: 0;
+  overflow: hidden;
   border-width: 0 1px 0 0;
   border-color: #ccc;
   visibility: hidden;
   font-size: 0.75rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .staged-view-tabs button.is-unlocked {
@@ -141,9 +144,11 @@
 
 .staged-view-tabs button.is-offering {
   visibility: visible;
-  border: 1px dashed #1b5eaa;
-  color: #1b5eaa;
-  background: #eef5fc;
+  border: 2px solid #064f9d;
+  color: #fff;
+  background: #064f9d;
+  font-weight: bold;
+  animation: staged-offer-pulse 850ms ease-in-out 4;
 }
 
 .staged-view-tabs button.is-active,
@@ -301,10 +306,10 @@
   position: relative;
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  grid-template-rows: repeat(9, minmax(60px, 1fr));
+  grid-template-rows: repeat(9, minmax(68px, 1fr));
   width: 100%;
   min-width: 0;
-  min-height: 540px;
+  min-height: 612px;
   height: 100%;
 }
 
@@ -340,7 +345,7 @@
 }
 
 .staged-control-slot.is-offering {
-  background: #eef5fc;
+  background: #dcecff;
 }
 
 .staged-control-slot.is-unlocked[data-owner="shared"] {
@@ -387,10 +392,12 @@
 
 .staged-unlock {
   display: none;
-  border: 1px dashed #1b5eaa !important;
-  color: #1b5eaa !important;
-  background: #fff !important;
+  border: 2px solid #064f9d !important;
+  color: #fff !important;
+  background: #064f9d !important;
   font-size: 0.76rem !important;
+  font-weight: bold;
+  letter-spacing: 0.01em;
 }
 
 .staged-control-slot > .staged-unlock {
@@ -403,11 +410,22 @@
 .staged-control-slot.is-offering > .staged-unlock,
 .staged-lane-curtain.is-offering > .staged-unlock {
   display: block;
+  animation: staged-offer-pulse 850ms ease-in-out 4;
 }
 
 .staged-unlock:hover {
   color: #fff !important;
-  background: #1b5eaa !important;
+  background: #063d79 !important;
+}
+
+@keyframes staged-offer-pulse {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgb(6 79 157 / 0);
+  }
+
+  50% {
+    box-shadow: 0 0 0 6px rgb(6 79 157 / 0.32);
+  }
 }
 
 .staged-control-dock .control {
@@ -416,8 +434,41 @@
   border-left: 0;
 }
 
+.staged-control-dock .control-heading {
+  align-items: flex-start;
+}
+
+.staged-control-dock .control-heading label,
+.staged-control-dock .control-heading output {
+  min-width: 0;
+  line-height: 1.15;
+  overflow-wrap: anywhere;
+}
+
+.staged-control-dock .control-heading output {
+  flex: 0 1 auto;
+  max-width: 52%;
+  text-align: right;
+}
+
 .staged-control-dock .control input[type="range"] {
+  display: block;
+  min-width: 0;
   margin-top: 0.45rem;
+}
+
+.staged-control-dock .range-labels {
+  gap: 0.5rem;
+  min-width: 0;
+}
+
+.staged-control-dock .range-labels span {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.staged-control-dock .range-labels span:last-child {
+  text-align: right;
 }
 
 .staged-control-dock .control > p {
@@ -483,6 +534,10 @@
 
 .staged-stream-slot #staged-new-stream {
   align-self: end;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .staged-stream-slot .transport-controls {
@@ -637,5 +692,11 @@
   .staged-lock-slot,
   .staged-lane-curtain {
     transition: none;
+  }
+
+  .staged-view-tabs button.is-offering,
+  .staged-control-slot.is-offering > .staged-unlock,
+  .staged-lane-curtain.is-offering > .staged-unlock {
+    animation: none;
   }
 }
