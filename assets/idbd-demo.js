@@ -201,6 +201,7 @@
       idbdWeights: new Float64Array(FEATURE_COUNT),
       beta,
       trace: new Float64Array(FEATURE_COUNT),
+      sgdMomentum: new Float64Array(FEATURE_COUNT),
       idbdMomentum: new Float64Array(FEATURE_COUNT),
       momentumTrace: new Float64Array(FEATURE_COUNT),
       directionSgd: new Float64Array(FEATURE_COUNT),
@@ -264,7 +265,16 @@
       const sgdDirection = state.directionSgd[feature] / actualBatchSize;
       const idbdDirection = state.directionIdbd[feature] / actualBatchSize;
       const curvature = state.activeCounts[feature] / actualBatchSize;
-      state.sgdWeights[feature] += state.sgdRate * sgdDirection;
+      let sgdUpdateDirection = sgdDirection;
+      if (state.momentum > 0) {
+        state.sgdMomentum[feature] = state.momentum * state.sgdMomentum[feature]
+          + (1 - state.momentum) * sgdDirection;
+        sgdUpdateDirection = state.sgdMomentum[feature];
+      }
+      if (state.weightDecay > 0) {
+        state.sgdWeights[feature] *= 1 - state.sgdRate * state.weightDecay;
+      }
+      state.sgdWeights[feature] += state.sgdRate * sgdUpdateDirection;
 
       const betaChange = clamp(state.theta * idbdDirection * state.trace[feature], -2, 2);
       state.beta[feature] = clamp(state.beta[feature] + betaChange, -10, Math.log(10));
@@ -786,9 +796,9 @@
     const note = byId("batch-note");
     if (extensionsEnabled) {
       if (batchSize === 1) {
-        note.innerHTML = "<strong>At batch size 1</strong>, the gradient stream is online. With both grafts off this reduces to classic IDBD; momentum or decay changes the update and its trace.";
+        note.innerHTML = "<strong>At batch size 1</strong>, the gradient stream is online. With both shared additions off this reduces to plain SGD and classic IDBD; momentum or decay changes both updates and IDBD’s trace.";
       } else {
-        note.innerHTML = "<strong>At batch size " + batchSize + "</strong>, the optimizer grafts use the same mean-gradient diagonal approximation as the duplicated baseline.";
+        note.innerHTML = "<strong>At batch size " + batchSize + "</strong>, both learners use the shared optimizer settings on the same mean-gradient batch; IDBD retains its diagonal trace approximation.";
       }
       return;
     }
@@ -1084,33 +1094,50 @@
     clone.classList.add("extended-experiment");
     prefixCloneIds(clone, "extended");
     clone.querySelector(".experiment-heading .section-label").textContent = "Interactive experiment 02 · optimizer grafts";
-    clone.querySelector(".experiment-heading h2").textContent = "What changes when IDBD inherits momentum and decay?";
-    clone.querySelector(".experiment-lede").textContent = "The same stream and baseline SGD, with derived momentum and decoupled weight-decay variants available for IDBD.";
+    clone.querySelector(".experiment-heading h2").textContent = "What changes when both learners inherit momentum and decay?";
+    clone.querySelector(".experiment-lede").textContent = "The same stream, now with shared momentum and weight decay for SGD and IDBD, plus IDBD-specific choices for how its meta-gradient trace follows those updates.";
+    clone.querySelector(".sgd-card .method-pill").textContent = "fixed rate + shared grafts";
     clone.querySelector(".idbd-card .method-pill").textContent = "one rate per feature + grafts";
-    clone.querySelector(".simulation-scope").innerHTML = "<strong>Independent live simulation.</strong> The data, plots, and playback controls are duplicated from experiment 01. Momentum and weight decay affect IDBD only, leaving SGD as the reference.";
+    clone.querySelector(".simulation-scope").innerHTML = "<strong>Independent live simulation.</strong> The data, plots, and playback controls are duplicated from experiment 01. Momentum and weight decay are shared by both learners; the trace mechanism choices apply only to IDBD.";
 
-    const graftControls = document.createElement("div");
-    graftControls.className = "optimizer-graft-controls";
-    graftControls.innerHTML = [
-      '<p class="graft-controls-title">Additional IDBD grafts</p>',
+    const sharedGraftControls = document.createElement("div");
+    sharedGraftControls.className = "optimizer-graft-controls shared-optimizer-controls";
+    sharedGraftControls.innerHTML = [
+      '<p class="graft-controls-title">Shared optimizer additions · SGD + IDBD</p>',
       '<div class="control">',
       '  <div class="control-heading"><label for="extended-momentum">Momentum <span class="math">μ</span></label><output id="extended-momentum-value" for="extended-momentum">0.00</output></div>',
       '  <input id="extended-momentum" type="range" min="0" max="0.99" step="0.01" value="0" aria-describedby="extended-momentum-help">',
       '  <div class="range-labels" aria-hidden="true"><span>off</span><span>0.99</span></div>',
-      '  <label class="mode-label" for="extended-momentum-mode">Trace mechanism</label>',
-      '  <select id="extended-momentum-mode"><option value="derived" selected>Derived trace</option><option value="naive">Naïve trace</option></select>',
-      '  <p id="extended-momentum-help">EMA momentum; derived mode carries p = dm/dβ.</p>',
+      '  <p id="extended-momentum-help">The same EMA momentum coefficient and update direction for both learners.</p>',
       '</div>',
       '<div class="control">',
       '  <div class="control-heading"><label for="extended-weight-decay">Weight decay <span class="math">λ</span></label><output id="extended-weight-decay-value" for="extended-weight-decay">off</output></div>',
       '  <input id="extended-weight-decay" type="range" min="0" max="7" step="1" value="0" aria-describedby="extended-weight-decay-help">',
       '  <div class="range-labels" aria-hidden="true"><span>off</span><span>1.0</span></div>',
-      '  <label class="mode-label" for="extended-weight-decay-mode">Decay mechanism</label>',
-      '  <select id="extended-weight-decay-mode"><option value="traced" selected>Traced α-coupled</option><option value="alpha_coupled">α-coupled</option><option value="fixed">Fixed-rate</option></select>',
-      '  <p id="extended-weight-decay-help">Decoupled decay; traced mode includes its β-derivative in h.</p>',
+      '  <p id="extended-weight-decay-help">The same decay strength for both; each learner scales it by its own learning rate.</p>',
       '</div>'
     ].join("");
-    clone.querySelector(".idbd-method-controls").appendChild(graftControls);
+    clone.querySelector(".shared-controls").insertBefore(
+      sharedGraftControls,
+      clone.querySelector(".shared-control-grid")
+    );
+
+    const idbdTraceControls = document.createElement("div");
+    idbdTraceControls.className = "idbd-trace-controls";
+    idbdTraceControls.innerHTML = [
+      '<p class="graft-controls-title">IDBD trace treatment</p>',
+      '<div class="control">',
+      '  <label class="mode-label" for="extended-momentum-mode">With momentum</label>',
+      '  <select id="extended-momentum-mode"><option value="derived" selected>Derived trace</option><option value="naive">Naïve trace</option></select>',
+      '  <p>Derived mode carries p = dm/dβ.</p>',
+      '</div>',
+      '<div class="control">',
+      '  <label class="mode-label" for="extended-weight-decay-mode">Decay mechanism</label>',
+      '  <select id="extended-weight-decay-mode"><option value="traced" selected>Traced α-coupled</option><option value="alpha_coupled">α-coupled</option><option value="fixed">Fixed-rate</option></select>',
+      '  <p>Traced mode includes decay’s β-derivative in h.</p>',
+      '</div>'
+    ].join("");
+    clone.querySelector(".idbd-method-controls").appendChild(idbdTraceControls);
     mount.replaceWith(clone);
   }
 
