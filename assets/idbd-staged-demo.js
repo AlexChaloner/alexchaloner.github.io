@@ -400,7 +400,7 @@
       button.addEventListener("click", function () { setStage(Number(button.dataset.nextStage), false, true); });
     });
     [[actual.steps, 1], [actual.sgdRate, 2], [actual.idbdRate, 5], [actual.theta, 6], [actual.batch, 12], [actual.momentum, 14], [actual.decay, 15]].forEach(function (entry) {
-      entry[0].addEventListener("change", function () { if (!suppressProgress) markProgress(entry[1], 1); });
+      entry[0].addEventListener("input", function () { if (!suppressProgress) markProgress(entry[1], 1); });
     });
     actual.newStream.addEventListener("click", function () { markProgress(13, 1); });
     actual.momentumMode.addEventListener("change", function () { markProgress(16, 1); });
