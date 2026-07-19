@@ -14,8 +14,7 @@
     ["Set a fair starting point", "Give IDBD an initial rate, or lock both learners to the same starting value.", "Enable adaptation", "stream"],
     ["Enable adaptation", "Theta controls how quickly IDBD changes each feature’s learning rate.", "Judge the clean signal", "loss"],
     ["Judge the clean signal", "Remove observation noise from the score and compare what each learner retained.", "Inspect every rate", "clean"],
-    ["Inspect every rate", "The predictive feature is green; the 63 irrelevant features occupy the same positions in both lanes.", "Watch the rates separate", "rates"],
-    ["Watch the rates separate", "Compare the predictive-feature rate with the typical irrelevant-feature rate over time.", "Inspect the trace", "history"],
+    ["Inspect every rate", "The predictive feature is green; the 63 irrelevant features occupy the same positions in both lanes.", "Inspect the trace", "rates"],
     ["Inspect the sensitivity trace", "IDBD’s signed h trace is the information SGD does not maintain.", "Inspect the model", "trace"],
     ["Inspect the model", "The predictive coefficient should approach one while irrelevant coefficients stay near zero.", "Set the batch size", "model"],
     ["Set the batch size", "Choose how many examples contribute to each parameter update.", "Change the stream", "model"],
@@ -25,8 +24,8 @@
     ["Choose the momentum trace", "Decide whether IDBD differentiates through momentum or uses the naïve trace.", "Choose the decay trace", "trace"],
     ["Choose the decay trace", "Decide how weight decay participates in IDBD’s meta-gradient.", "Start over", "trace"]
   ];
-  const viewUnlocks = { stream: 1, loss: 3, clean: 7, rates: 8, history: 9, trace: 10, model: 11 };
-  const tabUnlocks = { stream: 3, loss: 3, clean: 7, rates: 8, history: 9, trace: 10, model: 11 };
+  const viewUnlocks = { stream: 1, loss: 3, clean: 7, rates: 8, trace: 9, model: 10 };
+  const tabUnlocks = { stream: 3, loss: 3, clean: 7, rates: 8, trace: 9, model: 10 };
   const unlockTargets = {
     2: ["control", "sgd-rate", "Add learning rate"],
     3: ["view", "loss", "Add loss view"],
@@ -35,15 +34,14 @@
     6: ["control", "theta", "Add adaptation"],
     7: ["view", "clean", "Add clean loss"],
     8: ["view", "rates", "Add rate distribution"],
-    9: ["view", "history", "Add rate history"],
-    10: ["view", "trace", "Add h trace"],
-    11: ["view", "model", "Add model view"],
-    12: ["control", "batch", "Add batch size"],
-    13: ["control", "stream", "Add stream controls"],
-    14: ["control", "momentum", "Add momentum"],
-    15: ["control", "decay", "Add weight decay"],
-    16: ["control", "momentum-mode", "Add momentum trace"],
-    17: ["control", "decay-mode", "Add decay trace"]
+    9: ["view", "trace", "Add h trace"],
+    10: ["view", "model", "Add model view"],
+    11: ["control", "batch", "Add batch size"],
+    12: ["control", "stream", "Add stream controls"],
+    13: ["control", "momentum", "Add momentum"],
+    14: ["control", "decay", "Add weight decay"],
+    15: ["control", "momentum-mode", "Add momentum trace"],
+    16: ["control", "decay-mode", "Add decay trace"]
   };
   const gateHints = {
     1: "Adjust training steps",
@@ -54,15 +52,14 @@
     6: "Adjust the meta learning rate",
     7: "Open the new Clean loss view",
     8: "Open the new Rates view",
-    9: "Open the new Rate history view",
-    10: "Open the new h trace view",
-    11: "Open the new Model view",
-    12: "Adjust the batch size",
-    13: "Generate a new noise stream",
-    14: "Adjust momentum",
-    15: "Adjust weight decay",
-    16: "Change the momentum trace",
-    17: "Change the decay trace"
+    9: "Open the new h trace view",
+    10: "Open the new Model view",
+    11: "Adjust the batch size",
+    12: "Generate a new noise stream",
+    13: "Adjust momentum",
+    14: "Adjust weight decay",
+    15: "Change the momentum trace",
+    16: "Change the decay trace"
   };
   let initialized = false;
 
@@ -120,16 +117,6 @@
     return figure;
   }
 
-  function historyFigure() {
-    const figure = make("figure", "chart-block staged-panel");
-    figure.dataset.view = "history";
-    figure.innerHTML = [
-      '<figcaption><span>Fixed learning rate</span><small>one rate for every feature · 10⁻⁵–10 log scale</small></figcaption>',
-      '<canvas id="staged-sgd-rate-history-chart" role="img" aria-label="SGD fixed learning rate over training examples"></canvas>'
-    ].join("");
-    return figure;
-  }
-
   function emptyTracePanel() {
     const panel = make("div", "staged-panel staged-empty-panel");
     panel.dataset.view = "trace";
@@ -154,11 +141,11 @@
     const workbench = make("div", "staged-workbench");
     workbench.innerHTML = [
       '<header class="staged-workbench-heading">',
-      '  <div><p id="staged-stage-count" class="section-label">Stage 1 of 17</p><h3 id="staged-stage-title">Watch SGD learn</h3><p id="staged-stage-description"></p></div>',
+      '  <div><p id="staged-stage-count" class="section-label">Stage 1 of 16</p><h3 id="staged-stage-title">Watch SGD learn</h3><p id="staged-stage-description"></p></div>',
       '  <div class="staged-transport"><span id="staged-workbench-status" aria-live="polite">Preparing…</span><button id="staged-workbench-pause" type="button">Pause</button><button id="staged-workbench-play" type="button">Play</button></div>',
       '</header>',
       '<nav class="staged-view-tabs" aria-label="Visible measurement">',
-      '  <button type="button" data-view="stream">Stream</button><button type="button" data-view="loss">Loss</button><button type="button" data-view="clean">Clean loss</button><button type="button" data-view="rates">Rates</button><button type="button" data-view="history">Rate history</button><button type="button" data-view="trace">h trace</button><button type="button" data-view="model">Model</button>',
+      '  <button type="button" data-view="stream">Stream</button><button type="button" data-view="loss">Loss</button><button type="button" data-view="clean">Clean loss</button><button type="button" data-view="rates">Rates</button><button type="button" data-view="trace">h trace</button><button type="button" data-view="model">Model</button>',
       '</nav>',
       '<div class="staged-learner-grid">',
       '  <section class="staged-learner staged-sgd-lane" aria-label="SGD lane"><div class="staged-lane-heading"></div><div class="staged-lane-score"></div><div class="staged-viewport"></div></section>',
@@ -170,16 +157,16 @@
       '    <div class="staged-control-slot" data-slot="sgd-rate" data-owner="sgd" data-unlock="2"></div>',
       '    <div class="staged-control-slot" data-slot="idbd-rate" data-owner="idbd" data-unlock="5"></div>',
       '    <div class="staged-control-slot" data-slot="theta" data-owner="idbd" data-unlock="6"></div>',
-      '    <div class="staged-control-slot" data-slot="batch" data-owner="shared" data-unlock="12"></div>',
-      '    <div class="staged-control-slot staged-stream-slot" data-slot="stream" data-owner="shared" data-unlock="13"></div>',
-      '    <div class="staged-control-slot" data-slot="momentum" data-owner="shared" data-unlock="14"></div>',
-      '    <div class="staged-control-slot" data-slot="decay" data-owner="shared" data-unlock="15"></div>',
-      '    <div class="staged-control-slot" data-slot="momentum-mode" data-owner="idbd" data-unlock="16"></div>',
-      '    <div class="staged-control-slot" data-slot="decay-mode" data-owner="idbd" data-unlock="17"></div>',
+      '    <div class="staged-control-slot" data-slot="batch" data-owner="shared" data-unlock="11"></div>',
+      '    <div class="staged-control-slot staged-stream-slot" data-slot="stream" data-owner="shared" data-unlock="12"></div>',
+      '    <div class="staged-control-slot" data-slot="momentum" data-owner="shared" data-unlock="13"></div>',
+      '    <div class="staged-control-slot" data-slot="decay" data-owner="shared" data-unlock="14"></div>',
+      '    <div class="staged-control-slot" data-slot="momentum-mode" data-owner="idbd" data-unlock="15"></div>',
+      '    <div class="staged-control-slot" data-slot="decay-mode" data-owner="idbd" data-unlock="16"></div>',
       '    <div class="staged-lock-slot" data-owner="bridge" data-unlock="5"></div>',
       '  </div>',
       '</section>',
-      '<nav class="staged-navigation" aria-label="Walkthrough stages"><button id="staged-back" type="button">Back</button><div><span id="staged-nav-stage">Stage 1 of 17</span><strong id="staged-nav-next">Adjust training steps (0/5)</strong></div><button id="staged-show-all" class="staged-show-all" type="button">Open full lab</button></nav>'
+      '<nav class="staged-navigation" aria-label="Walkthrough stages"><button id="staged-back" type="button">Back</button><div><span id="staged-nav-stage">Stage 1 of 16</span><strong id="staged-nav-next">Adjust training steps (0/5)</strong></div><button id="staged-show-all" class="staged-show-all" type="button">Open full lab</button></nav>'
     ].join("");
     clone.querySelector(".experiment-heading").after(workbench);
 
@@ -207,8 +194,6 @@
     moveFigure("idbd-signal-loss-chart", "clean", idbdViewport);
     moveFigure("sgd-rates-chart", "rates", sgdViewport);
     moveFigure("idbd-rates-chart", "rates", idbdViewport);
-    sgdViewport.appendChild(historyFigure());
-    moveFigure("idbd-rate-history-chart", "history", idbdViewport);
     sgdViewport.appendChild(emptyTracePanel());
     moveFigure("idbd-trace-chart", "trace", idbdViewport);
     moveFigure("sgd-weights-chart", "model", sgdViewport);
@@ -287,7 +272,7 @@
       panels.forEach(function (panel) { panel.classList.toggle("is-active", panel.dataset.view === view); });
       window.dispatchEvent(new Event("resize"));
       if (userInitiated) {
-        const viewStage = { loss: 3, clean: 7, rates: 8, history: 9, trace: 10, model: 11 }[view];
+        const viewStage = { loss: 3, clean: 7, rates: 8, trace: 9, model: 10 }[view];
         if (viewStage === currentStage) markProgress(currentStage, 1);
       }
     }
@@ -303,7 +288,7 @@
     }
 
     function requiredProgress(stage) {
-      return [1, 2, 5, 6, 12, 14, 15].includes(stage) ? 5 : 1;
+      return [1, 2, 5, 6, 11, 13, 14].includes(stage) ? 5 : 1;
     }
 
     function markProgress(stage, amount) {
@@ -345,10 +330,10 @@
 
     function clearHiddenExtensions() {
       let changed = false;
-      if (currentStage < 14 && actual.momentum.value !== "0") { actual.momentum.value = "0"; changed = true; }
-      if (currentStage < 15 && actual.decay.value !== "0") { actual.decay.value = "0"; changed = true; }
-      if (currentStage < 16 && actual.momentumMode.value !== "derived") { actual.momentumMode.value = "derived"; changed = true; }
-      if (currentStage < 17 && actual.decayMode.value !== "traced") { actual.decayMode.value = "traced"; changed = true; }
+      if (currentStage < 13 && actual.momentum.value !== "0") { actual.momentum.value = "0"; changed = true; }
+      if (currentStage < 14 && actual.decay.value !== "0") { actual.decay.value = "0"; changed = true; }
+      if (currentStage < 15 && actual.momentumMode.value !== "derived") { actual.momentumMode.value = "derived"; changed = true; }
+      if (currentStage < 16 && actual.decayMode.value !== "traced") { actual.decayMode.value = "traced"; changed = true; }
       if (changed) {
         suppressProgress = true;
         actual.momentum.dispatchEvent(new Event("input", { bubbles: true }));
@@ -399,12 +384,12 @@
     unlockButtons.forEach(function (button) {
       button.addEventListener("click", function () { setStage(Number(button.dataset.nextStage), false, true); });
     });
-    [[actual.steps, 1], [actual.sgdRate, 2], [actual.idbdRate, 5], [actual.theta, 6], [actual.batch, 12], [actual.momentum, 14], [actual.decay, 15]].forEach(function (entry) {
+    [[actual.steps, 1], [actual.sgdRate, 2], [actual.idbdRate, 5], [actual.theta, 6], [actual.batch, 11], [actual.momentum, 13], [actual.decay, 14]].forEach(function (entry) {
       entry[0].addEventListener("input", function () { if (!suppressProgress) markProgress(entry[1], 1); });
     });
-    actual.newStream.addEventListener("click", function () { markProgress(13, 1); });
-    actual.momentumMode.addEventListener("change", function () { markProgress(16, 1); });
-    actual.decayMode.addEventListener("change", function () { markProgress(17, 1); });
+    actual.newStream.addEventListener("click", function () { markProgress(12, 1); });
+    actual.momentumMode.addEventListener("change", function () { markProgress(15, 1); });
+    actual.decayMode.addEventListener("change", function () { markProgress(16, 1); });
     pause.addEventListener("click", function () { actual.pause.click(); });
     play.addEventListener("click", function () { actual.play.click(); });
     back.addEventListener("click", function () { setStage(currentStage - 1); });
