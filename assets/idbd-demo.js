@@ -18,6 +18,7 @@
     65536, 100000, 250000, 500000, 1000000, 2000000, 5000000,
     10000000, 25000000, 50000000, 100000000
   ];
+  const WEIGHT_DECAY_OPTIONS = [0, 0.001, 0.003, 0.01, 0.03, 0.1, 0.3, 1];
   const COLORS = {
     ink: "#222222",
     muted: "#555555",
@@ -31,27 +32,38 @@
     alert: "#b42318"
   };
 
+  function createExperiment(prefix, extensionsEnabled) {
+    function byId(name) {
+      return document.getElementById(prefix ? prefix + "-" + name : name);
+    }
+
   const controls = {
-    sgdRate: document.getElementById("sgd-rate"),
-    idbdRate: document.getElementById("idbd-rate"),
-    theta: document.getElementById("theta"),
-    batch: document.getElementById("batch-size"),
-    steps: document.getElementById("training-steps"),
-    lockRates: document.getElementById("lock-rates"),
-    seed: document.getElementById("stream-seed"),
-    reseed: document.getElementById("reseed-stream"),
-    newStream: document.getElementById("new-stream"),
-    pause: document.getElementById("pause-training"),
-    play: document.getElementById("play-training"),
-    stop: document.getElementById("stop-training")
+    sgdRate: byId("sgd-rate"),
+    idbdRate: byId("idbd-rate"),
+    theta: byId("theta"),
+    batch: byId("batch-size"),
+    steps: byId("training-steps"),
+    lockRates: byId("lock-rates"),
+    seed: byId("stream-seed"),
+    reseed: byId("reseed-stream"),
+    newStream: byId("new-stream"),
+    pause: byId("pause-training"),
+    play: byId("play-training"),
+    stop: byId("stop-training"),
+    momentum: byId("momentum"),
+    momentumMode: byId("momentum-mode"),
+    weightDecay: byId("weight-decay"),
+    weightDecayMode: byId("weight-decay-mode")
   };
   const outputs = {
-    sgdRate: document.getElementById("sgd-rate-value"),
-    idbdRate: document.getElementById("idbd-rate-value"),
-    theta: document.getElementById("theta-value"),
-    batch: document.getElementById("batch-size-value"),
-    steps: document.getElementById("training-steps-value"),
-    status: document.getElementById("run-status")
+    sgdRate: byId("sgd-rate-value"),
+    idbdRate: byId("idbd-rate-value"),
+    theta: byId("theta-value"),
+    batch: byId("batch-size-value"),
+    steps: byId("training-steps-value"),
+    status: byId("run-status"),
+    momentum: byId("momentum-value"),
+    weightDecay: byId("weight-decay-value")
   };
 
   if (!controls.sgdRate || !controls.idbdRate || !controls.theta || !controls.batch || !controls.steps) return;
@@ -164,7 +176,7 @@
     };
   }
 
-  function createTrainingState(streamSeed, sgdRate, idbdInitialRate, theta, batchSize, exampleCount) {
+  function createTrainingState(streamSeed, sgdRate, idbdInitialRate, theta, batchSize, exampleCount, optimizerOptions) {
     const random = mulberry32(streamSeed);
     const beta = new Float64Array(FEATURE_COUNT);
     beta.fill(Math.log(idbdInitialRate));
@@ -172,7 +184,12 @@
     return {
       streamSeed,
       sgdRate,
+      idbdInitialRate,
       theta,
+      momentum: optimizerOptions.momentum,
+      momentumMode: optimizerOptions.momentumMode,
+      weightDecay: optimizerOptions.weightDecay,
+      weightDecayMode: optimizerOptions.weightDecayMode,
       batchSize,
       exampleCount,
       totalBatches,
@@ -184,6 +201,8 @@
       idbdWeights: new Float64Array(FEATURE_COUNT),
       beta,
       trace: new Float64Array(FEATURE_COUNT),
+      idbdMomentum: new Float64Array(FEATURE_COUNT),
+      momentumTrace: new Float64Array(FEATURE_COUNT),
       directionSgd: new Float64Array(FEATURE_COUNT),
       directionIdbd: new Float64Array(FEATURE_COUNT),
       activeCounts: new Float64Array(FEATURE_COUNT),
@@ -238,8 +257,10 @@
       }
     }
 
-    for (let index = 0; index < touchedCount; index += 1) {
-      const feature = state.touched[index];
+    const updateAllFeatures = state.momentum > 0 || state.weightDecay > 0;
+    const updateCount = updateAllFeatures ? FEATURE_COUNT : touchedCount;
+    for (let index = 0; index < updateCount; index += 1) {
+      const feature = updateAllFeatures ? index : state.touched[index];
       const sgdDirection = state.directionSgd[feature] / actualBatchSize;
       const idbdDirection = state.directionIdbd[feature] / actualBatchSize;
       const curvature = state.activeCounts[feature] / actualBatchSize;
@@ -248,9 +269,41 @@
       const betaChange = clamp(state.theta * idbdDirection * state.trace[feature], -2, 2);
       state.beta[feature] = clamp(state.beta[feature] + betaChange, -10, Math.log(10));
       const featureRate = Math.exp(state.beta[feature]);
-      const weightChange = featureRate * idbdDirection;
+      const oldTrace = state.trace[feature];
+      let updateDirection = idbdDirection;
+      let derivedMomentumTrace = null;
+      if (state.momentum > 0) {
+        state.idbdMomentum[feature] = state.momentum * state.idbdMomentum[feature]
+          + (1 - state.momentum) * idbdDirection;
+        updateDirection = state.idbdMomentum[feature];
+        if (state.momentumMode === "derived") {
+          state.momentumTrace[feature] = state.momentum * state.momentumTrace[feature]
+            - (1 - state.momentum) * curvature * oldTrace;
+          derivedMomentumTrace = state.momentumTrace[feature];
+        }
+      }
+
+      const oldWeight = state.idbdWeights[feature];
+      let baseTrace = oldTrace;
+      if (state.weightDecay > 0) {
+        if (state.weightDecayMode === "fixed") {
+          state.idbdWeights[feature] *= 1 - state.idbdInitialRate * state.weightDecay;
+        } else {
+          state.idbdWeights[feature] *= 1 - featureRate * state.weightDecay;
+          if (state.weightDecayMode === "traced") {
+            baseTrace = (1 - featureRate * state.weightDecay) * oldTrace
+              - featureRate * state.weightDecay * oldWeight;
+          }
+        }
+      }
+
+      const weightChange = featureRate * updateDirection;
       state.idbdWeights[feature] += weightChange;
-      state.trace[feature] = state.trace[feature] * Math.max(0, 1 - featureRate * curvature) + weightChange;
+      if (derivedMomentumTrace !== null) {
+        state.trace[feature] = baseTrace + weightChange + featureRate * derivedMomentumTrace;
+      } else {
+        state.trace[feature] = baseTrace * Math.max(0, 1 - featureRate * curvature) + weightChange;
+      }
       state.directionSgd[feature] = 0;
       state.directionIdbd[feature] = 0;
       state.activeCounts[feature] = 0;
@@ -332,7 +385,7 @@
   }
 
   function drawTraceChart(canvasId, series, bounds, ticks) {
-    const canvas = document.getElementById(canvasId);
+    const canvas = byId(canvasId);
     const surface = setupCanvas(canvas);
     const context = surface.context;
     const width = surface.width;
@@ -438,7 +491,7 @@
   }
 
   function drawLineChart(canvasId, steps, values, color, fill, bounds, exampleCount) {
-    const canvas = document.getElementById(canvasId);
+    const canvas = byId(canvasId);
     const surface = setupCanvas(canvas);
     const context = surface.context;
     const width = surface.width;
@@ -545,7 +598,7 @@
   }
 
   function drawLearningRates(canvasId, color, rateAt) {
-    const canvas = document.getElementById(canvasId);
+    const canvas = byId(canvasId);
     const surface = setupCanvas(canvas);
     const context = surface.context;
     const width = surface.width;
@@ -630,7 +683,7 @@
   }
 
   function drawWeights(canvasId, weights, color) {
-    const canvas = document.getElementById(canvasId);
+    const canvas = byId(canvasId);
     const surface = setupCanvas(canvas);
     const context = surface.context;
     const width = surface.width;
@@ -730,7 +783,15 @@
   }
 
   function updateBatchNote(batchSize) {
-    const note = document.getElementById("batch-note");
+    const note = byId("batch-note");
+    if (extensionsEnabled) {
+      if (batchSize === 1) {
+        note.innerHTML = "<strong>At batch size 1</strong>, the gradient stream is online. With both grafts off this reduces to classic IDBD; momentum or decay changes the update and its trace.";
+      } else {
+        note.innerHTML = "<strong>At batch size " + batchSize + "</strong>, the optimizer grafts use the same mean-gradient diagonal approximation as the duplicated baseline.";
+      }
+      return;
+    }
     if (batchSize === 1) {
       note.innerHTML = "<strong>At batch size 1</strong>, this is classic online IDBD. Move the batch slider to explore a mean-gradient diagonal approximation.";
     } else {
@@ -744,7 +805,16 @@
     const theta = Math.pow(10, Number(controls.theta.value));
     const batchSize = Math.pow(2, Number(controls.batch.value));
     const exampleCount = STEP_OPTIONS[Number(controls.steps.value)];
-    return { sgdRate, idbdInitialRate, theta, batchSize, exampleCount };
+    const momentum = extensionsEnabled ? Number(controls.momentum.value) : 0;
+    const momentumMode = extensionsEnabled ? controls.momentumMode.value : "derived";
+    const weightDecay = extensionsEnabled
+      ? WEIGHT_DECAY_OPTIONS[Number(controls.weightDecay.value)]
+      : 0;
+    const weightDecayMode = extensionsEnabled ? controls.weightDecayMode.value : "traced";
+    return {
+      sgdRate, idbdInitialRate, theta, batchSize, exampleCount,
+      momentum, momentumMode, weightDecay, weightDecayMode
+    };
   }
 
   function updateControlOutputs(settings) {
@@ -754,7 +824,11 @@
     outputs.theta.value = formatRate(values.theta);
     outputs.batch.value = String(values.batchSize);
     outputs.steps.value = formatInteger(values.exampleCount);
-    document.getElementById("example-count-label").textContent = formatInteger(values.exampleCount) + " examples";
+    if (extensionsEnabled) {
+      outputs.momentum.value = values.momentum.toFixed(2);
+      outputs.weightDecay.value = values.weightDecay === 0 ? "off" : formatRate(values.weightDecay);
+    }
+    byId("example-count-label").textContent = formatInteger(values.exampleCount) + " examples";
   }
 
   function idbdRateRatio(beta) {
@@ -766,12 +840,12 @@
   }
 
   function drawTrainingState(state) {
-    document.getElementById("sgd-loss-score").textContent = state.sgdLossEma === null ? "—" : formatScore(state.sgdLossEma);
-    document.getElementById("idbd-loss-score").textContent = state.idbdLossEma === null ? "—" : formatScore(state.idbdLossEma);
-    document.getElementById("sgd-signal-weight").textContent = formatScore(state.sgdWeights[0]);
-    document.getElementById("idbd-rate-ratio").textContent = formatScore(idbdRateRatio(state.beta)) + "×";
-    document.getElementById("sgd-signal-loss-score").textContent = formatScore(noiselessSignalMse(state.sgdWeights));
-    document.getElementById("idbd-signal-loss-score").textContent = formatScore(noiselessSignalMse(state.idbdWeights));
+    byId("sgd-loss-score").textContent = state.sgdLossEma === null ? "—" : formatScore(state.sgdLossEma);
+    byId("idbd-loss-score").textContent = state.idbdLossEma === null ? "—" : formatScore(state.idbdLossEma);
+    byId("sgd-signal-weight").textContent = formatScore(state.sgdWeights[0]);
+    byId("idbd-rate-ratio").textContent = formatScore(idbdRateRatio(state.beta)) + "×";
+    byId("sgd-signal-loss-score").textContent = formatScore(noiselessSignalMse(state.sgdWeights));
+    byId("idbd-signal-loss-score").textContent = formatScore(noiselessSignalMse(state.idbdWeights));
 
     updatePreviewPredictions(state.preview, state.sgdWeights, state.idbdWeights);
     drawTraceChart("feature-stream-chart", [
@@ -857,7 +931,8 @@
       settings.idbdInitialRate,
       settings.theta,
       settings.batchSize,
-      settings.exampleCount
+      settings.exampleCount,
+      settings
     );
     currentState = state;
     paused = false;
@@ -908,6 +983,12 @@
     if (controls.lockRates.checked) controls.idbdRate.value = controls.sgdRate.value;
     scheduleTraining();
   });
+  if (extensionsEnabled) {
+    controls.momentum.addEventListener("input", scheduleTraining);
+    controls.momentumMode.addEventListener("change", scheduleTraining);
+    controls.weightDecay.addEventListener("input", scheduleTraining);
+    controls.weightDecayMode.addEventListener("change", scheduleTraining);
+  }
   controls.reseed.addEventListener("click", function () {
     const requestedSeed = Number(controls.seed.value);
     if (!Number.isFinite(requestedSeed)) {
@@ -972,4 +1053,68 @@
   });
   updateTransportControls();
   scheduleTraining();
+  }
+
+  function prefixCloneIds(clone, prefix) {
+    const idMap = new Map();
+    clone.querySelectorAll("[id]").forEach(function (element) {
+      const oldId = element.id;
+      const newId = prefix + "-" + oldId;
+      idMap.set(oldId, newId);
+      element.id = newId;
+    });
+    ["for", "aria-labelledby", "aria-describedby"].forEach(function (attribute) {
+      const elements = Array.from(clone.querySelectorAll("[" + attribute + "]"));
+      if (clone.hasAttribute(attribute)) elements.unshift(clone);
+      elements.forEach(function (element) {
+        const rewritten = element.getAttribute(attribute).split(/\s+/).map(function (value) {
+          return idMap.get(value) || value;
+        }).join(" ");
+        element.setAttribute(attribute, rewritten);
+      });
+    });
+  }
+
+  function mountExtendedExperiment() {
+    const source = document.getElementById("idbd-playground");
+    const mount = document.getElementById("extended-experiment-mount");
+    if (!source || !mount) return;
+    const clone = source.cloneNode(true);
+    clone.id = "extended-idbd-playground";
+    clone.classList.add("extended-experiment");
+    prefixCloneIds(clone, "extended");
+    clone.querySelector(".experiment-heading .section-label").textContent = "Interactive experiment 02 · optimizer grafts";
+    clone.querySelector(".experiment-heading h2").textContent = "What changes when IDBD inherits momentum and decay?";
+    clone.querySelector(".experiment-lede").textContent = "The same stream and baseline SGD, with derived momentum and decoupled weight-decay variants available for IDBD.";
+    clone.querySelector(".idbd-card .method-pill").textContent = "one rate per feature + grafts";
+    clone.querySelector(".simulation-scope").innerHTML = "<strong>Independent live simulation.</strong> The data, plots, and playback controls are duplicated from experiment 01. Momentum and weight decay affect IDBD only, leaving SGD as the reference.";
+
+    const graftControls = document.createElement("div");
+    graftControls.className = "optimizer-graft-controls";
+    graftControls.innerHTML = [
+      '<p class="graft-controls-title">Additional IDBD grafts</p>',
+      '<div class="control">',
+      '  <div class="control-heading"><label for="extended-momentum">Momentum <span class="math">μ</span></label><output id="extended-momentum-value" for="extended-momentum">0.00</output></div>',
+      '  <input id="extended-momentum" type="range" min="0" max="0.99" step="0.01" value="0" aria-describedby="extended-momentum-help">',
+      '  <div class="range-labels" aria-hidden="true"><span>off</span><span>0.99</span></div>',
+      '  <label class="mode-label" for="extended-momentum-mode">Trace mechanism</label>',
+      '  <select id="extended-momentum-mode"><option value="derived" selected>Derived trace</option><option value="naive">Naïve trace</option></select>',
+      '  <p id="extended-momentum-help">EMA momentum; derived mode carries p = dm/dβ.</p>',
+      '</div>',
+      '<div class="control">',
+      '  <div class="control-heading"><label for="extended-weight-decay">Weight decay <span class="math">λ</span></label><output id="extended-weight-decay-value" for="extended-weight-decay">off</output></div>',
+      '  <input id="extended-weight-decay" type="range" min="0" max="7" step="1" value="0" aria-describedby="extended-weight-decay-help">',
+      '  <div class="range-labels" aria-hidden="true"><span>off</span><span>1.0</span></div>',
+      '  <label class="mode-label" for="extended-weight-decay-mode">Decay mechanism</label>',
+      '  <select id="extended-weight-decay-mode"><option value="traced" selected>Traced α-coupled</option><option value="alpha_coupled">α-coupled</option><option value="fixed">Fixed-rate</option></select>',
+      '  <p id="extended-weight-decay-help">Decoupled decay; traced mode includes its β-derivative in h.</p>',
+      '</div>'
+    ].join("");
+    clone.querySelector(".idbd-method-controls").appendChild(graftControls);
+    mount.replaceWith(clone);
+  }
+
+  mountExtendedExperiment();
+  createExperiment("", false);
+  createExperiment("extended", true);
 }());

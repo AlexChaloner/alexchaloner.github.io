@@ -259,6 +259,44 @@
   line-height: 1.35;
 }
 
+.optimizer-graft-controls {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  border-top: 1px solid #aaa;
+  background: #f2f6fb;
+}
+
+.graft-controls-title {
+  grid-column: 1 / -1;
+  margin: 0;
+  padding: 0.65rem 0.8rem;
+  border-bottom: 1px solid #ccc;
+  color: #1b5eaa;
+  font-weight: bold;
+}
+
+.idbd-method-controls .optimizer-graft-controls > .control + .control {
+  border-top: 0;
+  border-left: 1px solid #ccc;
+}
+
+.mode-label {
+  display: block;
+  margin-top: 0.7rem;
+  font-size: 0.78rem;
+  font-weight: bold;
+}
+
+.optimizer-graft-controls select {
+  width: 100%;
+  margin-top: 0.3rem;
+  padding: 0.35rem;
+  border: 1px solid #888;
+  color: inherit;
+  background: #fff;
+  font: inherit;
+}
+
 .shared-controls {
   min-width: 0;
   margin: 1rem 0 0;
@@ -543,6 +581,20 @@
   margin: 3rem 0;
 }
 
+.extension-intro {
+  margin-top: 3rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid #aaa;
+}
+
+.extension-intro h2 {
+  margin: 0.25rem 0;
+}
+
+.extended-experiment {
+  margin-top: 1rem;
+}
+
 .writing-slot .section-label:not(:first-child) {
   margin-top: 3rem;
 }
@@ -604,6 +656,19 @@
 
   .shared-control-grid > :nth-child(3) {
     grid-column: auto;
+  }
+
+  .optimizer-graft-controls {
+    grid-template-columns: 1fr;
+  }
+
+  .graft-controls-title {
+    grid-column: auto;
+  }
+
+  .idbd-method-controls .optimizer-graft-controls > .control + .control {
+    border-top: 1px solid #ccc;
+    border-left: 0;
   }
 
   .shared-legend span:nth-last-child(2) {
