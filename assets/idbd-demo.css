@@ -11,16 +11,17 @@
   --idbd-trace-colour: #71409a;
   --idbd-trace-wash: #f5eefb;
   max-width: 1120px;
-  margin: 0;
+  margin: 0 auto;
+  padding-bottom: 4rem;
 }
 
 .post-hero,
 .prose {
-  max-width: 720px;
+  max-width: 680px;
 }
 
 .post-hero {
-  margin: 2.5rem 0 2rem;
+  margin: 3.5rem 0;
 }
 
 .post-hero h1 {
@@ -66,8 +67,8 @@
 .algorithm-comparison {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 0.75rem;
-  margin: 1.5rem 0 0.75rem;
+  gap: 1rem;
+  margin: 2rem 0 1.25rem;
 }
 
 .algorithm-card {
@@ -185,8 +186,8 @@
 .key-trace { color: var(--idbd-trace-colour); }
 
 .experiment {
-  margin: 3rem 0;
-  padding: 1.25rem 0;
+  margin: 4.5rem 0;
+  padding: 1.75rem 0;
   border-top: 1px solid #888;
   border-bottom: 1px solid #888;
 }
@@ -777,12 +778,12 @@
 }
 
 .writing-slot {
-  margin: 3rem 0;
+  margin: 4.5rem 0;
 }
 
 .extension-intro {
-  margin-top: 3rem;
-  padding-top: 1.5rem;
+  margin-top: 4.5rem;
+  padding-top: 2rem;
   border-top: 1px solid #aaa;
 }
 
@@ -791,7 +792,13 @@
 }
 
 .extended-experiment {
-  margin-top: 1rem;
+  margin-top: 1.5rem;
+}
+
+.chapter-intro,
+.further-reading {
+  margin-top: 4.5rem;
+  margin-bottom: 4.5rem;
 }
 
 .writing-slot .section-label:not(:first-child) {
