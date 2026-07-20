@@ -4,7 +4,7 @@ title: "Learning to move probability"
 ---
 
 <link rel="stylesheet" href="{{ '/assets/flow-matching-demo.css' | relative_url }}">
-<link rel="stylesheet" href="{{ '/assets/mnist-latent-demo.css' | relative_url }}">
+<link rel="stylesheet" href="{{ '/assets/mnist-pixel-demo.css' | relative_url }}">
 
 <article class="fm-post">
   <header class="fm-hero">
@@ -205,12 +205,12 @@ title: "Learning to move probability"
         <p class="fm-section-label">Interactive comparison 02 · live browser training</p>
         <h2 id="mnist-lab-title">Can both methods learn handwritten digits?</h2>
       </div>
-      <p>Real MNIST digits, compressed into a 12-number latent space. The decoder is fixed; the two small generative models below begin from scratch and train live on identical batches.</p>
+      <p>Real MNIST digits, downsampled to 8 × 8 pixels so two small generative models can begin from scratch and train live on identical batches.</p>
     </header>
 
     <aside class="mnist-scope">
-      <strong>What is—and is not—pretrained.</strong>
-      <span>The image compressor and decoder are fixed so this can run quickly on a CPU. The diffusion noise predictor and flow-matching velocity field are randomly initialized here and learn from a bundled, balanced subset of 6,000 MNIST examples.</span>
+      <strong>Nothing here is pretrained.</strong>
+      <span>Each model works directly on 64 pixel values. The lower resolution keeps live CPU training practical; both randomly initialized fields learn from 6,000 MNIST examples. In the all-digits view, each model is also told the requested digit class—the standard class-conditioned setup—while still learning every pixel from scratch.</span>
     </aside>
 
     <div class="mnist-training-bar">
@@ -251,10 +251,10 @@ title: "Learning to move probability"
             </figure>
             <figure class="mnist-micro-film">
               <figcaption>Six checkpoints</figcaption>
-              <canvas id="mnist-diffusion-film" role="img" aria-label="Diffusion generation filmstrip from latent noise to a digit"></canvas>
+              <canvas id="mnist-diffusion-film" role="img" aria-label="Diffusion generation filmstrip from pixel noise to a digit"></canvas>
             </figure>
           </div>
-          <p id="mnist-diffusion-action" class="mnist-micro-action"><strong>Start:</strong> the decoder is looking at raw Gaussian latent noise.</p>
+          <p id="mnist-diffusion-action" class="mnist-micro-action"><strong>Start:</strong> every visible pixel is an independent Gaussian draw.</p>
         </article>
 
         <article class="mnist-micro-lane mnist-micro-flow">
@@ -266,19 +266,19 @@ title: "Learning to move probability"
             </figure>
             <figure class="mnist-micro-film">
               <figcaption>Six checkpoints</figcaption>
-              <canvas id="mnist-flow-film" role="img" aria-label="Flow-matching generation filmstrip from latent noise to a digit"></canvas>
+              <canvas id="mnist-flow-film" role="img" aria-label="Flow-matching generation filmstrip from pixel noise to a digit"></canvas>
             </figure>
           </div>
-          <p id="mnist-flow-action" class="mnist-micro-action"><strong>Start:</strong> exactly the same Gaussian latent noise as diffusion.</p>
+          <p id="mnist-flow-action" class="mnist-micro-action"><strong>Start:</strong> exactly the same Gaussian pixel noise as diffusion.</p>
         </article>
       </div>
 
       <figure class="mnist-path-figure">
         <figcaption>
-          <span><strong>The routes through latent space</strong> · a shared 2D view of the 12-number state</span>
+          <span><strong>The routes through pixel space</strong> · a shared 2D projection of the 64-pixel state</span>
           <small>purple: diffusion path · green: flow path · ring: selected moment</small>
         </figcaption>
-        <canvas id="mnist-path-chart" role="img" aria-label="Projected diffusion and flow-matching generation trajectories from the same latent noise"></canvas>
+        <canvas id="mnist-path-chart" role="img" aria-label="Projected diffusion and flow-matching generation trajectories from the same pixel noise"></canvas>
       </figure>
 
       <aside class="mnist-micro-note">
@@ -290,49 +290,49 @@ title: "Learning to move probability"
     <div class="mnist-lanes">
       <section class="mnist-lane mnist-diffusion-lane" aria-labelledby="mnist-diffusion-title">
         <header>
-          <div><p class="fm-section-label">Learner 01</p><h3 id="mnist-diffusion-title">Latent diffusion</h3></div>
+          <div><p class="fm-section-label">Learner 01</p><h3 id="mnist-diffusion-title">Pixel-space diffusion</h3></div>
           <span>predicts noise <i>ε</i></span>
         </header>
         <div class="mnist-score"><span>recent training MSE</span><strong id="mnist-diffusion-loss">untrained</strong></div>
         <figure class="mnist-samples">
-          <figcaption><span>Generated digits</span><small>purple · fixed decoder</small></figcaption>
-          <canvas id="mnist-diffusion-samples" role="img" aria-label="Digits generated by the live latent diffusion learner"></canvas>
+          <figcaption><span>Generated digits</span><small>purple · 8 × 8 pixels</small></figcaption>
+          <canvas id="mnist-diffusion-samples" role="img" aria-label="Digits generated by the live pixel-space diffusion learner"></canvas>
         </figure>
         <figure class="mnist-loss-figure">
           <figcaption><span>Noise-prediction loss</span><small>lower is better</small></figcaption>
           <canvas id="mnist-diffusion-loss-chart" role="img" aria-label="Diffusion training loss over browser updates"></canvas>
         </figure>
-        <p class="mnist-lane-note"><strong>Training:</strong> corrupt a digit latent and predict the exact Gaussian noise. <strong>Sampling:</strong> repeatedly remove predicted noise.</p>
+        <p class="mnist-lane-note"><strong>Training:</strong> corrupt the 64 digit pixels and predict their exact Gaussian noise. <strong>Sampling:</strong> repeatedly remove predicted noise.</p>
       </section>
 
       <section class="mnist-lane mnist-flow-lane" aria-labelledby="mnist-flow-title">
         <header>
-          <div><p class="fm-section-label">Learner 02</p><h3 id="mnist-flow-title">Latent flow matching</h3></div>
+          <div><p class="fm-section-label">Learner 02</p><h3 id="mnist-flow-title">Pixel-space flow matching</h3></div>
           <span>predicts velocity <i>v</i></span>
         </header>
         <div class="mnist-score"><span>recent training MSE</span><strong id="mnist-flow-loss">untrained</strong></div>
         <figure class="mnist-samples">
-          <figcaption><span>Generated digits</span><small>green · fixed decoder</small></figcaption>
-          <canvas id="mnist-flow-samples" role="img" aria-label="Digits generated by the live latent flow-matching learner"></canvas>
+          <figcaption><span>Generated digits</span><small>green · 8 × 8 pixels</small></figcaption>
+          <canvas id="mnist-flow-samples" role="img" aria-label="Digits generated by the live pixel-space flow-matching learner"></canvas>
         </figure>
         <figure class="mnist-loss-figure">
           <figcaption><span>Velocity-prediction loss</span><small>lower is better</small></figcaption>
           <canvas id="mnist-flow-loss-chart" role="img" aria-label="Flow-matching training loss over browser updates"></canvas>
         </figure>
-        <p class="mnist-lane-note"><strong>Training:</strong> connect noise to a digit latent and predict path velocity. <strong>Sampling:</strong> integrate that velocity field.</p>
+        <p class="mnist-lane-note"><strong>Training:</strong> connect pixel noise to a digit image and predict path velocity. <strong>Sampling:</strong> integrate that velocity field.</p>
       </section>
     </div>
 
     <section class="mnist-controls" aria-label="MNIST experiment controls">
       <div class="mnist-control">
-        <label for="mnist-digit">Digits to learn</label>
+        <label for="mnist-digit">Digit classes</label>
         <select id="mnist-digit">
-          <option value="all" selected>All digits</option>
+          <option value="all" selected>All digits · class-conditioned</option>
           <option value="0">Only 0</option><option value="1">Only 1</option><option value="2">Only 2</option>
           <option value="3">Only 3</option><option value="4">Only 4</option><option value="5">Only 5</option>
           <option value="6">Only 6</option><option value="7">Only 7</option><option value="8">Only 8</option><option value="9">Only 9</option>
         </select>
-        <p>Changing the data resets both learners.</p>
+        <p>The all-digits grid requests classes 0–9 in order. Changing this resets both learners.</p>
       </div>
 
       <div class="mnist-control">
@@ -375,5 +375,5 @@ title: "Learning to move probability"
 </article>
 
 <script src="{{ '/assets/flow-matching-demo.js' | relative_url }}"></script>
-<script src="{{ '/assets/mnist-latent-data.js' | relative_url }}"></script>
-<script src="{{ '/assets/mnist-latent-demo.js' | relative_url }}"></script>
+<script src="{{ '/assets/mnist-pixel-data.js' | relative_url }}"></script>
+<script src="{{ '/assets/mnist-pixel-demo.js' | relative_url }}"></script>

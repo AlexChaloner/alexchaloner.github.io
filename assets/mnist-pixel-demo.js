@@ -1,7 +1,7 @@
 (function () {
   "use strict";
 
-  const data = window.MNISTLatentData;
+  const data = window.MNISTPixelData;
   const mount = document.getElementById("mnist-lab");
   if (!data || !mount) return;
 
@@ -25,25 +25,22 @@
     pathChart: $("mnist-path-chart")
   };
 
-  const D = data.latentDim;
-  const H = 32;
-  const INPUT = D + 1;
+  const D = data.pixelDim;
+  const IMAGE_SIDE = data.imageSide;
+  const H = 128;
+  const INPUT = D + 11;
   const BATCH = 24;
   const SAMPLE_COUNT = 12;
 
-  function decodeBase64(value, signed) {
+  function decodeBase64(value) {
     const raw = atob(value);
     const bytes = new Uint8Array(raw.length);
     for (let i = 0; i < raw.length; i += 1) bytes[i] = raw.charCodeAt(i);
-    return signed ? new Int8Array(bytes.buffer) : bytes;
+    return bytes;
   }
 
-  const latentBytes = decodeBase64(data.latents, true);
-  const labels = decodeBase64(data.labels, false);
-  const decoderW1 = decodeBase64(data.decoder.w1, true);
-  const decoderW2 = decodeBase64(data.decoder.w2, true);
-  const decoderB1 = Float32Array.from(data.decoder.b1);
-  const decoderB2 = Float32Array.from(data.decoder.b2);
+  const pixelBytes = decodeBase64(data.pixels);
+  const labels = decodeBase64(data.labels);
 
   function mulberry32(seed) {
     let a = seed >>> 0;
@@ -66,9 +63,9 @@
     };
   }
 
-  function latentAt(index, out, offset) {
+  function imageAt(index, out, offset) {
     const base = index * D;
-    for (let j = 0; j < D; j += 1) out[offset + j] = latentBytes[base + j] * data.latentScale;
+    for (let j = 0; j < D; j += 1) out[offset + j] = pixelBytes[base + j] / 127.5 - 1;
   }
 
   function makeNetwork(rng) {
@@ -89,11 +86,11 @@
     };
   }
 
-  function predict(net, latent, time, hidden, output) {
+  function predict(net, point, time, digit, hidden, output) {
     for (let k = 0; k < H; k += 1) {
-      let sum = net.b1[k] + net.w1[k * INPUT + D] * time;
       const row = k * INPUT;
-      for (let j = 0; j < D; j += 1) sum += net.w1[row + j] * latent[j];
+      let sum = net.b1[k] + net.w1[row + D] * time + net.w1[row + D + 1 + digit] * 1.5;
+      for (let j = 0; j < D; j += 1) sum += net.w1[row + j] * point[j];
       hidden[k] = Math.tanh(sum);
     }
     for (let j = 0; j < D; j += 1) {
@@ -125,13 +122,15 @@
     const clean = new Float32Array(BATCH * D);
     const noise = new Float32Array(BATCH * D);
     const times = new Float32Array(BATCH);
+    const digits = new Uint8Array(BATCH);
     for (let item = 0; item < BATCH; item += 1) {
       const index = state.indices[Math.floor(state.trainingRng() * state.indices.length)];
-      latentAt(index, clean, item * D);
+      imageAt(index, clean, item * D);
+      digits[item] = labels[index];
       times[item] = 0.02 + state.trainingRng() * 0.96;
       for (let j = 0; j < D; j += 1) noise[item * D + j] = state.trainingNormal();
     }
-    return { clean, noise, times };
+    return { clean, noise, times, digits };
   }
 
   function trainNetwork(net, batch, method, learningRate) {
@@ -152,7 +151,7 @@
         input[j] = cleanScale * clean + noiseScale * noise;
         target[j] = method === "diffusion" ? noise : clean - noise;
       }
-      predict(net, input, t, hidden, output);
+      predict(net, input, t, batch.digits[item], hidden, output);
       hiddenGradient.fill(0);
       for (let j = 0; j < D; j += 1) {
         const error = output[j] - target[j];
@@ -171,57 +170,36 @@
         const row = k * INPUT;
         for (let j = 0; j < D; j += 1) net.g[0][row + j] += derivative * input[j];
         net.g[0][row + D] += derivative * t;
+        net.g[0][row + D + 1 + batch.digits[item]] += derivative * 1.5;
       }
     }
     adam(net, learningRate);
     return loss / (BATCH * D);
   }
 
-  function decoder(latent) {
-    const hidden = new Float32Array(data.decoder.hiddenDim);
-    for (let k = 0; k < hidden.length; k += 1) {
-      let sum = decoderB1[k];
-      const row = k * D;
-      for (let j = 0; j < D; j += 1) sum += decoderW1[row + j] * data.decoder.w1Scale * latent[j];
-      hidden[k] = Math.max(0, sum);
-    }
-    const pixels = new Uint8ClampedArray(784);
-    for (let p = 0; p < 784; p += 1) {
-      let sum = decoderB2[p];
-      const row = p * hidden.length;
-      for (let k = 0; k < hidden.length; k += 1) sum += decoderW2[row + k] * data.decoder.w2Scale * hidden[k];
-      pixels[p] = Math.round(255 / (1 + Math.exp(-Math.max(-12, Math.min(12, sum)))));
-    }
+  function visiblePixels(point) {
+    const pixels = new Uint8ClampedArray(D);
+    for (let p = 0; p < D; p += 1) pixels[p] = Math.round(255 * Math.max(0, Math.min(1, (point[p] + 1) / 2)));
     return pixels;
   }
 
-  function drawDigits(canvas, latents, tint) {
-    const columns = 4, rows = 3, cell = 28;
+  function drawDigits(canvas, states, tint) {
+    const columns = 4, rows = 3, cell = IMAGE_SIDE;
     canvas.width = columns * cell; canvas.height = rows * cell;
     const ctx = canvas.getContext("2d");
     const image = ctx.createImageData(canvas.width, canvas.height);
     for (let n = 0; n < SAMPLE_COUNT; n += 1) {
-      const latent = latents.subarray(n * D, (n + 1) * D);
-      const pixels = decoder(latent);
+      const point = states.subarray(n * D, (n + 1) * D);
       const cellX = (n % columns) * cell, cellY = Math.floor(n / columns) * cell;
-      for (let y = 0; y < 28; y += 1) {
-        for (let x = 0; x < 28; x += 1) {
-          const value = pixels[y * 28 + x] / 255;
-          const target = ((cellY + y) * canvas.width + cellX + x) * 4;
-          image.data[target] = Math.round(tint[0] * value);
-          image.data[target + 1] = Math.round(tint[1] * value);
-          image.data[target + 2] = Math.round(tint[2] * value);
-          image.data[target + 3] = 255;
-        }
-      }
+      paintDigit(image, canvas.width, visiblePixels(point), cellX, cellY, tint);
     }
     ctx.putImageData(image, 0, 0);
   }
 
   function paintDigit(image, imageWidth, pixels, cellX, cellY, tint) {
-    for (let y = 0; y < 28; y += 1) {
-      for (let x = 0; x < 28; x += 1) {
-        const value = pixels[y * 28 + x] / 255;
+    for (let y = 0; y < IMAGE_SIDE; y += 1) {
+      for (let x = 0; x < IMAGE_SIDE; x += 1) {
+        const value = pixels[y * IMAGE_SIDE + x] / 255;
         const target = ((cellY + y) * imageWidth + cellX + x) * 4;
         image.data[target] = Math.round(tint[0] * value);
         image.data[target + 1] = Math.round(tint[1] * value);
@@ -231,26 +209,26 @@
     }
   }
 
-  function drawJourneyDigit(canvas, latent, tint) {
-    canvas.width = 28; canvas.height = 28;
+  function drawJourneyDigit(canvas, point, tint) {
+    canvas.width = IMAGE_SIDE; canvas.height = IMAGE_SIDE;
     const ctx = canvas.getContext("2d");
-    const image = ctx.createImageData(28, 28);
-    paintDigit(image, 28, decoder(latent), 0, 0, tint);
+    const image = ctx.createImageData(IMAGE_SIDE, IMAGE_SIDE);
+    paintDigit(image, IMAGE_SIDE, visiblePixels(point), 0, 0, tint);
     ctx.putImageData(image, 0, 0);
   }
 
   function drawFilmstrip(canvas, journey, tint, activeCheckpoint, highlight) {
     const count = 6;
-    canvas.width = count * 28; canvas.height = 28;
+    canvas.width = count * IMAGE_SIDE; canvas.height = IMAGE_SIDE;
     const ctx = canvas.getContext("2d");
     const image = ctx.createImageData(canvas.width, canvas.height);
     for (let i = 0; i < count; i += 1) {
       const index = Math.round((journey.length - 1) * i / (count - 1));
-      paintDigit(image, canvas.width, decoder(journey[index]), i * 28, 0, tint);
+      paintDigit(image, canvas.width, visiblePixels(journey[index]), i * IMAGE_SIDE, 0, tint);
     }
     ctx.putImageData(image, 0, 0);
-    ctx.strokeStyle = highlight; ctx.lineWidth = 2;
-    ctx.strokeRect(activeCheckpoint * 28 + 1, 1, 26, 26);
+    ctx.strokeStyle = highlight; ctx.lineWidth = 1;
+    ctx.strokeRect(activeCheckpoint * IMAGE_SIDE + 0.5, 0.5, IMAGE_SIDE - 1, IMAGE_SIDE - 1);
   }
 
   function drawPathChart(canvas, diffusionJourney, flowJourney, activeIndex) {
@@ -264,11 +242,11 @@
     ctx.clearRect(0, 0, w, h);
     ctx.fillStyle = "#fff"; ctx.fillRect(0, 0, w, h);
 
-    const project = (latent) => {
+    const project = (point) => {
       let x = 0, y = 0;
       for (let j = 0; j < D; j += 1) {
-        x += latent[j] * Math.sin((j + 1) * 1.71);
-        y += latent[j] * Math.cos((j + 1) * 2.17);
+        x += point[j] * Math.sin((j + 1) * 1.71);
+        y += point[j] * Math.cos((j + 1) * 2.17);
       }
       return [x, y];
     };
@@ -328,19 +306,19 @@
     drawPathChart(ui.pathChart, state.diffusionJourney, state.flowJourney, index);
 
     if (index === 0) {
-      ui.journeyLabel.textContent = "step 0 / " + steps + " · identical latent noise";
-      ui.diffusionAction.innerHTML = "<strong>Start:</strong> the decoder is looking at raw Gaussian latent noise.";
-      ui.flowAction.innerHTML = "<strong>Start:</strong> exactly the same Gaussian latent noise as diffusion.";
+      ui.journeyLabel.textContent = "step 0 / " + steps + " · identical pixel noise";
+      ui.diffusionAction.innerHTML = "<strong>Start:</strong> every visible pixel is an independent Gaussian draw.";
+      ui.flowAction.innerHTML = "<strong>Start:</strong> exactly the same Gaussian pixel noise as diffusion.";
     } else if (index === steps) {
-      ui.journeyLabel.textContent = "step " + steps + " / " + steps + " · final decoded states";
-      ui.diffusionAction.innerHTML = "<strong>Finish:</strong> repeated noise estimates have been converted into a low-noise digit latent.";
-      ui.flowAction.innerHTML = "<strong>Finish:</strong> integrated velocity updates have transported the noise to a digit latent.";
+      ui.journeyLabel.textContent = "step " + steps + " / " + steps + " · final pixel images";
+      ui.diffusionAction.innerHTML = "<strong>Finish:</strong> repeated noise estimates have been converted into a low-noise digit image.";
+      ui.flowAction.innerHTML = "<strong>Finish:</strong> integrated velocity updates have transported the noise to a digit image.";
     } else {
-      const tau = Math.max(0.02, 0.98 - index * 0.96 / steps);
+      const tau = 0.98 * (1 - index / steps);
       const t = index / steps;
       ui.journeyLabel.textContent = "step " + index + " / " + steps + " · synchronized model evaluations";
-      ui.diffusionAction.innerHTML = "<strong>Noise level τ = " + tau.toFixed(2) + ":</strong> estimate <i>ε̂</i>; the sampler algebraically turns it into the next cleaner latent.";
-      ui.flowAction.innerHTML = "<strong>Path time t = " + t.toFixed(2) + ":</strong> predict <i>v̂</i>; the solver moves the latent directly by <i>v̂ Δt</i>.";
+      ui.diffusionAction.innerHTML = "<strong>Noise level τ = " + tau.toFixed(2) + ":</strong> estimate <i>ε̂</i>; the sampler algebraically turns it into the next cleaner pixel state.";
+      ui.flowAction.innerHTML = "<strong>Path time t = " + t.toFixed(2) + ":</strong> predict <i>v̂</i>; the solver moves all 64 pixels directly by <i>v̂ Δt</i>.";
     }
   }
 
@@ -381,6 +359,7 @@
     for (let i = 0; i < flow.length; i += 1) flow[i] = diffusion[i] = normal() * temperature;
     const hidden = new Float32Array(H), output = new Float32Array(D), point = new Float32Array(D);
     const steps = state.solverSteps;
+    const digitChoice = ui.digit.value;
     const flowJourney = [new Float32Array(flow.subarray(0, D))];
     const diffusionJourney = [new Float32Array(diffusion.subarray(0, D))];
     for (let step = 0; step < steps; step += 1) {
@@ -388,22 +367,24 @@
       for (let n = 0; n < SAMPLE_COUNT; n += 1) {
         const offset = n * D;
         point.set(flow.subarray(offset, offset + D));
-        predict(state.flowNet, point, t, hidden, output);
+        const digit = digitChoice === "all" ? n % 10 : Number(digitChoice);
+        predict(state.flowNet, point, t, digit, hidden, output);
         for (let j = 0; j < D; j += 1) flow[offset + j] += output[j] / steps;
       }
       flowJourney.push(new Float32Array(flow.subarray(0, D)));
     }
     for (let step = 0; step < steps; step += 1) {
-      const tau = 0.98 - step * 0.96 / steps;
-      const nextTau = Math.max(0.02, tau - 0.96 / steps);
-      const cleanScale = Math.sqrt(Math.max(0.02, 1 - tau));
+      const tau = 0.98 * (1 - step / steps);
+      const nextTau = 0.98 * (1 - (step + 1) / steps);
+      const cleanScale = Math.sqrt(1 - tau);
       const noiseScale = Math.sqrt(tau);
       for (let n = 0; n < SAMPLE_COUNT; n += 1) {
         const offset = n * D;
         point.set(diffusion.subarray(offset, offset + D));
-        predict(state.diffusionNet, point, tau, hidden, output);
+        const digit = digitChoice === "all" ? n % 10 : Number(digitChoice);
+        predict(state.diffusionNet, point, tau, digit, hidden, output);
         for (let j = 0; j < D; j += 1) {
-          const clean = Math.max(-5, Math.min(5, (diffusion[offset + j] - noiseScale * output[j]) / cleanScale));
+          const clean = Math.max(-1, Math.min(1, (diffusion[offset + j] - noiseScale * output[j]) / cleanScale));
           diffusion[offset + j] = Math.sqrt(1 - nextTau) * clean + Math.sqrt(nextTau) * output[j];
         }
       }
@@ -474,7 +455,7 @@
       drawLoss(ui.flowLossChart, state.flowHistory, "#167d69");
       sampleModels();
     }
-    ui.status.textContent = "Training live · update " + state.update.toLocaleString() + " · " + state.indices.length.toLocaleString() + " digit latents";
+    ui.status.textContent = "Training live · update " + state.update.toLocaleString() + " · " + state.indices.length.toLocaleString() + " digit images";
     if (state.update >= state.budget) {
       state.running = false; updateUi(); ui.status.textContent = "Complete · adjust a knob, regenerate, or reset to compare again"; return;
     }
