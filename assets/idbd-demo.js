@@ -1257,15 +1257,16 @@
     const mount = document.getElementById("extended-experiment-mount");
     if (!source || !mount) return;
     const clone = source.cloneNode(true);
+    clone.removeAttribute("hidden");
     clone.id = "extended-idbd-playground";
     clone.classList.add("extended-experiment");
     prefixCloneIds(clone, "extended");
-    clone.querySelector(".experiment-heading .section-label").textContent = "Interactive experiment 02 · optimizer grafts";
+    clone.querySelector(".experiment-heading .section-label").textContent = "Interactive experiment · optimizer grafts";
     clone.querySelector(".experiment-heading h2").textContent = "What changes when both learners inherit momentum and decay?";
     clone.querySelector(".experiment-lede").textContent = "The same stream, now with shared momentum and weight decay for SGD and IDBD, plus IDBD-specific choices for how its meta-gradient trace follows those updates.";
     clone.querySelector(".sgd-card .method-pill").textContent = "fixed rate + shared grafts";
     clone.querySelector(".idbd-card .method-pill").textContent = "one rate per feature + grafts";
-    clone.querySelector(".simulation-scope").innerHTML = "<strong>Independent live simulation.</strong> The data, plots, and playback controls are duplicated from experiment 01. Momentum and weight decay are shared by both learners; the trace mechanism choices apply only to IDBD.";
+    clone.querySelector(".simulation-scope").innerHTML = "<strong>Computed live in this browser.</strong> Momentum and weight decay are shared by both learners; the trace mechanism choices apply only to IDBD. Training yields between animation frames, and changing a setting cancels and restarts the run.";
 
     const sharedGraftControls = document.createElement("div");
     sharedGraftControls.className = "optimizer-graft-controls shared-optimizer-controls";
@@ -1306,13 +1307,9 @@
     ].join("");
     clone.querySelector(".idbd-method-controls").appendChild(idbdTraceControls);
     mount.replaceWith(clone);
+    source.remove();
   }
 
   mountExtendedExperiment();
-  createExperiment("", false);
   createExperiment("extended", true);
-  window.IDBDDemo = Object.freeze({
-    createExperiment,
-    prefixCloneIds
-  });
 }());

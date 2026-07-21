@@ -4,7 +4,6 @@ title: "Learning the learning rate"
 ---
 
 <link rel="stylesheet" href="{{ '/assets/idbd-demo.css' | relative_url }}">
-<link rel="stylesheet" href="{{ '/assets/idbd-staged-demo.css' | relative_url }}">
 
 <article class="idbd-post">
   <header class="post-hero">
@@ -58,16 +57,14 @@ title: "Learning the learning rate"
     <p class="algorithm-colour-key"><span class="key-rate">Per-feature rate</span><span class="key-theta">Meta learning rate θ</span><span class="key-trace">Sensitivity trace h</span></p>
   </section>
 
-  <section class="staged-prototype" id="interactive-play" aria-labelledby="staged-prototype-title">
-    <header class="staged-prototype-intro">
-      <p class="section-label">2 · Interactive play</p>
-      <h2 id="staged-prototype-title">Interactive play</h2>
-      <p>Start with SGD on a stream, then reveal IDBD and its diagnostics one idea at a time. The complete playgrounds remain later in the post for unrestricted exploration.</p>
-    </header>
-    <div id="staged-experiment-mount">
-      <p class="staged-loading">The staged experiment starts when it enters the viewport.</p>
-    </div>
+  <section class="prose chapter-intro" id="interactive-play" aria-labelledby="interactive-play-title">
+    <p class="section-label">2 · Interactive play</p>
+    <h2 id="interactive-play-title">Interactive play</h2>
+    <p>Compare SGD and IDBD on the same sparse, noisy stream. The controls include the full set of optimizer extensions: shared momentum and weight decay, plus IDBD-specific choices for carrying its trace through those updates.</p>
   </section>
+  <div id="extended-experiment-mount">
+    <p class="experiment-loading">Preparing the interactive experiment…</p>
+  </div>
 
   <section class="prose chapter-intro" id="noise-resistance" aria-labelledby="noise-resistance-title">
     <p class="section-label">3 · Experiment</p>
@@ -77,7 +74,7 @@ title: "Learning the learning rate"
     </div>
   </section>
 
-  <section class="experiment" id="idbd-playground" aria-labelledby="playground-title">
+  <section class="experiment" id="idbd-playground" aria-labelledby="playground-title" hidden>
     <div class="experiment-heading">
       <div>
         <p class="section-label">Interactive experiment 01</p>
@@ -329,9 +326,8 @@ title: "Learning the learning rate"
     <p class="section-label">4 · Optimizer extensions</p>
     <h2 id="extension-intro-title">Extending IDBD</h2>
     <p><strong>Giving both learners a modern optimizer ladder.</strong></p>
-    <p>The second playground repeats the same experiment, then gives both SGD and IDBD the momentum and weight-decay mechanisms from our optimizer modification experiments. IDBD also exposes the choices needed to carry its meta-gradient trace through those updates. With both shared additions switched off, it is an exact duplicate of the first.</p>
+    <p>The interactive experiment above gives both SGD and IDBD the momentum and weight-decay mechanisms from our optimizer modification experiments. IDBD also exposes the choices needed to carry its meta-gradient trace through those updates. Switch both shared additions off to recover the base comparison.</p>
   </section>
-  <div id="extended-experiment-mount"></div>
 
   <section class="prose chapter-intro" id="studies-on-idbd" aria-labelledby="studies-on-idbd-title">
     <p class="section-label">5 · Evidence</p>
@@ -373,4 +369,3 @@ title: "Learning the learning rate"
 </article>
 
 <script src="{{ '/assets/idbd-demo.js' | relative_url }}"></script>
-<script src="{{ '/assets/idbd-staged-demo.js' | relative_url }}"></script>
