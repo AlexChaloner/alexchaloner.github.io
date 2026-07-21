@@ -210,7 +210,7 @@ title: "Learning to move probability"
 
     <aside class="mnist-scope">
       <strong>Nothing here is pretrained.</strong>
-      <span>Each model works directly on 64 pixel values. The lower resolution keeps live CPU training practical; both randomly initialized fields learn from 6,000 MNIST examples. In the all-digits view, each model is also told the requested digit class—the standard class-conditioned setup—while still learning every pixel from scratch.</span>
+      <span>Each model works directly on 64 pixel values. The lower resolution keeps live CPU training practical; both randomly initialized fields learn from 6,000 MNIST examples. In the all-digits view, each model is also told the requested digit class—the standard class-conditioned setup—while still learning every pixel from scratch. A compute-matched residual design trades six generic hidden units for a time-gated pixel skip and class-specific output bias: 17,976 parameters instead of 17,984.</span>
     </aside>
 
     <div class="mnist-training-bar">

@@ -27,7 +27,7 @@
 
   const D = data.pixelDim;
   const IMAGE_SIDE = data.imageSide;
-  const H = 128;
+  const H = 122;
   const INPUT = D + 11;
   const BATCH = 24;
   const SAMPLE_COUNT = 12;
@@ -73,13 +73,17 @@
     const b1 = new Float32Array(H);
     const w2 = new Float32Array(D * H);
     const b2 = new Float32Array(D);
+    const classBias = new Float32Array(10 * D);
+    const skip0 = new Float32Array(D);
+    const skip1 = new Float32Array(D);
+    const skip2 = new Float32Array(D);
     const limit1 = Math.sqrt(6 / (INPUT + H));
     const limit2 = Math.sqrt(6 / (H + D));
     for (let i = 0; i < w1.length; i += 1) w1[i] = (rng() * 2 - 1) * limit1;
     for (let i = 0; i < w2.length; i += 1) w2[i] = (rng() * 2 - 1) * limit2;
-    const params = [w1, b1, w2, b2];
+    const params = [w1, b1, w2, b2, classBias, skip0, skip1, skip2];
     return {
-      w1, b1, w2, b2, step: 0,
+      w1, b1, w2, b2, classBias, skip0, skip1, skip2, step: 0,
       m: params.map((p) => new Float32Array(p.length)),
       v: params.map((p) => new Float32Array(p.length)),
       g: params.map((p) => new Float32Array(p.length))
@@ -94,7 +98,8 @@
       hidden[k] = Math.tanh(sum);
     }
     for (let j = 0; j < D; j += 1) {
-      let sum = net.b2[j];
+      const skip = net.skip0[j] + time * net.skip1[j] + time * time * net.skip2[j];
+      let sum = net.b2[j] + net.classBias[digit * D + j] + skip * point[j];
       const row = j * H;
       for (let k = 0; k < H; k += 1) sum += net.w2[row + k] * hidden[k];
       output[j] = sum;
@@ -106,7 +111,7 @@
     net.step += 1;
     const correction1 = 1 - Math.pow(0.9, net.step);
     const correction2 = 1 - Math.pow(0.999, net.step);
-    const params = [net.w1, net.b1, net.w2, net.b2];
+    const params = [net.w1, net.b1, net.w2, net.b2, net.classBias, net.skip0, net.skip1, net.skip2];
     for (let group = 0; group < params.length; group += 1) {
       const p = params[group], g = net.g[group], m = net.m[group], v = net.v[group];
       for (let i = 0; i < p.length; i += 1) {
@@ -158,6 +163,10 @@
         loss += error * error;
         const derivative = 2 * error / (BATCH * D);
         net.g[3][j] += derivative;
+        net.g[4][batch.digits[item] * D + j] += derivative;
+        net.g[5][j] += derivative * input[j];
+        net.g[6][j] += derivative * input[j] * t;
+        net.g[7][j] += derivative * input[j] * t * t;
         const row = j * H;
         for (let k = 0; k < H; k += 1) {
           net.g[2][row + k] += derivative * hidden[k];
