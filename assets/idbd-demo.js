@@ -43,6 +43,9 @@
     sgdRate: byId("sgd-rate"),
     idbdRate: byId("idbd-rate"),
     theta: byId("theta"),
+    metaExponent: byId("meta-exponent"),
+    betaFloor: byId("beta-floor"),
+    maxBetaChange: byId("max-beta-change"),
     batch: byId("batch-size"),
     steps: byId("training-steps"),
     lockRates: byId("lock-rates"),
@@ -61,6 +64,10 @@
     sgdRate: byId("sgd-rate-value"),
     idbdRate: byId("idbd-rate-value"),
     theta: byId("theta-value"),
+    metaExponent: byId("meta-exponent-value"),
+    betaFloor: byId("beta-floor-value"),
+    betaFloorRate: byId("beta-floor-rate"),
+    maxBetaChange: byId("max-beta-change-value"),
     batch: byId("batch-size-value"),
     steps: byId("training-steps-value"),
     status: byId("run-status"),
@@ -68,7 +75,11 @@
     weightDecay: byId("weight-decay-value")
   };
 
-  if (!controls.sgdRate || !controls.idbdRate || !controls.theta || !controls.batch || !controls.steps) return;
+  if (
+    !controls.sgdRate || !controls.idbdRate || !controls.theta ||
+    !controls.metaExponent || !controls.betaFloor || !controls.maxBetaChange ||
+    !controls.batch || !controls.steps
+  ) return;
 
   let seed = 20260713;
   let scheduled = false;
@@ -182,13 +193,18 @@
   function createTrainingState(streamSeed, sgdRate, idbdInitialRate, theta, batchSize, exampleCount, optimizerOptions) {
     const random = mulberry32(streamSeed);
     const beta = new Float64Array(FEATURE_COUNT);
-    beta.fill(Math.log(idbdInitialRate));
+    const initialBeta = Math.max(optimizerOptions.betaFloor, Math.log(idbdInitialRate));
+    const effectiveInitialRate = Math.exp(initialBeta);
+    beta.fill(initialBeta);
     const totalBatches = Math.ceil(exampleCount / batchSize);
     return {
       streamSeed,
       sgdRate,
-      idbdInitialRate,
+      idbdInitialRate: effectiveInitialRate,
       theta,
+      metaExponent: optimizerOptions.metaExponent,
+      betaFloor: optimizerOptions.betaFloor,
+      maxBetaChange: optimizerOptions.maxBetaChange,
       momentum: optimizerOptions.momentum,
       momentumMode: optimizerOptions.momentumMode,
       weightDecay: optimizerOptions.weightDecay,
@@ -221,8 +237,8 @@
         idbdLoss: [null],
         sgdSignalLoss: [FEATURE_PROBABILITY],
         idbdSignalLoss: [FEATURE_PROBABILITY],
-        idbdSignalRate: [idbdInitialRate],
-        idbdMedianNoiseRate: [idbdInitialRate]
+        idbdSignalRate: [effectiveInitialRate],
+        idbdMedianNoiseRate: [effectiveInitialRate]
       },
       sgdLossEma: null,
       idbdLossEma: null,
@@ -377,8 +393,19 @@
       }
       state.sgdWeights[feature] += state.sgdRate * sgdUpdateDirection;
 
-      const betaChange = clamp(state.theta * idbdDirection * state.trace[feature], -2, 2);
-      state.beta[feature] = clamp(state.beta[feature] + betaChange, -10, Math.log(10));
+      const oldFeatureRate = Math.exp(state.beta[feature]);
+      const metaScale = Math.pow(oldFeatureRate, state.metaExponent);
+      const unclippedBetaChange = state.theta * metaScale * idbdDirection * state.trace[feature];
+      const betaChange = clamp(
+        unclippedBetaChange,
+        -state.maxBetaChange,
+        state.maxBetaChange
+      );
+      state.beta[feature] = clamp(
+        state.beta[feature] + betaChange,
+        state.betaFloor,
+        Math.log(10)
+      );
       const featureRate = Math.exp(state.beta[feature]);
       const oldTrace = state.trace[feature];
       let updateDirection = idbdDirection;
@@ -1046,6 +1073,9 @@
     const sgdRate = Math.pow(10, Number(controls.sgdRate.value));
     const idbdInitialRate = Math.pow(10, Number(controls.idbdRate.value));
     const theta = Math.pow(10, Number(controls.theta.value));
+    const metaExponent = Number(controls.metaExponent.value);
+    const betaFloor = Number(controls.betaFloor.value);
+    const maxBetaChange = Number(controls.maxBetaChange.value);
     const batchSize = Math.pow(2, Number(controls.batch.value));
     const exampleCount = STEP_OPTIONS[Number(controls.steps.value)];
     const momentum = extensionsEnabled ? Number(controls.momentum.value) : 0;
@@ -1055,8 +1085,8 @@
       : 0;
     const weightDecayMode = extensionsEnabled ? controls.weightDecayMode.value : "traced";
     return {
-      sgdRate, idbdInitialRate, theta, batchSize, exampleCount,
-      momentum, momentumMode, weightDecay, weightDecayMode
+      sgdRate, idbdInitialRate, theta, metaExponent, betaFloor, maxBetaChange,
+      batchSize, exampleCount, momentum, momentumMode, weightDecay, weightDecayMode
     };
   }
 
@@ -1065,6 +1095,12 @@
     outputs.sgdRate.value = formatRate(values.sgdRate);
     outputs.idbdRate.value = formatRate(values.idbdInitialRate);
     outputs.theta.value = formatRate(values.theta);
+    outputs.metaExponent.value = values.metaExponent === 0
+      ? "0.00 · original"
+      : values.metaExponent.toFixed(2).replace("-", "−");
+    outputs.betaFloor.value = String(values.betaFloor).replace("-", "−");
+    outputs.betaFloorRate.textContent = formatRate(Math.exp(values.betaFloor));
+    outputs.maxBetaChange.value = values.maxBetaChange.toFixed(2);
     outputs.batch.value = String(values.batchSize);
     outputs.steps.value = formatInteger(values.exampleCount);
     if (extensionsEnabled) {
@@ -1253,6 +1289,9 @@
     handleRateInput(controls.idbdRate, controls.sgdRate);
   });
   controls.theta.addEventListener("input", scheduleTraining);
+  controls.metaExponent.addEventListener("input", scheduleTraining);
+  controls.betaFloor.addEventListener("input", scheduleTraining);
+  controls.maxBetaChange.addEventListener("input", scheduleTraining);
   controls.batch.addEventListener("input", scheduleTraining);
   controls.steps.addEventListener("input", scheduleTraining);
   controls.lockRates.addEventListener("change", function () {

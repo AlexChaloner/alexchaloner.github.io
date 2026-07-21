@@ -270,6 +270,41 @@ title: "Learning the learning rate"
           <div class="range-labels" aria-hidden="true"><span>0.001</span><span>100</span></div>
           <p id="theta-help">Only IDBD uses θ; it controls rate adaptation.</p>
         </div>
+
+        <div class="control meta-exponent-control">
+          <div class="control-heading">
+            <label for="meta-exponent">Meta-gradient scaling <span class="math">p</span></label>
+            <output id="meta-exponent-value" for="meta-exponent">0.00 · original</output>
+          </div>
+          <input id="meta-exponent" type="range" min="-1" max="2" step="0.05" value="0" aria-describedby="meta-exponent-help">
+          <div class="range-labels" aria-hidden="true"><span>−1</span><span>0 · original</span><span>2</span></div>
+          <p id="meta-exponent-help">Scales the β update by α<sup>p</sup>. <a href="https://cdn.aaai.org/AAAI/1992/AAAI92-027.pdf">Sutton proposed this family</a>; p = 0 recovers original IDBD. Negative p can make small rates adapt violently.</p>
+        </div>
+
+        <details class="idbd-stability-controls">
+          <summary>Advanced stability limits</summary>
+          <p class="stability-intro">Numerical safeguards suggested in Sutton’s paper. They do not alter an update unless it reaches a limit.</p>
+          <div class="stability-control-grid">
+            <div class="control">
+              <div class="control-heading">
+                <label for="beta-floor">Minimum <span class="math">β</span></label>
+                <output id="beta-floor-value" for="beta-floor">−10</output>
+              </div>
+              <input id="beta-floor" type="range" min="-20" max="-5" step="1" value="-10" aria-describedby="beta-floor-help">
+              <div class="range-labels" aria-hidden="true"><span>−20</span><span>−5</span></div>
+              <p id="beta-floor-help">Prevents underflow. The current minimum α is <span id="beta-floor-rate">4.5e-5</span>.</p>
+            </div>
+            <div class="control">
+              <div class="control-heading">
+                <label for="max-beta-change">Maximum <span class="math">|Δβ|</span></label>
+                <output id="max-beta-change-value" for="max-beta-change">2.00</output>
+              </div>
+              <input id="max-beta-change" type="range" min="0.25" max="4" step="0.25" value="2" aria-describedby="max-beta-change-help">
+              <div class="range-labels" aria-hidden="true"><span>0.25</span><span>4.00</span></div>
+              <p id="max-beta-change-help">Clips a single meta-update before it changes a feature’s learning rate.</p>
+            </div>
+          </div>
+        </details>
       </div>
     </section>
 

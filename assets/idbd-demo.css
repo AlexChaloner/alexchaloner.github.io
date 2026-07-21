@@ -375,6 +375,47 @@
   color: var(--idbd-theta-colour);
 }
 
+.meta-exponent-control {
+  box-shadow: inset 3px 0 0 var(--idbd-theta-colour);
+}
+
+.meta-exponent-control .math {
+  color: var(--idbd-theta-colour);
+}
+
+.idbd-stability-controls {
+  border-top: 1px solid #ccc;
+  background: #f4f4f4;
+}
+
+.idbd-stability-controls summary {
+  padding: 0.75rem 0.8rem;
+  font-weight: bold;
+  cursor: pointer;
+}
+
+.idbd-stability-controls[open] summary {
+  border-bottom: 1px solid #ccc;
+}
+
+.stability-intro {
+  margin: 0;
+  padding: 0.7rem 0.8rem 0;
+  color: #555;
+  font-size: 0.78rem;
+  line-height: 1.4;
+}
+
+.stability-control-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.stability-control-grid > .control + .control {
+  border-top: 0;
+  border-left: 1px solid #ccc;
+}
+
 .trace-parameter-chart {
   box-shadow: inset 0 3px 0 var(--idbd-trace-colour);
 }
@@ -891,7 +932,8 @@
   }
 
   .optimizer-graft-controls,
-  .idbd-trace-controls {
+  .idbd-trace-controls,
+  .stability-control-grid {
     grid-template-columns: 1fr;
   }
 
@@ -900,7 +942,8 @@
   }
 
   .optimizer-graft-controls > .control + .control,
-  .idbd-trace-controls > .control + .control {
+  .idbd-trace-controls > .control + .control,
+  .stability-control-grid > .control + .control {
     border-top: 1px solid #ccc;
     border-left: 0;
   }
