@@ -207,6 +207,8 @@
       sgdMomentum: new Float64Array(FEATURE_COUNT),
       idbdMomentum: new Float64Array(FEATURE_COUNT),
       momentumTrace: new Float64Array(FEATURE_COUNT),
+      lastUpdatedBatch: new Uint32Array(FEATURE_COUNT),
+      inactiveSeriesScratch: new Float64Array(4),
       directionSgd: new Float64Array(FEATURE_COUNT),
       directionIdbd: new Float64Array(FEATURE_COUNT),
       activeCounts: new Float64Array(FEATURE_COUNT),
@@ -231,6 +233,97 @@
     };
   }
 
+  // Sum n zero-gradient updates in closed form. Writing into a shared scratch
+  // array avoids allocating short-lived objects in the per-feature hot path.
+  function fillInactiveSeries(decay, momentum, count, result) {
+    const decayPower = Math.pow(decay, count);
+    const momentumPower = Math.pow(momentum, count);
+    result[0] = decayPower;
+    result[1] = momentumPower;
+    if (momentum === 0) {
+      result[2] = 0;
+      result[3] = 0;
+      return;
+    }
+
+    const difference = decay - momentum;
+    if (Math.abs(difference) <= 1e-8 * Math.max(1, Math.abs(decay), Math.abs(momentum))) {
+      result[2] = count * momentumPower;
+      result[3] = count > 1
+        ? count * (count - 1) * 0.5 * Math.pow(momentum, count - 1)
+        : 0;
+      return;
+    }
+
+    const decayDerivative = count * Math.pow(decay, count - 1);
+    result[2] = momentum * (decayPower - momentumPower) / difference;
+    result[3] = momentum * (
+      decayDerivative * difference - (decayPower - momentumPower)
+    ) / (difference * difference);
+  }
+
+  // Sparse features can sit idle for hundreds of batches. Their momentum,
+  // decay, and IDBD trace recurrences are linear while the gradient is zero,
+  // so fast-forward them only when a feature is next read or plotted.
+  function materializeFeature(state, feature, completedBatchCount) {
+    const inactiveCount = completedBatchCount - state.lastUpdatedBatch[feature];
+    if (inactiveCount <= 0) return;
+
+    const momentum = state.momentum;
+    const sgdDecay = state.weightDecay > 0
+      ? 1 - state.sgdRate * state.weightDecay
+      : 1;
+    const series = state.inactiveSeriesScratch;
+    fillInactiveSeries(sgdDecay, momentum, inactiveCount, series);
+    const oldSgdMomentum = state.sgdMomentum[feature];
+    state.sgdWeights[feature] = series[0] * state.sgdWeights[feature]
+      + state.sgdRate * oldSgdMomentum * series[2];
+    state.sgdMomentum[feature] = series[1] * oldSgdMomentum;
+
+    const featureRate = Math.exp(state.beta[feature]);
+    let idbdDecay = 1;
+    if (state.weightDecay > 0) {
+      idbdDecay = state.weightDecayMode === "fixed"
+        ? 1 - state.idbdInitialRate * state.weightDecay
+        : 1 - featureRate * state.weightDecay;
+    }
+    fillInactiveSeries(idbdDecay, momentum, inactiveCount, series);
+    const oldWeight = state.idbdWeights[feature];
+    const oldMomentum = state.idbdMomentum[feature];
+    const oldMomentumTrace = state.momentumTrace[feature];
+    state.idbdWeights[feature] = series[0] * oldWeight
+      + featureRate * oldMomentum * series[2];
+
+    const derivedMomentum = momentum > 0 && state.momentumMode === "derived";
+    if (state.weightDecay > 0 && state.weightDecayMode === "traced") {
+      const decayDerivative = idbdDecay - 1;
+      state.trace[feature] = series[0] * state.trace[feature]
+        + inactiveCount * Math.pow(idbdDecay, inactiveCount - 1) * decayDerivative * oldWeight
+        + featureRate * (oldMomentum + (derivedMomentum ? oldMomentumTrace : 0)) * series[2]
+        + featureRate * oldMomentum * series[3] * decayDerivative;
+    } else if (momentum > 0) {
+      const momentumSum = momentum === 1
+        ? inactiveCount
+        : momentum * (1 - series[1]) / (1 - momentum);
+      state.trace[feature] += featureRate
+        * (oldMomentum + (derivedMomentum ? oldMomentumTrace : 0))
+        * momentumSum;
+    }
+
+    state.idbdMomentum[feature] = series[1] * oldMomentum;
+    if (derivedMomentum) {
+      state.momentumTrace[feature] = series[1] * oldMomentumTrace;
+    }
+    state.lastUpdatedBatch[feature] = completedBatchCount;
+  }
+
+  function materializeAllFeatures(state, completedBatchCount) {
+    if (state.momentum === 0 && state.weightDecay === 0) return;
+    for (let feature = 0; feature < FEATURE_COUNT; feature += 1) {
+      materializeFeature(state, feature, completedBatchCount);
+    }
+  }
+
   function processBatch(state) {
     const start = state.examplesSeen;
     const end = Math.min(state.exampleCount, start + state.batchSize);
@@ -241,6 +334,11 @@
 
     for (let row = start; row < end; row += 1) {
       const activeCount = fillActiveFeatures(state.random, state.active);
+      if (state.momentum > 0 || state.weightDecay > 0) {
+        for (let index = 0; index < activeCount; index += 1) {
+          materializeFeature(state, state.active[index], state.batchIndex);
+        }
+      }
       const predictableTarget = activeCount > 0 && state.active[0] === 0 ? 1 : 0;
       const sparseNoise = state.random() < SPARSE_NOISE_PROBABILITY
         ? (state.random() < 0.5 ? -1 : 1)
@@ -263,10 +361,8 @@
       }
     }
 
-    const updateAllFeatures = state.momentum > 0 || state.weightDecay > 0;
-    const updateCount = updateAllFeatures ? FEATURE_COUNT : touchedCount;
-    for (let index = 0; index < updateCount; index += 1) {
-      const feature = updateAllFeatures ? index : state.touched[index];
+    for (let index = 0; index < touchedCount; index += 1) {
+      const feature = state.touched[index];
       const sgdDirection = state.directionSgd[feature] / actualBatchSize;
       const idbdDirection = state.directionIdbd[feature] / actualBatchSize;
       const curvature = state.activeCounts[feature] / actualBatchSize;
@@ -322,6 +418,7 @@
       state.directionSgd[feature] = 0;
       state.directionIdbd[feature] = 0;
       state.activeCounts[feature] = 0;
+      state.lastUpdatedBatch[feature] = state.batchIndex + 1;
     }
 
     const sgdBatchLoss = batchSgdSquaredError / actualBatchSize;
@@ -331,6 +428,7 @@
     state.examplesSeen = end;
 
     if (state.batchIndex % state.recordEvery === 0 || end === state.exampleCount) {
+      materializeAllFeatures(state, state.batchIndex + 1);
       state.curves.steps.push(end);
       state.curves.sgdLoss.push(state.sgdLossEma);
       state.curves.idbdLoss.push(state.idbdLossEma);
@@ -993,6 +1091,7 @@
   }
 
   function drawTrainingState(state) {
+    materializeAllFeatures(state, state.batchIndex);
     byId("sgd-loss-score").textContent = state.sgdLossEma === null ? "—" : formatScore(state.sgdLossEma);
     byId("idbd-loss-score").textContent = state.idbdLossEma === null ? "—" : formatScore(state.idbdLossEma);
     byId("sgd-signal-weight").textContent = formatScore(state.sgdWeights[0]);
