@@ -216,9 +216,9 @@ title: "Learning to move probability"
     <div class="mnist-training-bar">
       <div>
         <span>shared training progress</span>
-        <strong id="mnist-progress-label">0 / 1,200 updates</strong>
+        <strong id="mnist-progress-label">0 / 600 updates</strong>
       </div>
-      <progress id="mnist-progress" max="1200" value="0">0%</progress>
+      <progress id="mnist-progress" max="600" value="0">0%</progress>
       <div class="mnist-transport">
         <button id="mnist-train" class="mnist-primary" type="button">Train both</button>
         <button id="mnist-pause" type="button" disabled>Pause</button>
@@ -302,7 +302,7 @@ title: "Learning to move probability"
           <figcaption><span>Noise-prediction loss</span><small>lower is better</small></figcaption>
           <canvas id="mnist-diffusion-loss-chart" role="img" aria-label="Diffusion training loss over browser updates"></canvas>
         </figure>
-        <p class="mnist-lane-note"><strong>Training:</strong> corrupt the 64 digit pixels and predict their exact Gaussian noise. <strong>Sampling:</strong> repeatedly remove predicted noise.</p>
+        <p class="mnist-lane-note"><strong>Training:</strong> corrupt the 64 digit pixels and predict their exact Gaussian noise. <strong>Sampling:</strong> repeatedly remove predicted noise; intermediate clean estimates may overshoot the final pixel range before display clipping.</p>
       </section>
 
       <section class="mnist-lane mnist-flow-lane" aria-labelledby="mnist-flow-title">
@@ -327,8 +327,8 @@ title: "Learning to move probability"
       <div class="mnist-control">
         <label for="mnist-digit">Digit classes</label>
         <select id="mnist-digit">
-          <option value="all" selected>All digits · class-conditioned</option>
-          <option value="0">Only 0</option><option value="1">Only 1</option><option value="2">Only 2</option>
+          <option value="all">All digits · class-conditioned</option>
+          <option value="0" selected>Only 0</option><option value="1">Only 1</option><option value="2">Only 2</option>
           <option value="3">Only 3</option><option value="4">Only 4</option><option value="5">Only 5</option>
           <option value="6">Only 6</option><option value="7">Only 7</option><option value="8">Only 8</option><option value="9">Only 9</option>
         </select>
@@ -336,15 +336,15 @@ title: "Learning to move probability"
       </div>
 
       <div class="mnist-control">
-        <div><label for="mnist-updates">Training budget</label><output id="mnist-updates-output" for="mnist-updates">1,200</output></div>
-        <input id="mnist-updates" type="range" min="200" max="12000" step="200" value="1200">
-        <p>Up to 12,000 shared updates. Raise this after completion to continue the same learners.</p>
+        <div><label for="mnist-updates">Training budget</label><output id="mnist-updates-output" for="mnist-updates">600</output></div>
+        <input id="mnist-updates" type="range" min="200" max="12000" step="200" value="600">
+        <p>The tuned 600-update default beats the previous 1,200-update run. Raise it after completion to continue the same learners.</p>
       </div>
 
       <div class="mnist-control">
-        <div><label for="mnist-learning-rate">Learning rate</label><output id="mnist-learning-rate-output" for="mnist-learning-rate">0.0030</output></div>
-        <input id="mnist-learning-rate" type="range" min="-4" max="-2" step="0.05" value="-2.52">
-        <p>Adam step size for both neural fields.</p>
+        <div><label for="mnist-learning-rate">Peak learning rate</label><output id="mnist-learning-rate-output" for="mnist-learning-rate">0.0200</output></div>
+        <input id="mnist-learning-rate" type="range" min="-4" max="-1.3" step="0.05" value="-1.70">
+        <p>Cosine-decayed to 8% across the selected budget. Sweeps found warmup counterproductive for this tiny model.</p>
       </div>
 
       <div class="mnist-control">

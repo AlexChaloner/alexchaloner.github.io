@@ -393,7 +393,7 @@
         const digit = digitChoice === "all" ? n % 10 : Number(digitChoice);
         predict(state.diffusionNet, point, tau, digit, hidden, output);
         for (let j = 0; j < D; j += 1) {
-          const clean = Math.max(-1, Math.min(1, (diffusion[offset + j] - noiseScale * output[j]) / cleanScale));
+          const clean = Math.max(-1.5, Math.min(1.5, (diffusion[offset + j] - noiseScale * output[j]) / cleanScale));
           diffusion[offset + j] = Math.sqrt(1 - nextTau) * clean + Math.sqrt(nextTau) * output[j];
         }
       }
@@ -406,7 +406,7 @@
   }
 
   const state = {
-    diffusionNet: null, flowNet: null, indices: [], update: 0, budget: 1200, solverSteps: 24,
+    diffusionNet: null, flowNet: null, indices: [], update: 0, budget: 600, solverSteps: 24,
     running: false, frame: 0, trainingRng: null, trainingNormal: null,
     diffusionEma: null, flowEma: null, diffusionHistory: [], flowHistory: [],
     diffusionJourney: null, flowJourney: null
@@ -442,11 +442,18 @@
     ui.status.textContent = "Ready · models are untrained · " + state.indices.length.toLocaleString() + " examples available";
   }
 
+  function scheduledLearningRate() {
+    const peak = Math.pow(10, Number(ui.learningRate.value));
+    const progress = Math.min(1, (state.update + 1) / Math.max(1, state.budget));
+    return peak * (0.08 + 0.92 * 0.5 * (1 + Math.cos(Math.PI * progress)));
+  }
+
   function trainFrame() {
     if (!state.running) return;
     const count = Math.min(Number(ui.speed.value), state.budget - state.update);
-    const learningRate = Math.pow(10, Number(ui.learningRate.value));
+    let learningRate = scheduledLearningRate();
     for (let i = 0; i < count; i += 1) {
+      learningRate = scheduledLearningRate();
       const batch = makeBatch();
       const diffusionLoss = trainNetwork(state.diffusionNet, batch, "diffusion", learningRate);
       const flowLoss = trainNetwork(state.flowNet, batch, "flow", learningRate);
@@ -464,7 +471,7 @@
       drawLoss(ui.flowLossChart, state.flowHistory, "#167d69");
       sampleModels();
     }
-    ui.status.textContent = "Training live · update " + state.update.toLocaleString() + " · " + state.indices.length.toLocaleString() + " digit images";
+    ui.status.textContent = "Training live · update " + state.update.toLocaleString() + " · lr " + learningRate.toFixed(4) + " · " + state.indices.length.toLocaleString() + " digit images";
     if (state.update >= state.budget) {
       state.running = false; updateUi(); ui.status.textContent = "Complete · adjust a knob, regenerate, or reset to compare again"; return;
     }
