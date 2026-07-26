@@ -125,6 +125,252 @@
   background: var(--mnist-flow);
 }
 
+.mnist-targets {
+  border: 1px solid var(--mnist-line);
+  border-bottom: 0;
+  background: #f7f9f5;
+}
+
+.mnist-targets-header {
+  display: grid;
+  grid-template-columns: minmax(0, 1.1fr) minmax(280px, 0.9fr);
+  align-items: end;
+  gap: 2rem;
+  padding: 1rem;
+  border-bottom: 1px solid var(--mnist-line);
+}
+
+.mnist-targets-header h3 {
+  margin: 0.15rem 0 0;
+  font-size: clamp(1.25rem, 2.5vw, 1.65rem);
+}
+
+.mnist-targets-header > p {
+  margin: 0;
+  color: var(--mnist-muted);
+  font-size: 0.8rem;
+  line-height: 1.45;
+}
+
+.mnist-target-pair {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto auto;
+  align-items: center;
+  gap: 0.7rem;
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid var(--mnist-line);
+  background: #edf2ed;
+}
+
+.mnist-target-pair > div strong,
+.mnist-target-pair > div span {
+  display: block;
+}
+
+.mnist-target-pair > div strong {
+  font-size: 0.78rem;
+}
+
+.mnist-target-pair > div span {
+  margin-top: 0.15rem;
+  color: var(--mnist-muted);
+  font-size: 0.7rem;
+}
+
+.mnist-target-pair figure {
+  display: grid;
+  grid-template-columns: 54px auto;
+  align-items: center;
+  gap: 0.45rem;
+  margin: 0;
+}
+
+.mnist-target-pair canvas,
+.mnist-target-cards canvas {
+  display: block;
+  width: 100%;
+  aspect-ratio: 1;
+  background: #101613;
+  image-rendering: pixelated;
+}
+
+.mnist-target-pair figcaption {
+  color: var(--mnist-muted);
+  font-size: 0.7rem;
+  white-space: nowrap;
+}
+
+.mnist-target-plus {
+  color: var(--mnist-muted);
+  font-weight: 700;
+}
+
+.mnist-target-scrubber {
+  padding: 0.75rem 1rem 0.6rem;
+  border-bottom: 1px solid var(--mnist-line);
+  background: var(--mnist-paper);
+}
+
+.mnist-target-scrubber label {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.mnist-target-scrubber label span {
+  color: var(--mnist-muted);
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.mnist-target-scrubber label strong {
+  font: 0.76rem monospace;
+}
+
+.mnist-target-scrubber input {
+  width: 100%;
+  margin: 0.6rem 0 0.1rem;
+  accent-color: #376e9d;
+}
+
+.mnist-target-scrubber > div {
+  display: flex;
+  justify-content: space-between;
+  color: var(--mnist-muted);
+  font: 0.64rem monospace;
+}
+
+.mnist-target-lanes {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.mnist-target-lane {
+  min-width: 0;
+  background: var(--mnist-paper);
+}
+
+.mnist-target-lane + .mnist-target-lane {
+  border-left: 1px solid var(--mnist-line);
+}
+
+.mnist-target-lane > header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.65rem 0.8rem;
+  border-bottom: 1px solid var(--mnist-line);
+}
+
+.mnist-target-lane > header div strong,
+.mnist-target-lane > header div span {
+  display: block;
+}
+
+.mnist-target-lane > header div span {
+  margin-top: 0.1rem;
+  color: var(--mnist-muted);
+  font-size: 0.67rem;
+}
+
+.mnist-target-lane > header code {
+  color: var(--mnist-muted);
+  font-size: 0.68rem;
+  white-space: nowrap;
+}
+
+.mnist-target-diffusion > header strong { color: var(--mnist-diffusion); }
+.mnist-target-flow > header strong { color: var(--mnist-flow); }
+
+.mnist-target-cards {
+  display: grid;
+  grid-template-columns: minmax(62px, 1fr) auto minmax(62px, 1fr) auto minmax(62px, 1fr);
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.8rem;
+}
+
+.mnist-target-cards figure {
+  min-width: 0;
+  margin: 0;
+}
+
+.mnist-target-cards figcaption {
+  min-height: 2.15rem;
+  margin-bottom: 0.35rem;
+  font-size: 0.67rem;
+  line-height: 1.25;
+}
+
+.mnist-target-cards figcaption span,
+.mnist-target-cards figcaption small {
+  display: block;
+}
+
+.mnist-target-cards figcaption small {
+  margin-top: 0.12rem;
+  color: var(--mnist-muted);
+  font-size: 0.62rem;
+}
+
+.mnist-target-answer canvas {
+  outline: 2px solid #28332d;
+  outline-offset: 2px;
+}
+
+.mnist-target-arrow,
+.mnist-target-versus {
+  align-self: end;
+  min-height: calc(2.15rem + 0.35rem);
+  color: var(--mnist-muted);
+  font-size: 0.7rem;
+  font-weight: 700;
+}
+
+.mnist-target-arrow {
+  padding-top: 0.35rem;
+  font-size: 1rem;
+}
+
+.mnist-target-versus {
+  padding-top: 0.55rem;
+}
+
+.mnist-target-lane > p {
+  min-height: 3.5rem;
+  margin: 0;
+  padding: 0.65rem 0.8rem;
+  border-top: 1px solid var(--mnist-line);
+  color: var(--mnist-muted);
+  font-size: 0.72rem;
+  line-height: 1.45;
+}
+
+.mnist-target-lane > p span {
+  display: block;
+  margin-top: 0.12rem;
+  font-family: monospace;
+}
+
+.mnist-target-note {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 0.75rem;
+  padding: 0.75rem 0.85rem;
+  border-top: 1px solid var(--mnist-line);
+  background: #e9efea;
+  font-size: 0.75rem;
+  line-height: 1.45;
+}
+
+.mnist-target-note span { color: #435048; }
+.mnist-target-note span b:first-child { color: #216f9e; }
+.mnist-target-note span b:nth-child(2) { color: #a64e16; }
+
 .mnist-microscope {
   border: 1px solid var(--mnist-line);
   border-bottom: 0;
@@ -508,6 +754,9 @@
 @media (max-width: 800px) {
   .mnist-lab-header { grid-template-columns: 1fr; gap: 0.4rem; }
   .mnist-training-bar { grid-template-columns: 1fr; }
+  .mnist-targets-header { grid-template-columns: 1fr; gap: 0.4rem; }
+  .mnist-target-lanes { grid-template-columns: 1fr; }
+  .mnist-target-lane + .mnist-target-lane { border-top: 1px solid var(--mnist-line); border-left: 0; }
   .mnist-microscope-header { grid-template-columns: 1fr; gap: 0.4rem; }
   .mnist-micro-lanes { grid-template-columns: 1fr; }
   .mnist-micro-lane + .mnist-micro-lane { border-top: 1px solid var(--mnist-line); border-left: 0; }
@@ -521,6 +770,14 @@
 @media (max-width: 520px) {
   .mnist-scope { grid-template-columns: 1fr; gap: 0.25rem; }
   .mnist-transport { display: grid; grid-template-columns: 1fr; }
+  .mnist-target-pair { grid-template-columns: 1fr auto auto auto; }
+  .mnist-target-pair > div { grid-column: 1 / -1; }
+  .mnist-target-pair figure { grid-template-columns: 46px auto; }
+  .mnist-target-scrubber label { display: block; }
+  .mnist-target-scrubber label strong { display: block; margin-top: 0.2rem; }
+  .mnist-target-lane > header { align-items: flex-start; flex-direction: column; gap: 0.2rem; }
+  .mnist-target-cards { gap: 0.3rem; padding: 0.65rem; }
+  .mnist-target-note { grid-template-columns: 1fr; gap: 0.2rem; }
   .mnist-micro-scrubber label { display: block; }
   .mnist-micro-scrubber label strong { display: block; margin-top: 0.2rem; }
   .mnist-micro-images { grid-template-columns: 82px minmax(0, 1fr); gap: 0.55rem; padding: 0.65rem; }

@@ -226,6 +226,93 @@ title: "Learning to move probability"
       </div>
     </div>
 
+    <section class="mnist-targets" aria-labelledby="mnist-targets-title">
+      <header class="mnist-targets-header">
+        <div>
+          <p class="fm-section-label">Training microscope · one fixed digit–noise pair</p>
+          <h3 id="mnist-targets-title">The visible difference is what each learner must predict</h3>
+        </div>
+        <p>The finished digits should look alike. Here, the same ingredients instead reveal the different supervised-learning problems hiding underneath.</p>
+      </header>
+
+      <div class="mnist-target-pair">
+        <div>
+          <strong id="mnist-target-pair-label">Fixed pair · digit 0</strong>
+          <span>These two arrays remain fixed while you move the mixture or train.</span>
+        </div>
+        <figure>
+          <canvas id="mnist-target-clean" role="img" aria-label="The fixed clean MNIST training image"></canvas>
+          <figcaption>data <i>x</i></figcaption>
+        </figure>
+        <span class="mnist-target-plus" aria-hidden="true">+</span>
+        <figure>
+          <canvas id="mnist-target-noise" role="img" aria-label="The fixed Gaussian noise training array"></canvas>
+          <figcaption>noise <i>ε</i></figcaption>
+        </figure>
+      </div>
+
+      <div class="mnist-target-scrubber">
+        <label for="mnist-target-mix"><span>matched data : noise ratio</span><strong id="mnist-target-mix-label">50% data · 50% noise</strong></label>
+        <input id="mnist-target-mix" type="range" min="13" max="87" step="1" value="50">
+        <div aria-hidden="true"><span>mostly noise</span><span>balanced</span><span>mostly digit</span></div>
+      </div>
+
+      <div class="mnist-target-lanes">
+        <article class="mnist-target-lane mnist-target-diffusion">
+          <header>
+            <div><strong>Diffusion</strong><span>construct a corrupted image</span></div>
+            <code id="mnist-target-diffusion-time">noise level τ = 0.50</code>
+          </header>
+          <div class="mnist-target-cards">
+            <figure>
+              <figcaption><span>Network input</span><small>corrupted <i>x</i><sub>τ</sub></small></figcaption>
+              <canvas id="mnist-target-diffusion-input" role="img" aria-label="Diffusion model input for the fixed training pair"></canvas>
+            </figure>
+            <span class="mnist-target-arrow" aria-hidden="true">→</span>
+            <figure class="mnist-target-answer">
+              <figcaption><span>Exact label</span><small>added noise <i>ε</i></small></figcaption>
+              <canvas id="mnist-target-diffusion-answer" role="img" aria-label="Exact Gaussian noise target for diffusion training"></canvas>
+            </figure>
+            <span class="mnist-target-versus" aria-hidden="true">vs</span>
+            <figure>
+              <figcaption><span>Model output</span><small>prediction <i>ε̂</i></small></figcaption>
+              <canvas id="mnist-target-diffusion-prediction" role="img" aria-label="Current diffusion model noise prediction"></canvas>
+            </figure>
+          </div>
+          <p><strong>Question learned:</strong> “Which random noise was mixed into this image?” <span id="mnist-target-diffusion-error">Untrained prediction.</span></p>
+        </article>
+
+        <article class="mnist-target-lane mnist-target-flow">
+          <header>
+            <div><strong>Flow matching</strong><span>place a point on a straight path</span></div>
+            <code id="mnist-target-flow-time">path time t = 0.50</code>
+          </header>
+          <div class="mnist-target-cards">
+            <figure>
+              <figcaption><span>Network input</span><small>path point <i>x</i><sub>t</sub></small></figcaption>
+              <canvas id="mnist-target-flow-input" role="img" aria-label="Flow-matching model input for the fixed training pair"></canvas>
+            </figure>
+            <span class="mnist-target-arrow" aria-hidden="true">→</span>
+            <figure class="mnist-target-answer">
+              <figcaption><span>Exact label</span><small>velocity <i>x − ε</i></small></figcaption>
+              <canvas id="mnist-target-flow-answer" role="img" aria-label="Exact velocity target for flow-matching training"></canvas>
+            </figure>
+            <span class="mnist-target-versus" aria-hidden="true">vs</span>
+            <figure>
+              <figcaption><span>Model output</span><small>prediction <i>v̂</i></small></figcaption>
+              <canvas id="mnist-target-flow-prediction" role="img" aria-label="Current flow-matching model velocity prediction"></canvas>
+            </figure>
+          </div>
+          <p><strong>Question learned:</strong> “Which direction connects this noise to this digit?” <span id="mnist-target-flow-error">Untrained prediction.</span></p>
+        </article>
+      </div>
+
+      <aside class="mnist-target-note">
+        <strong>How to read the coloured arrays</strong>
+        <span><b>Blue means positive</b>, <b>orange means negative</b>, and darkness means near zero. Diffusion’s exact answer is literally the noise above. Flow’s answer is the pixel-by-pixel difference between the digit and that noise. The two input images share a data-to-noise ratio, although diffusion normalizes its mixture differently. Each MSE is useful across training, but their target scales differ, so do not rank the methods by comparing the two raw numbers.</span>
+      </aside>
+    </section>
+
     <section class="mnist-microscope" aria-labelledby="mnist-microscope-title">
       <header class="mnist-microscope-header">
         <div>

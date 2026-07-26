@@ -18,6 +18,13 @@
     solverSteps: $("mnist-solver-steps"), solverStepsOutput: $("mnist-solver-steps-output"),
     temperature: $("mnist-temperature"), temperatureOutput: $("mnist-temperature-output"),
     seed: $("mnist-seed"), regenerate: $("mnist-regenerate"), status: $("mnist-status"),
+    targetMix: $("mnist-target-mix"), targetMixLabel: $("mnist-target-mix-label"),
+    targetPairLabel: $("mnist-target-pair-label"), targetClean: $("mnist-target-clean"), targetNoise: $("mnist-target-noise"),
+    targetDiffusionTime: $("mnist-target-diffusion-time"), targetFlowTime: $("mnist-target-flow-time"),
+    targetDiffusionInput: $("mnist-target-diffusion-input"), targetFlowInput: $("mnist-target-flow-input"),
+    targetDiffusionAnswer: $("mnist-target-diffusion-answer"), targetFlowAnswer: $("mnist-target-flow-answer"),
+    targetDiffusionPrediction: $("mnist-target-diffusion-prediction"), targetFlowPrediction: $("mnist-target-flow-prediction"),
+    targetDiffusionError: $("mnist-target-diffusion-error"), targetFlowError: $("mnist-target-flow-error"),
     journey: $("mnist-journey"), journeyLabel: $("mnist-journey-label"),
     diffusionCurrent: $("mnist-diffusion-current"), flowCurrent: $("mnist-flow-current"),
     diffusionFilm: $("mnist-diffusion-film"), flowFilm: $("mnist-flow-film"),
@@ -226,6 +233,92 @@
     ctx.putImageData(image, 0, 0);
   }
 
+  function signalScale(point) {
+    let scale = 1;
+    for (let j = 0; j < D; j += 1) scale = Math.max(scale, Math.abs(point[j]));
+    return scale;
+  }
+
+  function drawSignedSignal(canvas, point, scale) {
+    canvas.width = IMAGE_SIDE; canvas.height = IMAGE_SIDE;
+    const ctx = canvas.getContext("2d");
+    const image = ctx.createImageData(IMAGE_SIDE, IMAGE_SIDE);
+    const neutral = [15, 21, 18];
+    const positive = [86, 190, 235];
+    const negative = [235, 132, 69];
+    for (let j = 0; j < D; j += 1) {
+      const strength = Math.min(1, Math.abs(point[j]) / scale);
+      const color = point[j] >= 0 ? positive : negative;
+      const offset = j * 4;
+      image.data[offset] = Math.round(neutral[0] + strength * (color[0] - neutral[0]));
+      image.data[offset + 1] = Math.round(neutral[1] + strength * (color[1] - neutral[1]));
+      image.data[offset + 2] = Math.round(neutral[2] + strength * (color[2] - neutral[2]));
+      image.data[offset + 3] = 255;
+    }
+    ctx.putImageData(image, 0, 0);
+  }
+
+  function makeTargetExample() {
+    const seed = (Number(ui.seed.value) || 20260719) >>> 0;
+    const rng = mulberry32((seed ^ 0xD13F4A27) >>> 0);
+    const normal = normalSource(rng);
+    const index = state.indices[Math.floor(rng() * state.indices.length)];
+    const clean = new Float32Array(D), noise = new Float32Array(D);
+    imageAt(index, clean, 0);
+    for (let j = 0; j < D; j += 1) noise[j] = normal();
+    state.targetExample = { clean, noise, digit: labels[index] };
+  }
+
+  function renderTrainingTargets() {
+    const example = state.targetExample;
+    if (!example || !state.diffusionNet || !state.flowNet) return;
+    const dataWeight = Number(ui.targetMix.value) / 100;
+    const noiseWeight = 1 - dataWeight;
+    const norm = Math.sqrt(dataWeight * dataWeight + noiseWeight * noiseWeight);
+    const tau = noiseWeight * noiseWeight / (norm * norm);
+    const flowTime = dataWeight;
+    const diffusionInput = new Float32Array(D), flowInput = new Float32Array(D);
+    const diffusionTarget = example.noise;
+    const flowTarget = new Float32Array(D);
+    for (let j = 0; j < D; j += 1) {
+      diffusionInput[j] = dataWeight * example.clean[j] / norm + noiseWeight * example.noise[j] / norm;
+      flowInput[j] = dataWeight * example.clean[j] + noiseWeight * example.noise[j];
+      flowTarget[j] = example.clean[j] - example.noise[j];
+    }
+
+    const hidden = new Float32Array(H);
+    const diffusionPrediction = new Float32Array(D), flowPrediction = new Float32Array(D);
+    predict(state.diffusionNet, diffusionInput, tau, example.digit, hidden, diffusionPrediction);
+    predict(state.flowNet, flowInput, flowTime, example.digit, hidden, flowPrediction);
+
+    let diffusionError = 0, flowError = 0;
+    for (let j = 0; j < D; j += 1) {
+      diffusionError += Math.pow(diffusionPrediction[j] - diffusionTarget[j], 2);
+      flowError += Math.pow(flowPrediction[j] - flowTarget[j], 2);
+    }
+    diffusionError /= D; flowError /= D;
+
+    const diffusionScale = signalScale(diffusionTarget);
+    const flowScale = signalScale(flowTarget);
+    drawJourneyDigit(ui.targetClean, example.clean, [232, 240, 235]);
+    drawSignedSignal(ui.targetNoise, example.noise, diffusionScale);
+    drawJourneyDigit(ui.targetDiffusionInput, diffusionInput, [205, 184, 255]);
+    drawJourneyDigit(ui.targetFlowInput, flowInput, [163, 245, 215]);
+    drawSignedSignal(ui.targetDiffusionAnswer, diffusionTarget, diffusionScale);
+    drawSignedSignal(ui.targetDiffusionPrediction, diffusionPrediction, diffusionScale);
+    drawSignedSignal(ui.targetFlowAnswer, flowTarget, flowScale);
+    drawSignedSignal(ui.targetFlowPrediction, flowPrediction, flowScale);
+
+    const dataPercent = Math.round(dataWeight * 100), noisePercent = 100 - dataPercent;
+    const progress = state.update === 0 ? "random initialization" : state.update.toLocaleString() + " updates";
+    ui.targetPairLabel.textContent = "Fixed pair · digit " + example.digit;
+    ui.targetMixLabel.textContent = dataPercent + "% data · " + noisePercent + "% noise";
+    ui.targetDiffusionTime.textContent = "noise level τ = " + tau.toFixed(2);
+    ui.targetFlowTime.textContent = "path time t = " + flowTime.toFixed(2);
+    ui.targetDiffusionError.textContent = progress + " · this-label MSE " + diffusionError.toFixed(3);
+    ui.targetFlowError.textContent = progress + " · this-label MSE " + flowError.toFixed(3);
+  }
+
   function drawFilmstrip(canvas, journey, tint, activeCheckpoint, highlight) {
     const count = 6;
     canvas.width = count * IMAGE_SIDE; canvas.height = IMAGE_SIDE;
@@ -409,7 +502,7 @@
     diffusionNet: null, flowNet: null, indices: [], update: 0, budget: 600, solverSteps: 24,
     running: false, frame: 0, trainingRng: null, trainingNormal: null,
     diffusionEma: null, flowEma: null, diffusionHistory: [], flowHistory: [],
-    diffusionJourney: null, flowJourney: null
+    diffusionJourney: null, flowJourney: null, targetExample: null
   };
 
   function setIndices() {
@@ -435,10 +528,11 @@
     const seed = ((Number(ui.seed.value) || 20260719) ^ 0x71C3A95D) >>> 0;
     state.diffusionNet = makeNetwork(mulberry32(seed)); state.flowNet = makeNetwork(mulberry32(seed));
     state.trainingRng = mulberry32((seed ^ 0xB5297A4D) >>> 0); state.trainingNormal = normalSource(state.trainingRng);
-    setIndices(); updateUi();
+    setIndices(); makeTargetExample(); updateUi();
     drawLoss(ui.diffusionLossChart, state.diffusionHistory, "#7857b2");
     drawLoss(ui.flowLossChart, state.flowHistory, "#167d69");
     sampleModels();
+    renderTrainingTargets();
     ui.status.textContent = "Ready · models are untrained · " + state.indices.length.toLocaleString() + " examples available";
   }
 
@@ -466,6 +560,7 @@
       }
     }
     updateUi();
+    renderTrainingTargets();
     if (state.update % 40 < count || state.update >= state.budget) {
       drawLoss(ui.diffusionLossChart, state.diffusionHistory, "#7857b2");
       drawLoss(ui.flowLossChart, state.flowHistory, "#167d69");
@@ -487,7 +582,8 @@
   ui.speed.addEventListener("input", () => { ui.speedOutput.value = ui.speed.value + " updates / frame"; });
   ui.solverSteps.addEventListener("input", () => { state.solverSteps = 2 ** Number(ui.solverSteps.value) + 8; ui.solverStepsOutput.value = state.solverSteps; sampleModels(); });
   ui.temperature.addEventListener("input", () => { ui.temperatureOutput.value = Number(ui.temperature.value).toFixed(2); sampleModels(); });
-  ui.regenerate.addEventListener("click", () => { let seed = Number(ui.seed.value); if (!Number.isFinite(seed)) seed = 20260719; ui.seed.value = (seed + 1) >>> 0; sampleModels(); ui.status.textContent = "Regenerated from a new shared noise draw"; });
+  ui.regenerate.addEventListener("click", () => { let seed = Number(ui.seed.value); if (!Number.isFinite(seed)) seed = 20260719; ui.seed.value = (seed + 1) >>> 0; makeTargetExample(); sampleModels(); renderTrainingTargets(); ui.status.textContent = "Regenerated from a new shared noise draw and training pair"; });
+  ui.targetMix.addEventListener("input", renderTrainingTargets);
   ui.journey.addEventListener("input", renderMicroscope);
   window.addEventListener("resize", () => { drawLoss(ui.diffusionLossChart, state.diffusionHistory, "#7857b2"); drawLoss(ui.flowLossChart, state.flowHistory, "#167d69"); renderMicroscope(); });
 
