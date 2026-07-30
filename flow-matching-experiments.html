@@ -5,6 +5,7 @@ title: "Learning to move probability"
 
 <link rel="stylesheet" href="{{ '/assets/flow-matching-demo.css' | relative_url }}">
 <link rel="stylesheet" href="{{ '/assets/mnist-pixel-demo.css' | relative_url }}">
+<link rel="stylesheet" href="{{ '/assets/mnist-transport-demo.css' | relative_url }}">
 
 <article class="fm-post">
   <header class="fm-hero">
@@ -459,8 +460,164 @@ title: "Learning to move probability"
       </div>
     </section>
   </section>
+
+  <section class="digit-flow-lab" id="digit-flow-lab" aria-labelledby="digit-flow-title">
+    <header class="digit-flow-header">
+      <div>
+        <p class="fm-section-label">Interactive comparison 03 · distribution-to-distribution transport</p>
+        <h2 id="digit-flow-title">Watch a 0 learn to become a 5</h2>
+      </div>
+      <p id="digit-flow-summary">Here the easy source is not Gaussian noise—it is a distribution of handwritten zeros. Flow matching learns the changing pixel velocity that carries those zeros into the distribution of fives.</p>
+    </header>
+
+    <aside class="digit-flow-scope">
+      <strong>This is transport, not unconditional generation.</strong>
+      <span>A source digit supplies the starting variation, so producing a new result requires a source image. The velocity network remains conditioned on that original source throughout this image-to-image journey. Generative models normally start from Gaussian noise because fresh noise is unlimited and free; the flow-matching recipe itself works with either source.</span>
+    </aside>
+
+    <section class="digit-flow-training" aria-label="Digit transport training controls">
+      <div class="digit-flow-training-rule">
+        <span><strong>Construct a temporary path</strong> <i>x</i><sub>t</sub> = (1 − <i>t</i>) <i>x</i><sub>source</sub> + <i>t x</i><sub>target</sub></span>
+        <span><strong>Give the learner a velocity label</strong> <i>v</i> = <i>x</i><sub>target</sub> − <i>x</i><sub>source</sub></span>
+      </div>
+      <div class="digit-flow-selectors">
+        <label>Source distribution
+          <select id="digit-flow-source">
+            <option value="0" selected>Digit 0</option><option value="1">Digit 1</option><option value="2">Digit 2</option>
+            <option value="3">Digit 3</option><option value="4">Digit 4</option><option value="5">Digit 5</option>
+            <option value="6">Digit 6</option><option value="7">Digit 7</option><option value="8">Digit 8</option><option value="9">Digit 9</option>
+          </select>
+        </label>
+        <span class="digit-flow-selector-arrow" aria-hidden="true">→</span>
+        <label>Target distribution
+          <select id="digit-flow-target">
+            <option value="0">Digit 0</option><option value="1">Digit 1</option><option value="2">Digit 2</option>
+            <option value="3">Digit 3</option><option value="4">Digit 4</option><option value="5" selected>Digit 5</option>
+            <option value="6">Digit 6</option><option value="7">Digit 7</option><option value="8">Digit 8</option><option value="9">Digit 9</option>
+          </select>
+        </label>
+        <label>Training coupling
+          <select id="digit-flow-pairing">
+            <option value="matched" selected>Closest-looking pairs</option>
+            <option value="random">Random pairs</option>
+          </select>
+        </label>
+      </div>
+
+      <div class="digit-flow-progress-row">
+        <div>
+          <span>live learner</span>
+          <strong id="digit-flow-progress-label">0 / 800 updates</strong>
+        </div>
+        <progress id="digit-flow-progress" max="800" value="0">0%</progress>
+        <div class="digit-flow-training-buttons">
+          <button id="digit-flow-train" class="digit-flow-primary" type="button">Train the flow</button>
+          <button id="digit-flow-train-pause" type="button" disabled>Pause</button>
+          <button id="digit-flow-reset" type="button">Reset</button>
+        </div>
+      </div>
+
+      <div class="digit-flow-knobs">
+        <label>
+          <span>Training budget <output id="digit-flow-budget-output" for="digit-flow-budget">800</output></span>
+          <input id="digit-flow-budget" type="range" min="200" max="4000" step="200" value="800">
+        </label>
+        <label>
+          <span>Training speed <output id="digit-flow-speed-output" for="digit-flow-speed">6 / frame</output></span>
+          <input id="digit-flow-speed" type="range" min="1" max="12" step="1" value="6">
+        </label>
+        <label>
+          <span>ODE steps <output id="digit-flow-steps-output" for="digit-flow-steps">24</output></span>
+          <input id="digit-flow-steps" type="range" min="8" max="48" step="4" value="24">
+        </label>
+      </div>
+
+      <p id="digit-flow-status" class="digit-flow-status" aria-live="polite">Preparing shape-matched 0 → 5 training pairs…</p>
+    </section>
+
+    <section class="digit-flow-motion" aria-labelledby="digit-flow-motion-title">
+      <header>
+        <div>
+          <p class="fm-section-label">The flow in motion</p>
+          <h3 id="digit-flow-motion-title">Horizontal position is time; changing pixels are the learned journey</h3>
+        </div>
+        <p>Each lane starts from a different source example. The tile’s left-to-right travel is only a clock—the morph inside the tile is the actual motion through 64-dimensional image space. Click a lane to inspect it.</p>
+      </header>
+
+      <canvas id="digit-flow-stage" role="img" aria-label="Six source digits travelling from left to right while morphing into target digits"></canvas>
+
+      <div class="digit-flow-timeline">
+        <label for="digit-flow-time"><span>path time</span><strong id="digit-flow-time-label">t = 0.00 · source distribution</strong></label>
+        <input id="digit-flow-time" type="range" min="0" max="1000" step="1" value="0">
+        <div aria-hidden="true"><span id="digit-flow-axis-source">source 0</span><span>learned ODE trajectory</span><span id="digit-flow-axis-target">target 5</span></div>
+      </div>
+
+      <div class="digit-flow-motion-buttons">
+        <button id="digit-flow-play" class="digit-flow-primary" type="button">Play once</button>
+        <button id="digit-flow-play-pause" type="button" disabled>Pause motion</button>
+        <button id="digit-flow-examples" type="button">New source examples</button>
+        <span id="digit-flow-selection">Inspecting lane 1 of 6</span>
+      </div>
+    </section>
+
+    <section class="digit-flow-microscope" aria-labelledby="digit-flow-microscope-title">
+      <header>
+        <div>
+          <p class="fm-section-label">Selected-lane microscope</p>
+          <h3 id="digit-flow-microscope-title">One Euler step, made visible</h3>
+        </div>
+        <p>The network sees the current image, path time, and original source. It emits a signed velocity for every pixel; the solver multiplies that velocity by a small time step and adds it to the current image.</p>
+      </header>
+
+      <div class="digit-flow-equation" aria-label="Euler solver update">
+        <span>current image <i>x</i><sub>t</sub></span>
+        <b>+</b>
+        <span>velocity <i>v</i><sub>θ</sub>(<i>x</i><sub>t</sub>, <i>t</i> | <i>x</i><sub>source</sub>) × Δ<i>t</i></span>
+        <b>=</b>
+        <span>next image <i>x</i><sub>t+Δt</sub></span>
+      </div>
+
+      <div class="digit-flow-inspection">
+        <figure>
+          <figcaption><span>Journey start</span><small id="digit-flow-source-caption">source 0</small></figcaption>
+          <canvas id="digit-flow-inspect-source" role="img" aria-label="Selected source digit"></canvas>
+        </figure>
+        <span class="digit-flow-inspect-arrow" aria-hidden="true">→</span>
+        <figure>
+          <figcaption><span>Current state</span><small id="digit-flow-current-caption">x at t = 0.00</small></figcaption>
+          <canvas id="digit-flow-inspect-current" role="img" aria-label="Current selected image on the learned flow trajectory"></canvas>
+        </figure>
+        <span class="digit-flow-inspect-plus" aria-hidden="true">+</span>
+        <figure class="digit-flow-velocity-figure">
+          <figcaption><span>Predicted velocity</span><small>blue + · orange −</small></figcaption>
+          <canvas id="digit-flow-inspect-velocity" role="img" aria-label="Signed per-pixel velocity predicted by the flow model"></canvas>
+        </figure>
+        <span class="digit-flow-inspect-arrow" aria-hidden="true">→</span>
+        <figure>
+          <figcaption><span>Next solver state</span><small id="digit-flow-next-caption">one step later</small></figcaption>
+          <canvas id="digit-flow-inspect-next" role="img" aria-label="Next image after applying one velocity step"></canvas>
+        </figure>
+        <span class="digit-flow-inspect-arrow" aria-hidden="true">→</span>
+        <figure>
+          <figcaption><span>Training reference</span><small id="digit-flow-target-caption">paired 5</small></figcaption>
+          <canvas id="digit-flow-inspect-target" role="img" aria-label="Target digit paired with the selected source during training"></canvas>
+        </figure>
+      </div>
+
+      <figure class="digit-flow-film">
+        <figcaption><span><strong>The selected learned journey</strong> · seven equally spaced solver states</span><small>this filmstrip is generated by integrating the trained velocity field</small></figcaption>
+        <canvas id="digit-flow-film" role="img" aria-label="Filmstrip of the selected source digit transforming into a target digit"></canvas>
+      </figure>
+
+      <aside class="digit-flow-note">
+        <strong>What the coupling changes</strong>
+        <span id="digit-flow-coupling-copy">MNIST does not contain naturally paired zeros and fives, so training must temporarily couple examples. Closest-looking pairs encourage shorter, more coherent paths. Random pairs create more conflicting velocities; the model still aims for the same target distribution, but individual journeys can become less direct.</span>
+      </aside>
+    </section>
+  </section>
 </article>
 
 <script src="{{ '/assets/flow-matching-demo.js' | relative_url }}"></script>
 <script src="{{ '/assets/mnist-pixel-data.js' | relative_url }}"></script>
 <script src="{{ '/assets/mnist-pixel-demo.js' | relative_url }}"></script>
+<script src="{{ '/assets/mnist-transport-demo.js' | relative_url }}"></script>
