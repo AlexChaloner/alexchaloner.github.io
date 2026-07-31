@@ -381,14 +381,6 @@
     state.examples = pool.slice(offset, offset + LANE_COUNT);
   }
 
-  function laneNoise(pair, lane) {
-    const seed = (0xD1B54A35 ^ Math.imul(pair[0] + 1, 0x9E3779B1) ^ Math.imul(pair[1] + 1, 0x85EBCA77) ^ Math.imul(state.exampleSeed + lane + 1, 0xC2B2AE3D)) >>> 0;
-    const normal = normalSource(mulberry32(seed));
-    const point = new Float32Array(D);
-    for (let j = 0; j < D; j += 1) point[j] = normal();
-    return point;
-  }
-
   function computeJourneys() {
     if (!state.examples.length || !state.diffusionNet || !state.flowNet) return;
     state.diffusionJourneys = []; state.flowJourneys = [];
@@ -407,15 +399,8 @@
       }
       state.flowJourneys.push(flowJourney);
 
-      const noise = laneNoise(pair, lane);
       const diffusionPoint = new Float32Array(source);
       const diffusionJourney = [new Float32Array(diffusionPoint)];
-      for (let step = 0; step < state.solverSteps; step += 1) {
-        const tau = 0.98 * (step + 1) / state.solverSteps;
-        const cleanScale = Math.sqrt(1 - tau), noiseScale = Math.sqrt(tau);
-        for (let j = 0; j < D; j += 1) diffusionPoint[j] = cleanScale * source[j] + noiseScale * noise[j];
-        diffusionJourney.push(new Float32Array(diffusionPoint));
-      }
       for (let step = 0; step < state.solverSteps; step += 1) {
         const tau = 0.98 * (1 - step / state.solverSteps);
         const nextTau = 0.98 * (1 - (step + 1) / state.solverSteps);
@@ -469,21 +454,10 @@
     const selectedBorder = diffusion ? "#eadfff" : "#eafbf5";
     const dimBorder = diffusion ? "#8066a6" : "#4e9d87";
     context.fillStyle = "#111814"; context.fillRect(0, 0, width, height);
-    if (diffusion) {
-      const handoffX = (layout.trackStart + layout.trackEnd) / 2;
-      context.fillStyle = "rgba(198,210,203,0.025)";
-      context.fillRect(layout.trackStart, 29, handoffX - layout.trackStart, height - 29);
-      context.fillStyle = "rgba(166,130,214,0.035)";
-      context.fillRect(handoffX, 29, layout.trackEnd - handoffX, height - 29);
-      context.strokeStyle = "rgba(210,187,245,0.38)";
-      context.setLineDash([3, 4]); context.beginPath(); context.moveTo(handoffX, 30); context.lineTo(handoffX, height); context.stroke(); context.setLineDash([]);
-      context.fillStyle = "#c7b0ea"; context.font = "700 8px monospace"; context.textAlign = "center";
-      context.fillText("MODEL STARTS", handoffX, 39);
-    }
     context.font = "700 9px system-ui, sans-serif"; context.textAlign = "center";
     context.fillStyle = "#aebbb4";
     context.fillText("START " + state.sourceDigit, layout.sourceX, 21);
-    context.fillText(diffusion ? "CORRUPT → DENOISE" : "FLOWING STATE", (layout.trackStart + layout.trackEnd) / 2, 21);
+    context.fillText(diffusion ? "DENOISING STATE" : "FLOWING STATE", (layout.trackStart + layout.trackEnd) / 2, 21);
     context.fillText((diffusion ? "TRAINING " : "PAIRED ") + state.targetDigit, layout.targetX, 21);
 
     const current = new Float32Array(D), ghost = new Float32Array(D), source = new Float32Array(D), target = new Float32Array(D);
@@ -507,28 +481,24 @@
       [0.25, 0.5, 0.75].forEach((checkpoint) => {
         stateAt(journeys[lane], checkpoint, ghost);
         const ghostX = layout.trackStart + checkpoint * (layout.trackEnd - layout.trackStart);
-        const ghostTint = diffusion && checkpoint <= 0.5 ? SOURCE_TINT : tint;
-        drawTile(context, ghost, ghostX, centerY, layout.tile * 0.78, ghostTint, 0.15, null);
+        drawTile(context, ghost, ghostX, centerY, layout.tile * 0.78, tint, 0.15, null);
       });
       stateAt(journeys[lane], state.motionProgress, current);
       const movingX = layout.trackStart + state.motionProgress * (layout.trackEnd - layout.trackStart);
-      const movingTint = diffusion && state.motionProgress < 0.5 ? SOURCE_TINT : tint;
-      drawTile(context, current, movingX, centerY, layout.tile, movingTint, 1, lane === state.selectedLane ? selectedBorder : dimBorder);
+      drawTile(context, current, movingX, centerY, layout.tile, tint, 1, lane === state.selectedLane ? selectedBorder : dimBorder);
       context.fillStyle = lane === state.selectedLane ? "#f7f5fb" : "#75837b";
       context.font = "10px monospace"; context.textAlign = "left";
       context.fillText(String(lane + 1), 4, centerY + 3);
     }
   }
 
-  function drawFilm(canvas, journey, tint, border, method) {
+  function drawFilm(canvas, journey, tint, border) {
     const count = 7;
     canvas.width = count * IMAGE_SIDE; canvas.height = IMAGE_SIDE;
     const context = canvas.getContext("2d"), image = context.createImageData(canvas.width, IMAGE_SIDE);
     for (let checkpoint = 0; checkpoint < count; checkpoint += 1) {
       const index = Math.round((journey.length - 1) * checkpoint / (count - 1));
-      const progress = checkpoint / (count - 1);
-      const frameTint = method === "diffusion" && progress <= 0.5 ? SOURCE_TINT : tint;
-      paintPixelImage(image, canvas.width, journey[index], checkpoint * IMAGE_SIDE, 0, frameTint);
+      paintPixelImage(image, canvas.width, journey[index], checkpoint * IMAGE_SIDE, 0, tint);
     }
     context.putImageData(image, 0, 0);
     const active = Math.round(state.motionProgress * (count - 1));
@@ -546,37 +516,26 @@
     imageAt(pair[0], source, 0); imageAt(pair[1], target, 0); stateAt(journey, state.motionProgress, current);
 
     if (method === "diffusion") {
-      if (state.motionProgress < 0.5) {
-        const corruptionProgress = state.motionProgress * 2;
-        const tau = 0.98 * corruptionProgress;
-        prediction.set(laneNoise(pair, state.selectedLane));
-        stateAt(journey, Math.min(0.5, state.motionProgress + 1 / (2 * state.solverSteps)), next);
-        refs.inspectorRule.textContent = "fixed corruption · no learning yet";
-        refs.predictionLabel.textContent = "Fixed noise draw";
-        refs.predictionHelp.textContent = "known · not predicted";
-        refs.currentCaption.textContent = corruptionProgress <= 0 ? "clean source · τ = 0.00" : "corrupting · τ = " + tau.toFixed(2);
-        refs.nextCaption.textContent = "fixed corruption step";
+      const tau = 0.98 * (1 - state.motionProgress);
+      predict(state.diffusionNet, current, null, tau, hidden, prediction);
+      const nextProgress = Math.min(1, state.motionProgress + 1 / state.solverSteps);
+      const nextTau = 0.98 * (1 - nextProgress);
+      const cleanScale = Math.sqrt(1 - tau), noiseScale = Math.sqrt(tau);
+      if (state.motionProgress >= 1) {
+        next.set(current);
       } else {
-        const denoisingProgress = (state.motionProgress - 0.5) * 2;
-        const tau = 0.98 * (1 - denoisingProgress);
-        predict(state.diffusionNet, current, null, tau, hidden, prediction);
-        const nextDenoisingProgress = Math.min(1, denoisingProgress + 1 / state.solverSteps);
-        const nextTau = 0.98 * (1 - nextDenoisingProgress);
-        const cleanScale = Math.sqrt(1 - tau), noiseScale = Math.sqrt(tau);
-        if (state.motionProgress >= 1) {
-          next.set(current);
-        } else {
-          for (let j = 0; j < D; j += 1) {
-            const clean = Math.max(-1.5, Math.min(1.5, (current[j] - noiseScale * prediction[j]) / cleanScale));
-            next[j] = Math.sqrt(1 - nextTau) * clean + Math.sqrt(nextTau) * prediction[j];
-          }
+        for (let j = 0; j < D; j += 1) {
+          const clean = Math.max(-1.5, Math.min(1.5, (current[j] - noiseScale * prediction[j]) / cleanScale));
+          next[j] = Math.sqrt(1 - nextTau) * clean + Math.sqrt(nextTau) * prediction[j];
         }
-        refs.inspectorRule.textContent = "learned five denoising · zero is gone";
-        refs.predictionLabel.textContent = "Predicted noise";
-        refs.predictionHelp.textContent = "blue + · orange −";
-        refs.currentCaption.textContent = state.motionProgress >= 1 ? "generated endpoint · τ = 0.00" : "denoising · τ = " + tau.toFixed(2);
-        refs.nextCaption.textContent = state.motionProgress >= 1 ? "journey complete" : "one learned step cleaner";
       }
+      refs.inspectorRule.textContent = "predict noise, then remove it";
+      refs.predictionLabel.textContent = "Predicted noise";
+      refs.predictionHelp.textContent = "blue + · orange −";
+      refs.currentCaption.textContent = state.motionProgress <= 0
+        ? "source declared noisy · τ = 0.98"
+        : state.motionProgress >= 1 ? "generated endpoint · τ = 0.00" : "denoising · τ = " + tau.toFixed(2);
+      refs.nextCaption.textContent = state.motionProgress >= 1 ? "journey complete" : "one learned step cleaner";
     } else {
       const time = Math.min(0.999, state.motionProgress);
       predict(state.flowNet, current, source, time, hidden, prediction);
@@ -586,8 +545,8 @@
       refs.nextCaption.textContent = state.motionProgress >= 1 ? "journey complete" : "Δt = " + delta.toFixed(3);
     }
 
-    const tint = method === "diffusion" && state.motionProgress < 0.5 ? SOURCE_TINT : method === "diffusion" ? DIFFUSION_TINT : FLOW_TINT;
-    if (method === "diffusion") refs.inspectPrediction.style.outlineColor = state.motionProgress < 0.5 ? "#7f8984" : "#7651aa";
+    const tint = method === "diffusion" ? DIFFUSION_TINT : FLOW_TINT;
+    if (method === "diffusion") refs.inspectPrediction.style.outlineColor = "#7651aa";
     drawPixelCanvas(refs.inspectSource, source, SOURCE_TINT);
     drawPixelCanvas(refs.inspectCurrent, current, tint);
     drawSignedCanvas(refs.inspectPrediction, prediction);
@@ -595,26 +554,20 @@
     drawPixelCanvas(refs.inspectTarget, target, TARGET_TINT);
     refs.sourceCaption.textContent = (method === "diffusion" ? "actual source " : "source ") + state.sourceDigit;
     refs.targetCaption.textContent = method === "diffusion" ? "a " + state.targetDigit + "-only example" : "paired " + state.targetDigit;
-    drawFilm(refs.film, journey, method === "diffusion" ? DIFFUSION_TINT : tint, method === "diffusion" ? "#eadfff" : "#eafbf5", method);
+    drawFilm(refs.film, journey, tint, method === "diffusion" ? "#eadfff" : "#eafbf5");
   }
 
   function renderMotion() {
     const progress = state.motionProgress;
     ui.time.value = Math.round(progress * 1000);
     if (progress <= 0) {
-      ui.timeLabel.textContent = "0% · both moving states are source " + state.sourceDigit;
-    } else if (progress < 0.5) {
-      ui.timeLabel.textContent = Math.round(progress * 100) + "% · diffusion fixed corruption τ = " + (0.98 * progress * 2).toFixed(2) + " · flow t = " + progress.toFixed(2);
-    } else if (progress === 0.5) {
-      ui.timeLabel.textContent = "50% · diffusion is near-noise; learned denoising begins · flow is halfway";
+      ui.timeLabel.textContent = "0% · same source " + state.sourceDigit + "; diffusion declares it τ = 0.98 noise";
     } else if (progress < 1) {
-      ui.timeLabel.textContent = Math.round(progress * 100) + "% · diffusion learned denoising τ = " + (0.98 * (1 - (progress - 0.5) * 2)).toFixed(2) + " · flow t = " + progress.toFixed(2);
+      ui.timeLabel.textContent = Math.round(progress * 100) + "% · diffusion denoising τ = " + (0.98 * (1 - progress)).toFixed(2) + " · flow t = " + progress.toFixed(2);
     } else {
       ui.timeLabel.textContent = "100% · both aim for target " + state.targetDigit;
     }
-    ui.microscopeCopy.textContent = progress < 0.5
-      ? "The purple diffusion state is still following fixed Gaussian corruption—its model is not being called. The green flow model is already predicting and applying velocity."
-      : "The purple five-only denoiser is now predicting noise and removing it. The green flow model continues predicting and applying velocity along its direct route.";
+    ui.microscopeCopy.textContent = "The purple model interprets the structured " + state.sourceDigit + " as noisy xτ and applies its learned " + state.targetDigit + "-only noise prediction. The green flow model predicts and applies velocity along its direct route.";
     ui.selection.textContent = "Inspecting row " + (state.selectedLane + 1) + " of " + LANE_COUNT;
     drawStage(ui.diffusionStage, state.diffusionJourneys, "diffusion");
     drawStage(ui.flowStage, state.flowJourneys, "flow");
@@ -623,18 +576,18 @@
 
   function updateLabels() {
     ui.title.textContent = "Two routes from " + state.sourceDigit + " → " + state.targetDigit;
-    ui.summary.textContent = "The diffusion model trains only on " + DIGIT_PLURALS[state.targetDigit] + ": to use it on a " + state.sourceDigit + ", we first destroy the " + state.sourceDigit + " with fixed Gaussian corruption, then let the learned " + state.targetDigit + " denoiser take over. Flow matching instead learns a direct " + state.sourceDigit + "-to-" + state.targetDigit + " velocity.";
-    ui.scopeCopy.textContent = "Diffusion never sees a " + state.sourceDigit + " during training. Its visible route starts from the actual " + state.sourceDigit + ", but " + state.sourceDigit + " → noise is a fixed mathematical operation—not something it learns. Only the noise → " + state.targetDigit + " half is learned. Flow sees paired " + DIGIT_PLURALS[state.sourceDigit] + " and " + DIGIT_PLURALS[state.targetDigit] + " and learns the whole direct route. The models get " + DIFFUSION_PARAMETER_COUNT.toLocaleString() + " and " + FLOW_PARAMETER_COUNT.toLocaleString() + " parameters respectively, the same update budget, and " + state.solverSteps + " learned model calls.";
+    ui.summary.textContent = "The diffusion model trains only on " + DIGIT_PLURALS[state.targetDigit] + ". At generation time, we hand it an actual " + state.sourceDigit + ", pretend that structured image is noise, and let its learned " + state.targetDigit + " denoiser act immediately. Flow matching instead learns a direct " + state.sourceDigit + "-to-" + state.targetDigit + " velocity.";
+    ui.scopeCopy.textContent = "Diffusion never sees a " + state.sourceDigit + " during training. We simply present the " + state.sourceDigit + " as xτ at τ = 0.98—as though its pixels were a nearly pure noise sample—and run learned reverse diffusion from the first step. This is an intentionally unusual seed, not forward corruption. Flow sees paired " + DIGIT_PLURALS[state.sourceDigit] + " and " + DIGIT_PLURALS[state.targetDigit] + " and learns the direct route. The models get " + DIFFUSION_PARAMETER_COUNT.toLocaleString() + " and " + FLOW_PARAMETER_COUNT.toLocaleString() + " parameters respectively, the same update budget, and " + state.solverSteps + " learned model calls.";
     ui.motionTitle.textContent = "The same six " + DIGIT_PLURALS[state.sourceDigit] + ", two very different routes";
-    ui.motionCopy.textContent = "Both moving tiles begin as the same source " + state.sourceDigit + ". Diffusion deliberately destroys it before its " + state.targetDigit + "-only denoiser can generate; flow continuously reshapes it. Horizontal position is a shared clock. Click either copy of a row to inspect it.";
-    ui.diffusion.filmCopy.textContent = "first half fixed · second half learned on " + DIGIT_PLURALS[state.targetDigit] + " only";
+    ui.motionCopy.textContent = "Both moving tiles begin with exactly the same " + state.sourceDigit + " pixels. Diffusion interprets those pixels as a high-noise state and denoises them; flow continuously reshapes them with its learned velocity. Horizontal position is a shared clock. Click a row to inspect it.";
+    ui.diffusion.filmCopy.textContent = "every step learned on " + DIGIT_PLURALS[state.targetDigit] + " only";
     ui.axisSource.textContent = "both start: source " + state.sourceDigit;
-    ui.axisMiddle.textContent = "diffusion: noise · flow: halfway";
+    ui.axisMiddle.textContent = "diffusion: denoising · flow: halfway";
     ui.axisTarget.textContent = "both aim for target " + state.targetDigit;
     const pairing = state.pairing === "matched"
       ? "Closest-looking pairing gives flow a relatively unambiguous relationship to learn."
       : "Random pairing asks flow to reconcile many less-consistent source-to-target relationships.";
-    ui.couplingCopy.textContent = "The diffusion model learns only the purple noise → " + state.targetDigit + " half. Starting from a " + state.sourceDigit + " is our intervention: fixed corruption pushes it onto a state the " + state.targetDigit + "-only model understands, discarding much of its identity. Flow learns the entire green " + state.sourceDigit + " → " + state.targetDigit + " trip from paired examples. Flow pairing changes only the flow learner. " + pairing;
+    ui.couplingCopy.textContent = "The diffusion model learns a general purple noise → " + state.targetDigit + " denoiser. It never learns " + state.sourceDigit + " → " + state.targetDigit + "; we induce that route by pretending the " + state.sourceDigit + " itself is near-pure noise. Flow learns the entire green " + state.sourceDigit + " → " + state.targetDigit + " trip from paired examples. Flow pairing changes only the flow learner. " + pairing;
   }
 
   function updateTrainingUi() {
@@ -696,7 +649,7 @@
     state.motionProgress = progress; renderMotion();
     if (progress >= 1) {
       stopMotion(false);
-      ui.status.textContent = "Journeys complete · diffusion travelled " + state.sourceDigit + " → noise → " + state.targetDigit + "; flow travelled directly " + state.sourceDigit + " → " + state.targetDigit;
+      ui.status.textContent = "Journeys complete · diffusion treated " + state.sourceDigit + " as noise and denoised it toward " + state.targetDigit + "; flow travelled directly " + state.sourceDigit + " → " + state.targetDigit;
       return;
     }
     state.animationFrame = window.requestAnimationFrame(motionFrame);

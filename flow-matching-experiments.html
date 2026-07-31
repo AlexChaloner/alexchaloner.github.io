@@ -467,12 +467,12 @@ title: "Learning to move probability"
         <p class="fm-section-label">Interactive comparison 03 · image-to-image routes</p>
         <h2 id="digit-flow-title">Two routes from 0 → 5</h2>
       </div>
-      <p id="digit-flow-summary">The diffusion model trains only on fives: to use it on a zero, we first destroy the zero with fixed Gaussian corruption, then let the learned five denoiser take over. Flow matching instead learns a direct zero-to-five velocity.</p>
+      <p id="digit-flow-summary">The diffusion model trains only on fives. At generation time, we hand it an actual zero, pretend that structured image is noise, and let its learned five denoiser act immediately. Flow matching instead learns a direct zero-to-five velocity.</p>
     </header>
 
     <aside class="digit-flow-scope">
       <strong>The crucial asymmetry</strong>
-      <span id="digit-flow-scope-copy">Diffusion never sees a zero during training. Its visible route starts from the actual zero, but zero → noise is a fixed mathematical operation—not something it learns. Only the noise → five half is learned. Flow sees paired zeros and fives and learns the whole direct route. Both get approximately 18,900 parameters, the same update budget, and 24 learned model calls.</span>
+      <span id="digit-flow-scope-copy">Diffusion never sees a zero during training. We simply present the zero as <i>x</i><sub>τ</sub> at τ = 0.98—as though its pixels were a nearly pure noise sample—and run learned reverse diffusion from the first step. This is an intentionally unusual seed, not forward corruption. Flow sees paired zeros and fives and learns the direct route. Both get approximately 18,900 parameters, the same update budget, and 24 learned model calls.</span>
     </aside>
 
     <section class="digit-flow-training" aria-label="Paired digit comparison training controls">
@@ -541,13 +541,13 @@ title: "Learning to move probability"
           <p class="fm-section-label">Direct, synchronized comparison</p>
           <h3 id="digit-flow-motion-title">The same six zeros, two very different routes</h3>
         </div>
-        <p id="digit-flow-motion-copy">Both moving tiles now begin as the same source zero. Diffusion deliberately destroys it before its five-only denoiser can generate; flow continuously reshapes it. Horizontal position is a shared clock. Click a row to inspect it.</p>
+        <p id="digit-flow-motion-copy">Both moving tiles begin with exactly the same zero pixels. Diffusion interprets those pixels as a high-noise state and denoises them; flow continuously reshapes them with its learned velocity. Horizontal position is a shared clock. Click a row to inspect it.</p>
       </header>
 
       <div class="digit-flow-stage-grid">
         <article class="digit-flow-method-stage digit-flow-method-diffusion">
-          <header><span>Target-only diffusion</span><strong>fixed corruption + learned denoising · source → noise → target</strong></header>
-          <canvas id="digit-diffusion-stage" role="img" aria-label="Six source digits being corrupted into noise and then denoised by a target-only diffusion model"></canvas>
+          <header><span>Target-only diffusion</span><strong>learned denoising · pretend-noise source → target</strong></header>
+          <canvas id="digit-diffusion-stage" role="img" aria-label="Six source digits being treated as high-noise states and denoised by a target-only diffusion model"></canvas>
         </article>
         <article class="digit-flow-method-stage digit-flow-method-flow">
           <header><span>Flow matching</span><strong>learned direct transport · source → target</strong></header>
@@ -556,9 +556,9 @@ title: "Learning to move probability"
       </div>
 
       <div class="digit-flow-timeline">
-        <label for="digit-flow-time"><span>shared route progress</span><strong id="digit-flow-time-label">0% · both moving states are source 0</strong></label>
+        <label for="digit-flow-time"><span>shared route progress</span><strong id="digit-flow-time-label">0% · same source 0; diffusion declares it τ = 0.98 noise</strong></label>
         <input id="digit-flow-time" type="range" min="0" max="1000" step="1" value="0">
-        <div aria-hidden="true"><span id="digit-flow-axis-source">both start: source 0</span><span id="digit-flow-axis-middle">diffusion: noise · flow: halfway</span><span id="digit-flow-axis-target">both aim for target 5</span></div>
+        <div aria-hidden="true"><span id="digit-flow-axis-source">both start: source 0</span><span id="digit-flow-axis-middle">diffusion: denoising · flow: halfway</span><span id="digit-flow-axis-target">both aim for target 5</span></div>
       </div>
 
       <div class="digit-flow-motion-buttons">
@@ -575,23 +575,23 @@ title: "Learning to move probability"
           <p class="fm-section-label">Selected-row microscope</p>
           <h3 id="digit-flow-microscope-title">Every part of both routes, made visible</h3>
         </div>
-        <p id="digit-flow-microscope-copy">Before 50%, diffusion is only applying known Gaussian corruption. After 50%, its learned model predicts noise and removes it. Flow predicts and applies velocity throughout the entire route.</p>
+        <p id="digit-flow-microscope-copy">Diffusion treats the structured zero as noisy <i>x</i><sub>τ</sub>, predicts the noise it believes is present, then removes it. Flow predicts a signed pixel velocity and moves with it. Both learned models act throughout the entire route.</p>
       </header>
 
       <div class="digit-flow-microscope-grid">
         <article class="digit-flow-method-inspector digit-flow-method-diffusion">
-          <header><span>Target-only diffusion</span><strong id="digit-diffusion-inspector-rule">fixed corruption · no learning yet</strong></header>
-          <div class="digit-flow-equation" aria-label="Complete diffusion image-to-image route">
-            <span>source <i>x</i><sub>0</sub></span><b>→</b><span>fixed corruption to near-noise</span><b>→</b><span>learned target-only denoising</span>
+          <header><span>Target-only diffusion</span><strong id="digit-diffusion-inspector-rule">predict noise, then remove it</strong></header>
+          <div class="digit-flow-equation" aria-label="Reverse diffusion from a source image treated as noise">
+            <span>source, declared noisy <i>x</i><sub>τ</sub></span><b>→</b><span>predict <i>ε̂</i><sub>θ</sub>(<i>x</i><sub>τ</sub>, τ)</span><b>→</b><span>less noisy state</span>
           </div>
           <div class="digit-flow-inspection">
             <figure><figcaption><span>Journey start</span><small id="digit-diffusion-source-caption">actual source 0</small></figcaption><canvas id="digit-diffusion-inspect-source" role="img" aria-label="Source digit at the start of the diffusion route"></canvas></figure>
-            <figure><figcaption><span>Current state</span><small id="digit-diffusion-current-caption">clean source · τ = 0.00</small></figcaption><canvas id="digit-diffusion-inspect-current" role="img" aria-label="Current state along the diffusion route"></canvas></figure>
-            <figure class="digit-flow-prediction-figure"><figcaption><span id="digit-diffusion-prediction-label">Fixed noise draw</span><small id="digit-diffusion-prediction-help">known · not predicted</small></figcaption><canvas id="digit-diffusion-inspect-prediction" role="img" aria-label="Known or predicted per-pixel noise in the diffusion route"></canvas></figure>
-            <figure><figcaption><span>Next state</span><small id="digit-diffusion-next-caption">one corruption step later</small></figcaption><canvas id="digit-diffusion-inspect-next" role="img" aria-label="Next state along the diffusion route"></canvas></figure>
+            <figure><figcaption><span>Current state</span><small id="digit-diffusion-current-caption">source declared noisy · τ = 0.98</small></figcaption><canvas id="digit-diffusion-inspect-current" role="img" aria-label="Current state along the diffusion route"></canvas></figure>
+            <figure class="digit-flow-prediction-figure"><figcaption><span id="digit-diffusion-prediction-label">Predicted noise</span><small id="digit-diffusion-prediction-help">blue + · orange −</small></figcaption><canvas id="digit-diffusion-inspect-prediction" role="img" aria-label="Per-pixel noise predicted by diffusion"></canvas></figure>
+            <figure><figcaption><span>Next state</span><small id="digit-diffusion-next-caption">one learned step cleaner</small></figcaption><canvas id="digit-diffusion-inspect-next" role="img" aria-label="Next state along the diffusion route"></canvas></figure>
             <figure><figcaption><span>Training example</span><small id="digit-diffusion-target-caption">a five-only example</small></figcaption><canvas id="digit-diffusion-inspect-target" role="img" aria-label="Example from the target-only diffusion training set"></canvas></figure>
           </div>
-          <figure class="digit-flow-film"><figcaption><span><strong>Source → noise → target</strong> · seven states</span><small id="digit-diffusion-film-copy">first half fixed · second half learned</small></figcaption><canvas id="digit-diffusion-film" role="img" aria-label="Filmstrip of a source digit being corrupted and then denoised into a target digit"></canvas></figure>
+          <figure class="digit-flow-film"><figcaption><span><strong>Source-as-noise → target</strong> · seven states</span><small id="digit-diffusion-film-copy">every step learned on fives only</small></figcaption><canvas id="digit-diffusion-film" role="img" aria-label="Filmstrip of a source digit being treated as noise and denoised into a target digit"></canvas></figure>
         </article>
 
         <article class="digit-flow-method-inspector digit-flow-method-flow">
@@ -612,7 +612,7 @@ title: "Learning to move probability"
 
       <aside class="digit-flow-note">
         <strong>What is actually learned?</strong>
-        <span id="digit-flow-coupling-copy">The diffusion model learns only the purple noise → five half. Starting from a zero is our intervention: fixed corruption pushes that zero onto a state the five model understands, discarding much of its identity. Flow learns the entire green zero → five trip from paired examples. Flow pairing changes only the flow learner.</span>
+        <span id="digit-flow-coupling-copy">The diffusion model learns a general purple noise → five denoiser. It never learns zero → five; we induce that route by pretending the zero itself is near-pure noise. Flow learns the entire green zero → five trip from paired examples. Flow pairing changes only the flow learner.</span>
       </aside>
     </section>
   </section>
