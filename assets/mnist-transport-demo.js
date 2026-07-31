@@ -47,9 +47,6 @@
   const DIFFUSION_H = 143;
   const BATCH = 24;
   const LANE_COUNT = 6;
-  const DIGIT_PLURALS = ["zeros", "ones", "twos", "threes", "fours", "fives", "sixes", "sevens", "eights", "nines"];
-  const FLOW_PARAMETER_COUNT = FLOW_H * (D * 2 + 1) + FLOW_H + D * FLOW_H + D + 3 * D;
-  const DIFFUSION_PARAMETER_COUNT = DIFFUSION_H * (D + 1) + DIFFUSION_H + D * DIFFUSION_H + D + 3 * D;
   const DIFFUSION_TINT = [205, 184, 255];
   const FLOW_TINT = [134, 240, 210];
   const SOURCE_TINT = [198, 210, 203];
@@ -529,20 +526,20 @@
           next[j] = Math.sqrt(1 - nextTau) * clean + Math.sqrt(nextTau) * prediction[j];
         }
       }
-      refs.inspectorRule.textContent = "predict noise, then remove it";
-      refs.predictionLabel.textContent = "Predicted noise";
+      refs.inspectorRule.textContent = "predict noise → denoise";
+      refs.predictionLabel.textContent = "Noise";
       refs.predictionHelp.textContent = "blue + · orange −";
       refs.currentCaption.textContent = state.motionProgress <= 0
-        ? "source declared noisy · τ = 0.98"
-        : state.motionProgress >= 1 ? "generated endpoint · τ = 0.00" : "denoising · τ = " + tau.toFixed(2);
-      refs.nextCaption.textContent = state.motionProgress >= 1 ? "journey complete" : "one learned step cleaner";
+        ? "τ = 0.98"
+        : state.motionProgress >= 1 ? "τ = 0.00" : "τ = " + tau.toFixed(2);
+      refs.nextCaption.textContent = state.motionProgress >= 1 ? "complete" : "one step";
     } else {
       const time = Math.min(0.999, state.motionProgress);
       predict(state.flowNet, current, source, time, hidden, prediction);
       const delta = state.motionProgress >= 1 ? 0 : Math.min(1 / state.solverSteps, 1 - state.motionProgress);
       for (let j = 0; j < D; j += 1) next[j] = current[j] + delta * prediction[j];
-      refs.currentCaption.textContent = "x at t = " + state.motionProgress.toFixed(2);
-      refs.nextCaption.textContent = state.motionProgress >= 1 ? "journey complete" : "Δt = " + delta.toFixed(3);
+      refs.currentCaption.textContent = "t = " + state.motionProgress.toFixed(2);
+      refs.nextCaption.textContent = state.motionProgress >= 1 ? "complete" : "Δt = " + delta.toFixed(3);
     }
 
     const tint = method === "diffusion" ? DIFFUSION_TINT : FLOW_TINT;
@@ -552,8 +549,8 @@
     drawSignedCanvas(refs.inspectPrediction, prediction);
     drawPixelCanvas(refs.inspectNext, next, tint);
     drawPixelCanvas(refs.inspectTarget, target, TARGET_TINT);
-    refs.sourceCaption.textContent = (method === "diffusion" ? "actual source " : "source ") + state.sourceDigit;
-    refs.targetCaption.textContent = method === "diffusion" ? "a " + state.targetDigit + "-only example" : "paired " + state.targetDigit;
+    refs.sourceCaption.textContent = "source " + state.sourceDigit;
+    refs.targetCaption.textContent = (method === "diffusion" ? "target " : "paired ") + state.targetDigit;
     drawFilm(refs.film, journey, tint, method === "diffusion" ? "#eadfff" : "#eafbf5");
   }
 
@@ -561,38 +558,38 @@
     const progress = state.motionProgress;
     ui.time.value = Math.round(progress * 1000);
     if (progress <= 0) {
-      ui.timeLabel.textContent = "0% · same source " + state.sourceDigit + "; diffusion declares it τ = 0.98 noise";
+      ui.timeLabel.textContent = "0% · source " + state.sourceDigit;
     } else if (progress < 1) {
-      ui.timeLabel.textContent = Math.round(progress * 100) + "% · diffusion denoising τ = " + (0.98 * (1 - progress)).toFixed(2) + " · flow t = " + progress.toFixed(2);
+      ui.timeLabel.textContent = Math.round(progress * 100) + "% · diffusion τ " + (0.98 * (1 - progress)).toFixed(2) + " · flow t " + progress.toFixed(2);
     } else {
-      ui.timeLabel.textContent = "100% · both aim for target " + state.targetDigit;
+      ui.timeLabel.textContent = "100% · target " + state.targetDigit;
     }
-    ui.microscopeCopy.textContent = "The purple model interprets the structured " + state.sourceDigit + " as noisy xτ and applies its learned " + state.targetDigit + "-only noise prediction. The green flow model predicts and applies velocity along its direct route.";
-    ui.selection.textContent = "Inspecting row " + (state.selectedLane + 1) + " of " + LANE_COUNT;
+    ui.microscopeCopy.textContent = "Diffusion removes predicted noise. Flow applies predicted velocity.";
+    ui.selection.textContent = "Row " + (state.selectedLane + 1) + " / " + LANE_COUNT;
     drawStage(ui.diffusionStage, state.diffusionJourneys, "diffusion");
     drawStage(ui.flowStage, state.flowJourneys, "flow");
     renderInspection("diffusion"); renderInspection("flow");
   }
 
   function updateLabels() {
-    ui.title.textContent = "Two routes from " + state.sourceDigit + " → " + state.targetDigit;
-    ui.summary.textContent = "The diffusion model trains only on " + DIGIT_PLURALS[state.targetDigit] + ". At generation time, we hand it an actual " + state.sourceDigit + ", pretend that structured image is noise, and let its learned " + state.targetDigit + " denoiser act immediately. Flow matching instead learns a direct " + state.sourceDigit + "-to-" + state.targetDigit + " velocity.";
-    ui.scopeCopy.textContent = "Diffusion never sees a " + state.sourceDigit + " during training. We simply present the " + state.sourceDigit + " as xτ at τ = 0.98—as though its pixels were a nearly pure noise sample—and run learned reverse diffusion from the first step. This is an intentionally unusual seed, not forward corruption. Flow sees paired " + DIGIT_PLURALS[state.sourceDigit] + " and " + DIGIT_PLURALS[state.targetDigit] + " and learns the direct route. The models get " + DIFFUSION_PARAMETER_COUNT.toLocaleString() + " and " + FLOW_PARAMETER_COUNT.toLocaleString() + " parameters respectively, the same update budget, and " + state.solverSteps + " learned model calls.";
-    ui.motionTitle.textContent = "The same six " + DIGIT_PLURALS[state.sourceDigit] + ", two very different routes";
-    ui.motionCopy.textContent = "Both moving tiles begin with exactly the same " + state.sourceDigit + " pixels. Diffusion interprets those pixels as a high-noise state and denoises them; flow continuously reshapes them with its learned velocity. Horizontal position is a shared clock. Click a row to inspect it.";
-    ui.diffusion.filmCopy.textContent = "every step learned on " + DIGIT_PLURALS[state.targetDigit] + " only";
-    ui.axisSource.textContent = "both start: source " + state.sourceDigit;
-    ui.axisMiddle.textContent = "diffusion: denoising · flow: halfway";
-    ui.axisTarget.textContent = "both aim for target " + state.targetDigit;
+    ui.title.textContent = "Zero to Five";
+    ui.summary.textContent = state.sourceDigit + " → " + state.targetDigit + ": same start, two routes.";
+    ui.scopeCopy.textContent = "Diffusion: train on " + state.targetDigit + "s; treat " + state.sourceDigit + " as noise. Flow: train on " + state.sourceDigit + " → " + state.targetDigit + " pairs. Same updates and " + state.solverSteps + " model calls.";
+    ui.motionTitle.textContent = "Six examples";
+    ui.motionCopy.textContent = "Same start. Synchronized progress.";
+    ui.diffusion.filmCopy.textContent = "trained on " + state.targetDigit + "s";
+    ui.axisSource.textContent = "start " + state.sourceDigit;
+    ui.axisMiddle.textContent = "halfway";
+    ui.axisTarget.textContent = "target " + state.targetDigit;
     const pairing = state.pairing === "matched"
-      ? "Closest-looking pairing gives flow a relatively unambiguous relationship to learn."
-      : "Random pairing asks flow to reconcile many less-consistent source-to-target relationships.";
-    ui.couplingCopy.textContent = "The diffusion model learns a general purple noise → " + state.targetDigit + " denoiser. It never learns " + state.sourceDigit + " → " + state.targetDigit + "; we induce that route by pretending the " + state.sourceDigit + " itself is near-pure noise. Flow learns the entire green " + state.sourceDigit + " → " + state.targetDigit + " trip from paired examples. Flow pairing changes only the flow learner. " + pairing;
+      ? "closest pairs"
+      : "random pairs";
+    ui.couplingCopy.textContent = "Diffusion: noise → " + state.targetDigit + ". Flow: " + state.sourceDigit + " → " + state.targetDigit + " (" + pairing + ").";
   }
 
   function updateTrainingUi() {
     ui.progress.max = state.budget; ui.progress.value = state.update;
-    ui.progressLabel.textContent = state.update.toLocaleString() + " / " + state.budget.toLocaleString() + " updates";
+    ui.progressLabel.textContent = state.update.toLocaleString() + " / " + state.budget.toLocaleString();
     ui.diffusionLoss.value = state.diffusionEma === null ? "untrained" : state.diffusionEma.toFixed(4);
     ui.flowLoss.value = state.flowEma === null ? "untrained" : state.flowEma.toFixed(4);
     ui.train.disabled = state.training || state.update >= state.budget;
@@ -624,10 +621,10 @@
     }
     updateTrainingUi();
     if (state.update % 80 < count || state.update >= state.budget) computeJourneys();
-    ui.status.textContent = "Training both · update " + state.update.toLocaleString() + " · diffusion noise MSE " + state.diffusionEma.toFixed(4) + " · flow velocity MSE " + state.flowEma.toFixed(4) + " · lr " + learningRate.toFixed(4);
+    ui.status.textContent = "Training · " + state.update.toLocaleString() + " / " + state.budget.toLocaleString();
     if (state.update >= state.budget) {
       stopTraining(); computeJourneys();
-      ui.status.textContent = "Training complete · press Play once to compare both " + state.sourceDigit + " → " + state.targetDigit + " journeys";
+      ui.status.textContent = "Training complete · press Play";
       return;
     }
     state.trainingTimer = window.setTimeout(trainFrame, 0);
@@ -638,8 +635,8 @@
     if (state.animationFrame) window.cancelAnimationFrame(state.animationFrame);
     state.animationFrame = 0;
     ui.playPause.disabled = true;
-    ui.play.textContent = state.motionProgress >= 1 ? "Replay both" : "Play once";
-    if (paused) ui.status.textContent = "Motion paused at " + Math.round(state.motionProgress * 100) + "%";
+    ui.play.textContent = state.motionProgress >= 1 ? "Replay" : "Play";
+    if (paused) ui.status.textContent = "Paused · " + Math.round(state.motionProgress * 100) + "%";
   }
 
   function motionFrame(now) {
@@ -649,7 +646,7 @@
     state.motionProgress = progress; renderMotion();
     if (progress >= 1) {
       stopMotion(false);
-      ui.status.textContent = "Journeys complete · diffusion treated " + state.sourceDigit + " as noise and denoised it toward " + state.targetDigit + "; flow travelled directly " + state.sourceDigit + " → " + state.targetDigit;
+      ui.status.textContent = "Routes complete";
       return;
     }
     state.animationFrame = window.requestAnimationFrame(motionFrame);
@@ -662,7 +659,7 @@
     state.motionStartProgress = state.motionProgress;
     state.motionStartedAt = performance.now();
     state.motionDuration = Math.max(500, 5200 * (1 - state.motionStartProgress));
-    ui.play.textContent = "Playing once…"; ui.playPause.disabled = false;
+    ui.play.textContent = "Playing…"; ui.playPause.disabled = false;
     state.animationFrame = window.requestAnimationFrame(motionFrame);
   }
 
@@ -677,7 +674,7 @@
     state.flowRng = mulberry32((flowSeed ^ 0xB5297A4D) >>> 0);
     state.trainingNormal = normalSource(mulberry32((diffusionSeed ^ 0xD1B54A35) >>> 0));
     chooseExamples(); updateLabels(); updateTrainingUi(); computeJourneys();
-    ui.status.textContent = "Ready · diffusion: " + indicesByDigit[state.targetDigit].length.toLocaleString() + " target-only examples, " + DIFFUSION_PARAMETER_COUNT.toLocaleString() + " parameters · flow: " + state.pairs.length.toLocaleString() + " " + (state.pairing === "matched" ? "closest-looking" : "random") + " pairs, " + FLOW_PARAMETER_COUNT.toLocaleString() + " parameters";
+    ui.status.textContent = "Ready · untrained";
   }
 
   function configureExperiment(changedControl) {
@@ -688,7 +685,7 @@
       else { source = (target + 9) % 10; ui.source.value = String(source); }
     }
     state.sourceDigit = source; state.targetDigit = target; state.pairing = ui.pairing.value;
-    ui.status.textContent = "Building target-only " + target + " data and " + (state.pairing === "matched" ? "closest-looking" : "random") + " " + source + " → " + target + " flow pairs…";
+    ui.status.textContent = "Loading " + source + " → " + target + "…";
     state.pairs = makePairs(source, target, state.pairing);
     resetLearners();
   }
@@ -717,7 +714,7 @@
     state.training = true; updateTrainingUi(); state.trainingTimer = window.setTimeout(trainFrame, 0);
   });
   ui.trainPause.addEventListener("click", () => {
-    stopTraining(); computeJourneys(); ui.status.textContent = "Both learners paused at update " + state.update.toLocaleString();
+    stopTraining(); computeJourneys(); ui.status.textContent = "Paused · " + state.update.toLocaleString();
   });
   ui.reset.addEventListener("click", resetLearners);
   ui.budget.addEventListener("input", () => {
@@ -736,7 +733,7 @@
   ui.playPause.addEventListener("click", () => stopMotion(true));
   ui.examples.addEventListener("click", () => {
     stopMotion(false); state.exampleSeed = (state.exampleSeed + LANE_COUNT) >>> 0; state.motionProgress = 0;
-    chooseExamples(); computeJourneys(); ui.status.textContent = "Loaded six new shared source/target rows; both trained models are unchanged";
+    chooseExamples(); computeJourneys(); ui.status.textContent = "New examples";
   });
   ui.diffusionStage.addEventListener("click", (event) => selectLane(event, ui.diffusionStage));
   ui.flowStage.addEventListener("click", (event) => selectLane(event, ui.flowStage));

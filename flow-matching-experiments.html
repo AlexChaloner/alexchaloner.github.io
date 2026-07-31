@@ -1,6 +1,6 @@
 ---
 layout: default
-title: "Learning to move probability"
+title: "Flow matching diagrams"
 ---
 
 <link rel="stylesheet" href="{{ '/assets/flow-matching-demo.css' | relative_url }}">
@@ -9,60 +9,46 @@ title: "Learning to move probability"
 
 <article class="fm-post">
   <header class="fm-hero">
-    <p class="fm-kicker">Flow matching experiments <span aria-hidden="true">/</span> interactive draft</p>
-    <h1>Learning to move probability</h1>
-    <p class="fm-dek">Diffusion learns to undo noise. Flow matching learns the motion directly.</p>
-    <div class="fm-meta">
-      <span>Alex Chaloner</span>
-      <span>Experimental page · July 2026</span>
-      <span>Best explored with a pointer</span>
-    </div>
+    <p class="fm-kicker">Interactive experiments</p>
+    <h1>Flow Matching Diagrams</h1>
+    <nav class="fm-meta" aria-label="Diagram index">
+      <a href="#diagram-dots">1: Dots</a>
+      <a href="#mnist-lab">2: Digit Generator</a>
+      <a href="#digit-flow-lab">3: Zero to Five</a>
+    </nav>
   </header>
 
-  <section class="fm-prose" aria-labelledby="fm-intro-title">
-    <p class="fm-section-label">Start with the problem</p>
-    <h2 id="fm-intro-title">How do we turn random noise into new data?</h2>
-    <p>Suppose the orange points are examples from a dataset. We can draw more Gaussian noise whenever we want, but we cannot directly draw another data point. A generative model has to learn a transformation from that easy source of randomness into the shape of the data.</p>
-    <p><strong>Diffusion gives us one answer:</strong> gradually add noise to data, train a model to identify the noise that was added, then run that corruption process backward.</p>
-    <div class="fm-equation fm-diffusion-equation" aria-label="Diffusion corruption and noise-prediction objective">
-      <span><i>x</i><sub>τ</sub> = √(1 − <i>τ</i>) <i>x</i><sub>data</sub> + √<i>τ ε</i></span>
-      <span><i>ε</i> ∼ Normal(0, <i>I</i>)</span>
-      <span>min <i>E</i> ‖<i>ε</i><sub>θ</sub>(<i>x</i><sub>τ</sub>, <i>τ</i>) − <i>ε</i>‖²</span>
-    </div>
-  </section>
-
-  <section class="fm-lab" aria-labelledby="fm-lab-title">
+  <section class="fm-lab" id="diagram-dots" aria-labelledby="fm-lab-title">
     <header class="fm-lab-header">
       <div>
-        <p class="fm-section-label">Interactive comparison 01</p>
-        <h2 id="fm-lab-title">Two ways to learn noise → data</h2>
+        <p class="fm-section-label">Diagram 1</p>
+        <h2 id="fm-lab-title">Dots</h2>
       </div>
-      <p>The learners receive the same data and Gaussian noise. Keep both columns in view as their targets, learned fields, and generated samples change.</p>
     </header>
 
     <nav class="fm-tabs" aria-label="Flow matching walkthrough">
-      <button type="button" class="is-active" data-stage="targets" aria-pressed="true"><span>01</span> Construct targets</button>
-      <button type="button" data-stage="fields" aria-pressed="false"><span>02</span> Learn the fields</button>
-      <button type="button" data-stage="sample" aria-pressed="false"><span>03</span> Generate together</button>
+      <button type="button" class="is-active" data-stage="targets" aria-pressed="true"><span>01</span> Targets</button>
+      <button type="button" data-stage="fields" aria-pressed="false"><span>02</span> Fields</button>
+      <button type="button" data-stage="sample" aria-pressed="false"><span>03</span> Generate</button>
     </nav>
 
     <div class="fm-stage-copy" aria-live="polite">
-      <p class="fm-section-label" id="fm-stage-kicker">Step 1 · Supervised learning targets</p>
-      <h3 id="fm-stage-title">The crucial difference is what appears after the arrow</h3>
-      <p id="fm-stage-description">Diffusion predicts the exact Gaussian noise mixed into a data example. Flow matching predicts the velocity of a temporary noise–data path.</p>
+      <p class="fm-section-label" id="fm-stage-kicker">Targets</p>
+      <h3 id="fm-stage-title">Noise vs velocity</h3>
+      <p id="fm-stage-description">Diffusion predicts noise. Flow predicts motion.</p>
     </div>
 
     <div class="fm-dual-workbench">
       <section class="fm-method-lane fm-diffusion-lane" aria-labelledby="fm-diffusion-lane-title">
         <header>
-          <div><p class="fm-section-label">Learner 01</p><h3 id="fm-diffusion-lane-title">Diffusion</h3></div>
-          <strong>learns noise <i>ε</i> · not motion</strong>
+          <div><h3 id="fm-diffusion-lane-title">Diffusion</h3></div>
+          <strong>predicts noise <i>ε</i></strong>
         </header>
-        <p class="fm-lane-rule"><span>training path</span> data → noise <b>·</b> <span>generation</span> noise → data</p>
+        <p class="fm-lane-rule"><span>train</span> data → noise <b>·</b> <span>sample</span> noise → data</p>
         <div class="fm-canvas-wrap">
           <canvas id="fm-sample-canvas" role="img" aria-label="Diffusion corruption targets, learned denoising field, and generated samples"></canvas>
           <div class="fm-time-badge"><span>corruption <i>τ</i></span><strong id="fm-diffusion-time-badge">0.55</strong></div>
-          <p class="fm-canvas-hint" id="fm-diffusion-hint">Purple line glyphs encode added noise <i>ε</i>; they are not motion.</p>
+          <p class="fm-canvas-hint" id="fm-diffusion-hint">Purple marks = added noise.</p>
         </div>
         <dl class="fm-lane-readout">
           <div><dt>input</dt><dd>noisy <i>x</i><sub>τ</sub> + time <i>τ</i></dd></div>
@@ -72,14 +58,14 @@ title: "Learning to move probability"
 
       <section class="fm-method-lane fm-flow-lane" aria-labelledby="fm-flow-lane-title">
         <header>
-          <div><p class="fm-section-label">Learner 02</p><h3 id="fm-flow-lane-title">Flow matching</h3></div>
-          <strong>learns velocity <i>v</i></strong>
+          <div><h3 id="fm-flow-lane-title">Flow matching</h3></div>
+          <strong>predicts velocity <i>v</i></strong>
         </header>
-        <p class="fm-lane-rule"><span>training path</span> noise → data <b>·</b> <span>generation</span> noise → data</p>
+        <p class="fm-lane-rule"><span>train</span> noise → data <b>·</b> <span>sample</span> noise → data</p>
         <div class="fm-canvas-wrap" id="fm-main-wrap">
           <canvas id="fm-main-canvas" role="img" aria-label="Flow-matching velocity targets, learned velocity field, and generated samples"></canvas>
           <div class="fm-time-badge"><span>path time <i>t</i></span><strong id="fm-time-badge">0.55</strong></div>
-          <p class="fm-canvas-hint" id="fm-canvas-hint">The highlighted random pair exists only to make a label.</p>
+          <p class="fm-canvas-hint" id="fm-canvas-hint">Highlighted pair = one velocity target.</p>
         </div>
         <dl class="fm-lane-readout">
           <div><dt>input</dt><dd>position <i>x</i><sub>t</sub> + time <i>t</i></dd></div>
@@ -89,7 +75,7 @@ title: "Learning to move probability"
     </div>
 
     <div class="fm-time-control" id="fm-path-controls">
-      <button id="fm-play" type="button" aria-label="Play both probability paths once">Play once</button>
+      <button id="fm-play" type="button" aria-label="Play both probability paths once">Play</button>
       <label for="fm-time"><b>path progress</b> <span><output id="fm-time-output" for="fm-time">0.55</output></span> <b>endpoint</b></label>
       <input id="fm-time" type="range" min="0.005" max="0.995" step="0.005" value="0.55">
     </div>
@@ -105,16 +91,15 @@ title: "Learning to move probability"
       </fieldset>
 
       <div class="fm-control fm-training-control">
-        <div><label for="fm-training-count">Training examples seen</label><output id="fm-training-count-output" for="fm-training-count">420 / 420</output></div>
+        <div><label for="fm-training-count">Examples</label><output id="fm-training-count-output" for="fm-training-count">420 / 420</output></div>
         <input id="fm-training-count" type="range" min="20" max="420" step="4" value="420">
-        <button id="fm-train" type="button">Replay learning</button>
-        <p>Both local regressors receive the same growing set of endpoint pairs.</p>
+        <button id="fm-train" type="button">Replay</button>
       </div>
 
       <div class="fm-control">
-        <div><label for="fm-bandwidth">Model smoothness</label><output id="fm-bandwidth-output" for="fm-bandwidth">0.34</output></div>
+        <div><label for="fm-bandwidth">Smoothness</label><output id="fm-bandwidth-output" for="fm-bandwidth">0.34</output></div>
         <input id="fm-bandwidth" type="range" min="0.18" max="1.1" step="0.01" value="0.34">
-        <p id="fm-bandwidth-help">The width of the neighbourhood each learner averages.</p>
+        <p id="fm-bandwidth-help">Local averaging radius.</p>
       </div>
 
       <fieldset>
@@ -126,8 +111,8 @@ title: "Learning to move probability"
 
       <div class="fm-pair-control" id="fm-pair-control">
         <p><span>Flow coupling</span><strong>independent · random</strong></p>
-        <button id="fm-trace-pair" type="button">Trace another flow pair</button>
-        <p>Pair <output id="fm-pair-number">1</output> is highlighted only in the flow lane. Its endpoint is hidden from the learner.</p>
+        <button id="fm-trace-pair" type="button">Another pair</button>
+        <p>Highlighted pair <output id="fm-pair-number">1</output>.</p>
       </div>
 
       <div class="fm-seed-control">
@@ -142,104 +127,51 @@ title: "Learning to move probability"
         <input id="fm-steps" type="range" min="1" max="6" step="1" value="4">
         <div class="fm-range-labels"><span>2</span><span>64</span></div>
       </div>
-      <button id="fm-generate" class="fm-primary" type="button">Generate both from the same noise</button>
+      <button id="fm-generate" class="fm-primary" type="button">Generate both</button>
       <button id="fm-reset-samples" type="button">Reset samples</button>
-      <p class="fm-sample-status" id="fm-sample-status" aria-live="polite">Ready · 180 shared noise points</p>
+      <p class="fm-sample-status" id="fm-sample-status" aria-live="polite">Ready · shared noise</p>
     </section>
 
     <div class="fm-readout" aria-live="polite">
       <div><span>training examples</span><strong id="fm-pair-count">420</strong></div>
       <div><span id="fm-stat-a-label">diffusion target</span><strong id="fm-stat-a">noise ε</strong></div>
       <div><span id="fm-stat-b-label">flow target</span><strong id="fm-stat-b">velocity v</strong></div>
-      <p id="fm-reading"><strong>Same input signature, different answer:</strong> both models receive a point and a time. Diffusion is graded against added noise; flow matching is graded against motion.</p>
+      <p id="fm-reading"><strong>Same input:</strong> diffusion predicts noise; flow predicts motion.</p>
     </div>
-  </section>
-
-  <section class="fm-prose fm-comparison-copy" aria-labelledby="fm-switch-title">
-    <p class="fm-section-label">Change the learning target</p>
-    <h2 id="fm-switch-title">Flow matching learns the trip, not the corruption</h2>
-    <p>Flow matching starts with the same ingredients—data, Gaussian noise, and a randomly chosen intermediate time—but constructs an explicit path from noise to data. The model’s target is now the path’s velocity: <em>which way and how fast should this point move right now?</em></p>
-      <div class="fm-equation" aria-label="Flow matching interpolation and training objective">
-      <span><i>x</i><sub>t</sub> = (1 − <i>t</i>) <i>x</i><sub>noise</sub> + <i>t x</i><sub>data</sub></span>
-      <span><i>u</i><sub>t</sub> = <i>x</i><sub>data</sub> − <i>x</i><sub>noise</sub></span>
-      <span>min <i>E</i> ‖<i>v</i><sub>θ</sub>(<i>x</i><sub>t</sub>, <i>t</i>) − <i>u</i><sub>t</sub>‖²</span>
-    </div>
-    <div class="fm-compare" aria-label="Diffusion and flow matching comparison">
-      <div><strong>Diffusion</strong><span>Learn the noise or score</span><span>Reverse a noising process</span><span>Sample with a reverse SDE or its probability-flow ODE</span></div>
-      <div><strong>Flow matching</strong><span>Learn velocity directly</span><span>Follow a chosen probability path</span><span>Sample by solving an ODE</span></div>
-    </div>
-    <p class="fm-nuance"><strong>The boundary is not absolute.</strong> Flow matching is a general way to train vector fields, and it can use diffusion probability paths too. This toy compares the familiar noise-prediction diffusion objective with the simplest straight-line, independently paired flow-matching objective.</p>
-    <aside class="fm-pair-note">
-      <p class="fm-section-label">Why are the connections arbitrary?</p>
-      <h3>The pairs are temporary scaffolding—not destinations chosen by particles</h3>
-      <ol>
-        <li>Independently draw one Gaussian-noise sample and one example from the dataset.</li>
-        <li>Temporarily connect them so the velocity along that path is known.</li>
-        <li>Train on <em>current position + time → velocity</em>. Do not show the model the endpoint.</li>
-        <li>Discard the pair. At generation time, fresh noise follows the averaged field and has no assigned destination.</li>
-      </ol>
-      <p>So there is no hidden rhyme or reason to any one line. The structure appears only after the model averages the enormous collection of random training paths. It is not trained by running the eight modes backward: training jumps directly to a random intermediate time; only generation integrates a journey, from noise to data.</p>
-    </aside>
-  </section>
-
-  <section class="fm-prose fm-explanation" aria-labelledby="fm-ambiguity-title">
-    <p class="fm-section-label">The important subtlety</p>
-    <h2 id="fm-ambiguity-title">One location can receive conflicting instructions</h2>
-    <p>Random paths cross. Near a crossing, one pair may say “up” while another says “down”. A deterministic model cannot emit both answers, so squared-error regression learns their conditional average. That average is the <em>marginal velocity field</em>: the single vector field whose probability flow has the same intermediate distributions as all those conditional paths.</p>
-    <p>The second view lets you click anywhere to inspect this averaging. Thin arrows are nearby training targets; the heavy arrow is their weighted mean.</p>
-  </section>
-
-  <section class="fm-prose fm-takeaways" aria-labelledby="fm-takeaways-title">
-    <p class="fm-section-label">What to keep</p>
-    <h2 id="fm-takeaways-title">The flow matching mental model</h2>
-    <ol>
-      <li><strong>Create easy supervised targets.</strong> Sample noise, sample data, choose a probability path, and calculate its velocity.</li>
-      <li><strong>Regress many conditional arrows into one field.</strong> The model learns the average instruction compatible with its current state and time.</li>
-      <li><strong>Generate by solving an ODE.</strong> Start from new noise and repeatedly ask the field which way to move.</li>
-    </ol>
-    <p>Real systems replace the two-dimensional points with images, audio, actions, or other high-dimensional objects. The geometry is harder to draw, but the recipe is unchanged.</p>
   </section>
 
   <section class="mnist-lab" id="mnist-lab" aria-labelledby="mnist-lab-title">
     <header class="mnist-lab-header">
       <div>
-        <p class="fm-section-label">Interactive comparison 02 · live browser training</p>
-        <h2 id="mnist-lab-title">Can both methods learn handwritten digits?</h2>
+        <p class="fm-section-label">Diagram 2</p>
+        <h2 id="mnist-lab-title">Digit Generator</h2>
       </div>
-      <p>Real MNIST digits, downsampled to 8 × 8 pixels so two small generative models can begin from scratch and train live on identical batches.</p>
     </header>
-
-    <aside class="mnist-scope">
-      <strong>Nothing here is pretrained.</strong>
-      <span>Each model works directly on 64 pixel values. The lower resolution keeps live CPU training practical; both randomly initialized fields learn from 6,000 MNIST examples. In the all-digits view, each model is also told the requested digit class—the standard class-conditioned setup—while still learning every pixel from scratch. A compute-matched residual design trades six generic hidden units for a time-gated pixel skip and class-specific output bias: 17,976 parameters instead of 17,984.</span>
-    </aside>
 
     <div class="mnist-training-bar">
       <div>
-        <span>shared training progress</span>
+        <span>training</span>
         <strong id="mnist-progress-label">0 / 600 updates</strong>
       </div>
       <progress id="mnist-progress" max="600" value="0">0%</progress>
       <div class="mnist-transport">
         <button id="mnist-train" class="mnist-primary" type="button">Train both</button>
         <button id="mnist-pause" type="button" disabled>Pause</button>
-        <button id="mnist-reset" type="button">Reset learners</button>
+        <button id="mnist-reset" type="button">Reset</button>
       </div>
     </div>
 
     <section class="mnist-targets" aria-labelledby="mnist-targets-title">
       <header class="mnist-targets-header">
         <div>
-          <p class="fm-section-label">Training microscope · one fixed digit–noise pair</p>
-          <h3 id="mnist-targets-title">The visible difference is what each learner must predict</h3>
+          <p class="fm-section-label">Training</p>
+          <h3 id="mnist-targets-title">Targets</h3>
         </div>
-        <p>The finished digits should look alike. Here, the same ingredients instead reveal the different supervised-learning problems hiding underneath.</p>
       </header>
 
       <div class="mnist-target-pair">
         <div>
-          <strong id="mnist-target-pair-label">Fixed pair · digit 0</strong>
-          <span>These two arrays remain fixed while you move the mixture or train.</span>
+          <strong id="mnist-target-pair-label">Fixed pair · 0</strong>
         </div>
         <figure>
           <canvas id="mnist-target-clean" role="img" aria-label="The fixed clean MNIST training image"></canvas>
@@ -253,7 +185,7 @@ title: "Learning to move probability"
       </div>
 
       <div class="mnist-target-scrubber">
-        <label for="mnist-target-mix"><span>matched data : noise ratio</span><strong id="mnist-target-mix-label">50% data · 50% noise</strong></label>
+        <label for="mnist-target-mix"><span>data / noise</span><strong id="mnist-target-mix-label">50% / 50%</strong></label>
         <input id="mnist-target-mix" type="range" min="13" max="87" step="1" value="50">
         <div aria-hidden="true"><span>mostly noise</span><span>balanced</span><span>mostly digit</span></div>
       </div>
@@ -261,153 +193,140 @@ title: "Learning to move probability"
       <div class="mnist-target-lanes">
         <article class="mnist-target-lane mnist-target-diffusion">
           <header>
-            <div><strong>Diffusion</strong><span>construct a corrupted image</span></div>
-            <code id="mnist-target-diffusion-time">noise level τ = 0.50</code>
+            <div><strong>Diffusion</strong><span>corrupt digit</span></div>
+            <code id="mnist-target-diffusion-time">τ = 0.50</code>
           </header>
           <div class="mnist-target-cards">
             <figure>
-              <figcaption><span>Network input</span><small>corrupted <i>x</i><sub>τ</sub></small></figcaption>
+              <figcaption><span>Input</span><small>corrupted <i>x</i><sub>τ</sub></small></figcaption>
               <canvas id="mnist-target-diffusion-input" role="img" aria-label="Diffusion model input for the fixed training pair"></canvas>
             </figure>
             <span class="mnist-target-arrow" aria-hidden="true">→</span>
             <figure class="mnist-target-answer">
-              <figcaption><span>Exact label</span><small>added noise <i>ε</i></small></figcaption>
+              <figcaption><span>Target</span><small>noise <i>ε</i></small></figcaption>
               <canvas id="mnist-target-diffusion-answer" role="img" aria-label="Exact Gaussian noise target for diffusion training"></canvas>
             </figure>
             <span class="mnist-target-versus" aria-hidden="true">vs</span>
             <figure>
-              <figcaption><span>Model output</span><small>prediction <i>ε̂</i></small></figcaption>
+              <figcaption><span>Prediction</span><small><i>ε̂</i></small></figcaption>
               <canvas id="mnist-target-diffusion-prediction" role="img" aria-label="Current diffusion model noise prediction"></canvas>
             </figure>
           </div>
-          <p><strong>Question learned:</strong> “Which random noise was mixed into this image?” <span id="mnist-target-diffusion-error">Untrained prediction.</span></p>
+          <p><strong>Learn:</strong> added noise. <span id="mnist-target-diffusion-error">Untrained.</span></p>
         </article>
 
         <article class="mnist-target-lane mnist-target-flow">
           <header>
-            <div><strong>Flow matching</strong><span>place a point on a straight path</span></div>
-            <code id="mnist-target-flow-time">path time t = 0.50</code>
+            <div><strong>Flow matching</strong><span>bridge noise → digit</span></div>
+            <code id="mnist-target-flow-time">t = 0.50</code>
           </header>
           <div class="mnist-target-cards">
             <figure>
-              <figcaption><span>Network input</span><small>path point <i>x</i><sub>t</sub></small></figcaption>
+              <figcaption><span>Input</span><small>path point <i>x</i><sub>t</sub></small></figcaption>
               <canvas id="mnist-target-flow-input" role="img" aria-label="Flow-matching model input for the fixed training pair"></canvas>
             </figure>
             <span class="mnist-target-arrow" aria-hidden="true">→</span>
             <figure class="mnist-target-answer">
-              <figcaption><span>Exact label</span><small>velocity <i>x − ε</i></small></figcaption>
+              <figcaption><span>Target</span><small>velocity <i>x − ε</i></small></figcaption>
               <canvas id="mnist-target-flow-answer" role="img" aria-label="Exact velocity target for flow-matching training"></canvas>
             </figure>
             <span class="mnist-target-versus" aria-hidden="true">vs</span>
             <figure>
-              <figcaption><span>Model output</span><small>prediction <i>v̂</i></small></figcaption>
+              <figcaption><span>Prediction</span><small><i>v̂</i></small></figcaption>
               <canvas id="mnist-target-flow-prediction" role="img" aria-label="Current flow-matching model velocity prediction"></canvas>
             </figure>
           </div>
-          <p><strong>Question learned:</strong> “Which direction connects this noise to this digit?” <span id="mnist-target-flow-error">Untrained prediction.</span></p>
+          <p><strong>Learn:</strong> path velocity. <span id="mnist-target-flow-error">Untrained.</span></p>
         </article>
       </div>
-
-      <aside class="mnist-target-note">
-        <strong>How to read the coloured arrays</strong>
-        <span><b>Blue means positive</b>, <b>orange means negative</b>, and darkness means near zero. Diffusion’s exact answer is literally the noise above. Flow’s answer is the pixel-by-pixel difference between the digit and that noise. The two input images share a data-to-noise ratio, although diffusion normalizes its mixture differently. Each MSE is useful across training, but their target scales differ, so do not rank the methods by comparing the two raw numbers.</span>
-      </aside>
     </section>
 
     <section class="mnist-microscope" aria-labelledby="mnist-microscope-title">
       <header class="mnist-microscope-header">
         <div>
-          <p class="fm-section-label">Generation microscope · one shared noise sample</p>
-          <h3 id="mnist-microscope-title">Same beginning, different journey</h3>
+          <p class="fm-section-label">Generation</p>
+          <h3 id="mnist-microscope-title">Paths</h3>
         </div>
-        <p>Drag one scrubber through both generators. Their final digits may look alike because they learn the same data; the intermediate route reveals what each model actually does.</p>
       </header>
 
       <div class="mnist-micro-scrubber">
-        <label for="mnist-journey"><span>shared generation progress</span><strong id="mnist-journey-label">step 12 / 24 · synchronized model evaluations</strong></label>
+        <label for="mnist-journey"><span>progress</span><strong id="mnist-journey-label">12 / 24 steps</strong></label>
         <input id="mnist-journey" type="range" min="0" max="100" step="1" value="50">
         <div aria-hidden="true"><span>noise</span><span>20%</span><span>40%</span><span>60%</span><span>80%</span><span>digit</span></div>
       </div>
 
       <div class="mnist-micro-lanes">
         <article class="mnist-micro-lane mnist-micro-diffusion">
-          <header><strong>Diffusion journey</strong><span>estimate noise → denoise</span></header>
+          <header><strong>Diffusion</strong><span>predict noise → denoise</span></header>
           <div class="mnist-micro-images">
             <figure class="mnist-micro-current">
-              <figcaption>Selected moment</figcaption>
+              <figcaption>Now</figcaption>
               <canvas id="mnist-diffusion-current" role="img" aria-label="Selected intermediate digit in the diffusion generation journey"></canvas>
             </figure>
             <figure class="mnist-micro-film">
-              <figcaption>Six checkpoints</figcaption>
+              <figcaption>Path</figcaption>
               <canvas id="mnist-diffusion-film" role="img" aria-label="Diffusion generation filmstrip from pixel noise to a digit"></canvas>
             </figure>
           </div>
-          <p id="mnist-diffusion-action" class="mnist-micro-action"><strong>Start:</strong> every visible pixel is an independent Gaussian draw.</p>
+          <p id="mnist-diffusion-action" class="mnist-micro-action"><strong>Start:</strong> Gaussian noise.</p>
         </article>
 
         <article class="mnist-micro-lane mnist-micro-flow">
-          <header><strong>Flow-matching journey</strong><span>predict velocity → move</span></header>
+          <header><strong>Flow matching</strong><span>predict velocity → move</span></header>
           <div class="mnist-micro-images">
             <figure class="mnist-micro-current">
-              <figcaption>Selected moment</figcaption>
+              <figcaption>Now</figcaption>
               <canvas id="mnist-flow-current" role="img" aria-label="Selected intermediate digit in the flow-matching generation journey"></canvas>
             </figure>
             <figure class="mnist-micro-film">
-              <figcaption>Six checkpoints</figcaption>
+              <figcaption>Path</figcaption>
               <canvas id="mnist-flow-film" role="img" aria-label="Flow-matching generation filmstrip from pixel noise to a digit"></canvas>
             </figure>
           </div>
-          <p id="mnist-flow-action" class="mnist-micro-action"><strong>Start:</strong> exactly the same Gaussian pixel noise as diffusion.</p>
+          <p id="mnist-flow-action" class="mnist-micro-action"><strong>Start:</strong> same Gaussian noise.</p>
         </article>
       </div>
 
       <figure class="mnist-path-figure">
         <figcaption>
-          <span><strong>The routes through pixel space</strong> · a shared 2D projection of the 64-pixel state</span>
-          <small>purple: diffusion path · green: flow path · ring: selected moment</small>
+          <span><strong>Pixel-space routes</strong></span>
+          <small>purple: diffusion · green: flow · ring: now</small>
         </figcaption>
         <canvas id="mnist-path-chart" role="img" aria-label="Projected diffusion and flow-matching generation trajectories from the same pixel noise"></canvas>
       </figure>
-
-      <aside class="mnist-micro-note">
-        <strong>What to notice</strong>
-        <span>The purple model does not output the purple path directly: it predicts noise, and the sampler converts that prediction into each denoising step. The green model outputs the velocity used for each step directly. Neither method has a characteristic final-image style.</span>
-      </aside>
     </section>
 
     <div class="mnist-lanes">
       <section class="mnist-lane mnist-diffusion-lane" aria-labelledby="mnist-diffusion-title">
         <header>
-          <div><p class="fm-section-label">Learner 01</p><h3 id="mnist-diffusion-title">Pixel-space diffusion</h3></div>
+          <div><h3 id="mnist-diffusion-title">Diffusion</h3></div>
           <span>predicts noise <i>ε</i></span>
         </header>
-        <div class="mnist-score"><span>recent training MSE</span><strong id="mnist-diffusion-loss">untrained</strong></div>
+        <div class="mnist-score"><span>MSE</span><strong id="mnist-diffusion-loss">untrained</strong></div>
         <figure class="mnist-samples">
-          <figcaption><span>Generated digits</span><small>purple · 8 × 8 pixels</small></figcaption>
+          <figcaption><span>Samples</span><small>purple · 8 × 8</small></figcaption>
           <canvas id="mnist-diffusion-samples" role="img" aria-label="Digits generated by the live pixel-space diffusion learner"></canvas>
         </figure>
         <figure class="mnist-loss-figure">
-          <figcaption><span>Noise-prediction loss</span><small>lower is better</small></figcaption>
+          <figcaption><span>Loss</span><small>noise prediction</small></figcaption>
           <canvas id="mnist-diffusion-loss-chart" role="img" aria-label="Diffusion training loss over browser updates"></canvas>
         </figure>
-        <p class="mnist-lane-note"><strong>Training:</strong> corrupt the 64 digit pixels and predict their exact Gaussian noise. <strong>Sampling:</strong> repeatedly remove predicted noise; intermediate clean estimates may overshoot the final pixel range before display clipping.</p>
       </section>
 
       <section class="mnist-lane mnist-flow-lane" aria-labelledby="mnist-flow-title">
         <header>
-          <div><p class="fm-section-label">Learner 02</p><h3 id="mnist-flow-title">Pixel-space flow matching</h3></div>
+          <div><h3 id="mnist-flow-title">Flow matching</h3></div>
           <span>predicts velocity <i>v</i></span>
         </header>
-        <div class="mnist-score"><span>recent training MSE</span><strong id="mnist-flow-loss">untrained</strong></div>
+        <div class="mnist-score"><span>MSE</span><strong id="mnist-flow-loss">untrained</strong></div>
         <figure class="mnist-samples">
-          <figcaption><span>Generated digits</span><small>green · 8 × 8 pixels</small></figcaption>
+          <figcaption><span>Samples</span><small>green · 8 × 8</small></figcaption>
           <canvas id="mnist-flow-samples" role="img" aria-label="Digits generated by the live pixel-space flow-matching learner"></canvas>
         </figure>
         <figure class="mnist-loss-figure">
-          <figcaption><span>Velocity-prediction loss</span><small>lower is better</small></figcaption>
+          <figcaption><span>Loss</span><small>velocity prediction</small></figcaption>
           <canvas id="mnist-flow-loss-chart" role="img" aria-label="Flow-matching training loss over browser updates"></canvas>
         </figure>
-        <p class="mnist-lane-note"><strong>Training:</strong> connect pixel noise to a digit image and predict path velocity. <strong>Sampling:</strong> integrate that velocity field.</p>
       </section>
     </div>
 
@@ -420,43 +339,37 @@ title: "Learning to move probability"
           <option value="3">Only 3</option><option value="4">Only 4</option><option value="5">Only 5</option>
           <option value="6">Only 6</option><option value="7">Only 7</option><option value="8">Only 8</option><option value="9">Only 9</option>
         </select>
-        <p>The all-digits grid requests classes 0–9 in order. Changing this resets both learners.</p>
       </div>
 
       <div class="mnist-control">
         <div><label for="mnist-updates">Training budget</label><output id="mnist-updates-output" for="mnist-updates">600</output></div>
         <input id="mnist-updates" type="range" min="200" max="12000" step="200" value="600">
-        <p>The tuned 600-update default beats the previous 1,200-update run. Raise it after completion to continue the same learners.</p>
       </div>
 
       <div class="mnist-control">
         <div><label for="mnist-learning-rate">Peak learning rate</label><output id="mnist-learning-rate-output" for="mnist-learning-rate">0.0200</output></div>
         <input id="mnist-learning-rate" type="range" min="-4" max="-1.3" step="0.05" value="-1.70">
-        <p>Cosine-decayed to 8% across the selected budget. Sweeps found warmup counterproductive for this tiny model.</p>
       </div>
 
       <div class="mnist-control">
-        <div><label for="mnist-speed">Training speed</label><output id="mnist-speed-output" for="mnist-speed">4 updates / frame</output></div>
+        <div><label for="mnist-speed">Training speed</label><output id="mnist-speed-output" for="mnist-speed">4 / frame</output></div>
         <input id="mnist-speed" type="range" min="1" max="12" step="1" value="4">
-        <p>More work per animation frame; higher values may briefly make the page less responsive.</p>
       </div>
 
       <div class="mnist-control">
         <div><label for="mnist-solver-steps">Sampling steps</label><output id="mnist-solver-steps-output" for="mnist-solver-steps">24</output></div>
         <input id="mnist-solver-steps" type="range" min="1" max="6" step="1" value="4">
-        <p>Both samplers use the same number of model evaluations.</p>
       </div>
 
       <div class="mnist-control">
         <div><label for="mnist-temperature">Noise scale</label><output id="mnist-temperature-output" for="mnist-temperature">1.00</output></div>
         <input id="mnist-temperature" type="range" min="0.6" max="1.4" step="0.02" value="1">
-        <p>Changes the shared starting noise without retraining.</p>
       </div>
 
       <div class="mnist-seed-control">
         <label for="mnist-seed">Sample seed</label>
         <div><input id="mnist-seed" type="number" min="0" max="4294967295" value="20260719"><button id="mnist-regenerate" type="button">Regenerate</button></div>
-        <p id="mnist-status" aria-live="polite">Ready · models are untrained</p>
+        <p id="mnist-status" aria-live="polite">Ready · untrained</p>
       </div>
     </section>
   </section>
@@ -464,24 +377,24 @@ title: "Learning to move probability"
   <section class="digit-flow-lab" id="digit-flow-lab" aria-labelledby="digit-flow-title">
     <header class="digit-flow-header">
       <div>
-        <p class="fm-section-label">Interactive comparison 03 · image-to-image routes</p>
-        <h2 id="digit-flow-title">Two routes from 0 → 5</h2>
+        <p class="fm-section-label">Diagram 3</p>
+        <h2 id="digit-flow-title">Zero to Five</h2>
       </div>
-      <p id="digit-flow-summary">The diffusion model trains only on fives. At generation time, we hand it an actual zero, pretend that structured image is noise, and let its learned five denoiser act immediately. Flow matching instead learns a direct zero-to-five velocity.</p>
+      <p id="digit-flow-summary">Same zero. Two learned routes.</p>
     </header>
 
     <aside class="digit-flow-scope">
-      <strong>The crucial asymmetry</strong>
-      <span id="digit-flow-scope-copy">Diffusion never sees a zero during training. We simply present the zero as <i>x</i><sub>τ</sub> at τ = 0.98—as though its pixels were a nearly pure noise sample—and run learned reverse diffusion from the first step. This is an intentionally unusual seed, not forward corruption. Flow sees paired zeros and fives and learns the direct route. Both get approximately 18,900 parameters, the same update budget, and 24 learned model calls.</span>
+      <strong>Setup</strong>
+      <span id="digit-flow-scope-copy">Diffusion: train on fives; treat zero as noise. Flow: train on zero → five pairs. Same updates and model calls.</span>
     </aside>
 
     <section class="digit-flow-training" aria-label="Paired digit comparison training controls">
       <div class="digit-flow-training-rule">
-        <span class="digit-flow-rule-diffusion"><strong>Target-only diffusion</strong> Train on target digits only: <i>x</i><sub>τ</sub> = √(1 − τ)<i>x</i><sub>target</sub> + √τ<i>ε</i>. Predict the added noise <i>ε</i>. No source digit is supplied.<small>noise MSE <output id="digit-diffusion-loss">untrained</output></small></span>
-        <span class="digit-flow-rule-flow"><strong>Paired flow matching</strong> Bridge each pair: <i>x</i><sub>t</sub> = (1 − <i>t</i>)<i>x</i><sub>source</sub> + <i>t x</i><sub>target</sub>. Predict velocity <i>x</i><sub>target</sub> − <i>x</i><sub>source</sub>.<small>velocity MSE <output id="digit-flow-loss">untrained</output></small></span>
+        <span class="digit-flow-rule-diffusion"><strong>Diffusion</strong> Train on targets; predict noise.<small>MSE <output id="digit-diffusion-loss">untrained</output></small></span>
+        <span class="digit-flow-rule-flow"><strong>Flow matching</strong> Train on pairs; predict velocity.<small>MSE <output id="digit-flow-loss">untrained</output></small></span>
       </div>
       <div class="digit-flow-selectors">
-        <label>Source distribution
+        <label>Start
           <select id="digit-flow-source">
             <option value="0" selected>Digit 0</option><option value="1">Digit 1</option><option value="2">Digit 2</option>
             <option value="3">Digit 3</option><option value="4">Digit 4</option><option value="5">Digit 5</option>
@@ -489,14 +402,14 @@ title: "Learning to move probability"
           </select>
         </label>
         <span class="digit-flow-selector-arrow" aria-hidden="true">→</span>
-        <label>Target distribution
+        <label>Target
           <select id="digit-flow-target">
             <option value="0">Digit 0</option><option value="1">Digit 1</option><option value="2">Digit 2</option>
             <option value="3">Digit 3</option><option value="4">Digit 4</option><option value="5" selected>Digit 5</option>
             <option value="6">Digit 6</option><option value="7">Digit 7</option><option value="8">Digit 8</option><option value="9">Digit 9</option>
           </select>
         </label>
-        <label>Flow pairing only
+        <label>Flow pairs
           <select id="digit-flow-pairing">
             <option value="matched" selected>Closest-looking pairs</option>
             <option value="random">Random pairs</option>
@@ -506,7 +419,7 @@ title: "Learning to move probability"
 
       <div class="digit-flow-progress-row">
         <div>
-          <span>live learner</span>
+          <span>training</span>
           <strong id="digit-flow-progress-label">0 / 1,200 updates</strong>
         </div>
         <progress id="digit-flow-progress" max="1200" value="0">0%</progress>
@@ -519,100 +432,100 @@ title: "Learning to move probability"
 
       <div class="digit-flow-knobs">
         <label>
-          <span>Shared training budget <output id="digit-flow-budget-output" for="digit-flow-budget">1,200</output></span>
+          <span>Updates <output id="digit-flow-budget-output" for="digit-flow-budget">1,200</output></span>
           <input id="digit-flow-budget" type="range" min="400" max="4000" step="200" value="1200">
         </label>
         <label>
-          <span>Training speed <output id="digit-flow-speed-output" for="digit-flow-speed">6 / frame</output></span>
+          <span>Speed <output id="digit-flow-speed-output" for="digit-flow-speed">6 / frame</output></span>
           <input id="digit-flow-speed" type="range" min="1" max="12" step="1" value="6">
         </label>
         <label>
-          <span>Solver calls each <output id="digit-flow-steps-output" for="digit-flow-steps">24</output></span>
+          <span>Steps <output id="digit-flow-steps-output" for="digit-flow-steps">24</output></span>
           <input id="digit-flow-steps" type="range" min="8" max="48" step="4" value="24">
         </label>
       </div>
 
-      <p id="digit-flow-status" class="digit-flow-status" aria-live="polite">Preparing five-only diffusion data and paired 0 → 5 flow data…</p>
+      <p id="digit-flow-status" class="digit-flow-status" aria-live="polite">Loading 0 → 5…</p>
     </section>
 
     <section class="digit-flow-motion" aria-labelledby="digit-flow-motion-title">
       <header>
         <div>
-          <p class="fm-section-label">Direct, synchronized comparison</p>
-          <h3 id="digit-flow-motion-title">The same six zeros, two very different routes</h3>
+          <p class="fm-section-label">Routes</p>
+          <h3 id="digit-flow-motion-title">Six examples</h3>
         </div>
-        <p id="digit-flow-motion-copy">Both moving tiles begin with exactly the same zero pixels. Diffusion interprets those pixels as a high-noise state and denoises them; flow continuously reshapes them with its learned velocity. Horizontal position is a shared clock. Click a row to inspect it.</p>
+        <p id="digit-flow-motion-copy">Same start. Synchronized progress.</p>
       </header>
 
       <div class="digit-flow-stage-grid">
         <article class="digit-flow-method-stage digit-flow-method-diffusion">
-          <header><span>Target-only diffusion</span><strong>learned denoising · pretend-noise source → target</strong></header>
+          <header><span>Diffusion</span><strong>source-as-noise → target</strong></header>
           <canvas id="digit-diffusion-stage" role="img" aria-label="Six source digits being treated as high-noise states and denoised by a target-only diffusion model"></canvas>
         </article>
         <article class="digit-flow-method-stage digit-flow-method-flow">
-          <header><span>Flow matching</span><strong>learned direct transport · source → target</strong></header>
+          <header><span>Flow matching</span><strong>source → target</strong></header>
           <canvas id="digit-flow-stage" role="img" aria-label="Six source digits moving along learned flow trajectories into target digits"></canvas>
         </article>
       </div>
 
       <div class="digit-flow-timeline">
-        <label for="digit-flow-time"><span>shared route progress</span><strong id="digit-flow-time-label">0% · same source 0; diffusion declares it τ = 0.98 noise</strong></label>
+        <label for="digit-flow-time"><span>progress</span><strong id="digit-flow-time-label">0% · source 0</strong></label>
         <input id="digit-flow-time" type="range" min="0" max="1000" step="1" value="0">
-        <div aria-hidden="true"><span id="digit-flow-axis-source">both start: source 0</span><span id="digit-flow-axis-middle">diffusion: denoising · flow: halfway</span><span id="digit-flow-axis-target">both aim for target 5</span></div>
+        <div aria-hidden="true"><span id="digit-flow-axis-source">start 0</span><span id="digit-flow-axis-middle">halfway</span><span id="digit-flow-axis-target">target 5</span></div>
       </div>
 
       <div class="digit-flow-motion-buttons">
-        <button id="digit-flow-play" class="digit-flow-primary" type="button">Play once</button>
-        <button id="digit-flow-play-pause" type="button" disabled>Pause motion</button>
-        <button id="digit-flow-examples" type="button">New source examples</button>
-        <span id="digit-flow-selection">Inspecting lane 1 of 6</span>
+        <button id="digit-flow-play" class="digit-flow-primary" type="button">Play</button>
+        <button id="digit-flow-play-pause" type="button" disabled>Pause</button>
+        <button id="digit-flow-examples" type="button">New examples</button>
+        <span id="digit-flow-selection">Row 1 / 6</span>
       </div>
     </section>
 
     <section class="digit-flow-microscope" aria-labelledby="digit-flow-microscope-title">
       <header>
         <div>
-          <p class="fm-section-label">Selected-row microscope</p>
-          <h3 id="digit-flow-microscope-title">Every part of both routes, made visible</h3>
+          <p class="fm-section-label">Selected row</p>
+          <h3 id="digit-flow-microscope-title">One step</h3>
         </div>
-        <p id="digit-flow-microscope-copy">Diffusion treats the structured zero as noisy <i>x</i><sub>τ</sub>, predicts the noise it believes is present, then removes it. Flow predicts a signed pixel velocity and moves with it. Both learned models act throughout the entire route.</p>
+        <p id="digit-flow-microscope-copy">Diffusion removes predicted noise. Flow applies predicted velocity.</p>
       </header>
 
       <div class="digit-flow-microscope-grid">
         <article class="digit-flow-method-inspector digit-flow-method-diffusion">
-          <header><span>Target-only diffusion</span><strong id="digit-diffusion-inspector-rule">predict noise, then remove it</strong></header>
+          <header><span>Diffusion</span><strong id="digit-diffusion-inspector-rule">predict noise → denoise</strong></header>
           <div class="digit-flow-equation" aria-label="Reverse diffusion from a source image treated as noise">
-            <span>source, declared noisy <i>x</i><sub>τ</sub></span><b>→</b><span>predict <i>ε̂</i><sub>θ</sub>(<i>x</i><sub>τ</sub>, τ)</span><b>→</b><span>less noisy state</span>
+            <span>state <i>x</i><sub>τ</sub></span><b>→</b><span>predict noise <i>ε̂</i></span><b>→</b><span>next state</span>
           </div>
           <div class="digit-flow-inspection">
-            <figure><figcaption><span>Journey start</span><small id="digit-diffusion-source-caption">actual source 0</small></figcaption><canvas id="digit-diffusion-inspect-source" role="img" aria-label="Source digit at the start of the diffusion route"></canvas></figure>
-            <figure><figcaption><span>Current state</span><small id="digit-diffusion-current-caption">source declared noisy · τ = 0.98</small></figcaption><canvas id="digit-diffusion-inspect-current" role="img" aria-label="Current state along the diffusion route"></canvas></figure>
-            <figure class="digit-flow-prediction-figure"><figcaption><span id="digit-diffusion-prediction-label">Predicted noise</span><small id="digit-diffusion-prediction-help">blue + · orange −</small></figcaption><canvas id="digit-diffusion-inspect-prediction" role="img" aria-label="Per-pixel noise predicted by diffusion"></canvas></figure>
-            <figure><figcaption><span>Next state</span><small id="digit-diffusion-next-caption">one learned step cleaner</small></figcaption><canvas id="digit-diffusion-inspect-next" role="img" aria-label="Next state along the diffusion route"></canvas></figure>
-            <figure><figcaption><span>Training example</span><small id="digit-diffusion-target-caption">a five-only example</small></figcaption><canvas id="digit-diffusion-inspect-target" role="img" aria-label="Example from the target-only diffusion training set"></canvas></figure>
+            <figure><figcaption><span>Start</span><small id="digit-diffusion-source-caption">source 0</small></figcaption><canvas id="digit-diffusion-inspect-source" role="img" aria-label="Source digit at the start of the diffusion route"></canvas></figure>
+            <figure><figcaption><span>State</span><small id="digit-diffusion-current-caption">τ = 0.98</small></figcaption><canvas id="digit-diffusion-inspect-current" role="img" aria-label="Current state along the diffusion route"></canvas></figure>
+            <figure class="digit-flow-prediction-figure"><figcaption><span id="digit-diffusion-prediction-label">Noise</span><small id="digit-diffusion-prediction-help">blue + · orange −</small></figcaption><canvas id="digit-diffusion-inspect-prediction" role="img" aria-label="Per-pixel noise predicted by diffusion"></canvas></figure>
+            <figure><figcaption><span>Next</span><small id="digit-diffusion-next-caption">one step</small></figcaption><canvas id="digit-diffusion-inspect-next" role="img" aria-label="Next state along the diffusion route"></canvas></figure>
+            <figure><figcaption><span>Example</span><small id="digit-diffusion-target-caption">target 5</small></figcaption><canvas id="digit-diffusion-inspect-target" role="img" aria-label="Example from the target-only diffusion training set"></canvas></figure>
           </div>
-          <figure class="digit-flow-film"><figcaption><span><strong>Source-as-noise → target</strong> · seven states</span><small id="digit-diffusion-film-copy">every step learned on fives only</small></figcaption><canvas id="digit-diffusion-film" role="img" aria-label="Filmstrip of a source digit being treated as noise and denoised into a target digit"></canvas></figure>
+          <figure class="digit-flow-film"><figcaption><span><strong>Route</strong></span><small id="digit-diffusion-film-copy">trained on fives</small></figcaption><canvas id="digit-diffusion-film" role="img" aria-label="Filmstrip of a source digit being treated as noise and denoised into a target digit"></canvas></figure>
         </article>
 
         <article class="digit-flow-method-inspector digit-flow-method-flow">
-          <header><span>Flow matching</span><strong>predict velocity, then move with it</strong></header>
+          <header><span>Flow matching</span><strong>predict velocity → move</strong></header>
           <div class="digit-flow-equation" aria-label="Flow matching Euler update">
             <span>current state <i>x</i><sub>t</sub></span><b>+</b><span><i>v</i><sub>θ</sub>(<i>x</i><sub>t</sub>, <i>t</i> | <i>x</i><sub>source</sub>) × Δ<i>t</i></span><b>=</b><span>next state</span>
           </div>
           <div class="digit-flow-inspection">
-            <figure><figcaption><span>Journey start</span><small id="digit-flow-source-caption">source 0</small></figcaption><canvas id="digit-flow-inspect-source" role="img" aria-label="Source digit that begins the flow journey"></canvas></figure>
-            <figure><figcaption><span>Current state</span><small id="digit-flow-current-caption">x at t = 0.00</small></figcaption><canvas id="digit-flow-inspect-current" role="img" aria-label="Current state on the flow trajectory"></canvas></figure>
-            <figure class="digit-flow-prediction-figure"><figcaption><span>Predicted velocity</span><small>blue + · orange −</small></figcaption><canvas id="digit-flow-inspect-prediction" role="img" aria-label="Signed per-pixel velocity predicted by flow matching"></canvas></figure>
-            <figure><figcaption><span>Next state</span><small id="digit-flow-next-caption">one Euler step later</small></figcaption><canvas id="digit-flow-inspect-next" role="img" aria-label="Next state after one Euler step"></canvas></figure>
-            <figure><figcaption><span>Shared reference</span><small id="digit-flow-target-caption">paired 5</small></figcaption><canvas id="digit-flow-inspect-target" role="img" aria-label="Target digit paired with this source"></canvas></figure>
+            <figure><figcaption><span>Start</span><small id="digit-flow-source-caption">source 0</small></figcaption><canvas id="digit-flow-inspect-source" role="img" aria-label="Source digit that begins the flow journey"></canvas></figure>
+            <figure><figcaption><span>State</span><small id="digit-flow-current-caption">t = 0.00</small></figcaption><canvas id="digit-flow-inspect-current" role="img" aria-label="Current state on the flow trajectory"></canvas></figure>
+            <figure class="digit-flow-prediction-figure"><figcaption><span>Velocity</span><small>blue + · orange −</small></figcaption><canvas id="digit-flow-inspect-prediction" role="img" aria-label="Signed per-pixel velocity predicted by flow matching"></canvas></figure>
+            <figure><figcaption><span>Next</span><small id="digit-flow-next-caption">one step</small></figcaption><canvas id="digit-flow-inspect-next" role="img" aria-label="Next state after one Euler step"></canvas></figure>
+            <figure><figcaption><span>Pair</span><small id="digit-flow-target-caption">target 5</small></figcaption><canvas id="digit-flow-inspect-target" role="img" aria-label="Target digit paired with this source"></canvas></figure>
           </div>
-          <figure class="digit-flow-film"><figcaption><span><strong>Source → target</strong> · seven states</span><small>generated by integrating velocity</small></figcaption><canvas id="digit-flow-film" role="img" aria-label="Filmstrip of a source digit flowing into a target digit"></canvas></figure>
+          <figure class="digit-flow-film"><figcaption><span><strong>Route</strong></span><small>integrated velocity</small></figcaption><canvas id="digit-flow-film" role="img" aria-label="Filmstrip of a source digit flowing into a target digit"></canvas></figure>
         </article>
       </div>
 
       <aside class="digit-flow-note">
-        <strong>What is actually learned?</strong>
-        <span id="digit-flow-coupling-copy">The diffusion model learns a general purple noise → five denoiser. It never learns zero → five; we induce that route by pretending the zero itself is near-pure noise. Flow learns the entire green zero → five trip from paired examples. Flow pairing changes only the flow learner.</span>
+        <strong>Learned</strong>
+        <span id="digit-flow-coupling-copy">Diffusion: noise → five. Flow: zero → five.</span>
       </aside>
     </section>
   </section>

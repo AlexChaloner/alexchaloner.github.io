@@ -38,6 +38,12 @@
   line-height: 1.45;
 }
 
+.mnist-lab-header > div:only-child,
+.mnist-targets-header > div:only-child,
+.mnist-microscope-header > div:only-child {
+  grid-column: 1 / -1;
+}
+
 .mnist-scope {
   display: grid;
   grid-template-columns: auto minmax(0, 1fr);

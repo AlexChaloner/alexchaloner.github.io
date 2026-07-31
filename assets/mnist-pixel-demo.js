@@ -310,13 +310,13 @@
     drawSignedSignal(ui.targetFlowPrediction, flowPrediction, flowScale);
 
     const dataPercent = Math.round(dataWeight * 100), noisePercent = 100 - dataPercent;
-    const progress = state.update === 0 ? "random initialization" : state.update.toLocaleString() + " updates";
-    ui.targetPairLabel.textContent = "Fixed pair · digit " + example.digit;
-    ui.targetMixLabel.textContent = dataPercent + "% data · " + noisePercent + "% noise";
-    ui.targetDiffusionTime.textContent = "noise level τ = " + tau.toFixed(2);
-    ui.targetFlowTime.textContent = "path time t = " + flowTime.toFixed(2);
-    ui.targetDiffusionError.textContent = progress + " · this-label MSE " + diffusionError.toFixed(3);
-    ui.targetFlowError.textContent = progress + " · this-label MSE " + flowError.toFixed(3);
+    const progress = state.update === 0 ? "untrained" : state.update.toLocaleString() + " updates";
+    ui.targetPairLabel.textContent = "Pair · " + example.digit;
+    ui.targetMixLabel.textContent = dataPercent + "% / " + noisePercent + "%";
+    ui.targetDiffusionTime.textContent = "τ = " + tau.toFixed(2);
+    ui.targetFlowTime.textContent = "t = " + flowTime.toFixed(2);
+    ui.targetDiffusionError.textContent = progress + " · MSE " + diffusionError.toFixed(3);
+    ui.targetFlowError.textContent = progress + " · MSE " + flowError.toFixed(3);
   }
 
   function drawFilmstrip(canvas, journey, tint, activeCheckpoint, highlight) {
@@ -408,19 +408,19 @@
     drawPathChart(ui.pathChart, state.diffusionJourney, state.flowJourney, index);
 
     if (index === 0) {
-      ui.journeyLabel.textContent = "step 0 / " + steps + " · identical pixel noise";
-      ui.diffusionAction.innerHTML = "<strong>Start:</strong> every visible pixel is an independent Gaussian draw.";
-      ui.flowAction.innerHTML = "<strong>Start:</strong> exactly the same Gaussian pixel noise as diffusion.";
+      ui.journeyLabel.textContent = "0 / " + steps + " steps · same noise";
+      ui.diffusionAction.innerHTML = "<strong>Start:</strong> Gaussian noise.";
+      ui.flowAction.innerHTML = "<strong>Start:</strong> same Gaussian noise.";
     } else if (index === steps) {
-      ui.journeyLabel.textContent = "step " + steps + " / " + steps + " · final pixel images";
-      ui.diffusionAction.innerHTML = "<strong>Finish:</strong> repeated noise estimates have been converted into a low-noise digit image.";
-      ui.flowAction.innerHTML = "<strong>Finish:</strong> integrated velocity updates have transported the noise to a digit image.";
+      ui.journeyLabel.textContent = steps + " / " + steps + " steps · digits";
+      ui.diffusionAction.innerHTML = "<strong>Finish:</strong> denoised digit.";
+      ui.flowAction.innerHTML = "<strong>Finish:</strong> transported digit.";
     } else {
       const tau = 0.98 * (1 - index / steps);
       const t = index / steps;
-      ui.journeyLabel.textContent = "step " + index + " / " + steps + " · synchronized model evaluations";
-      ui.diffusionAction.innerHTML = "<strong>Noise level τ = " + tau.toFixed(2) + ":</strong> estimate <i>ε̂</i>; the sampler algebraically turns it into the next cleaner pixel state.";
-      ui.flowAction.innerHTML = "<strong>Path time t = " + t.toFixed(2) + ":</strong> predict <i>v̂</i>; the solver moves all 64 pixels directly by <i>v̂ Δt</i>.";
+      ui.journeyLabel.textContent = index + " / " + steps + " steps";
+      ui.diffusionAction.innerHTML = "<strong>τ = " + tau.toFixed(2) + ":</strong> predict noise → denoise.";
+      ui.flowAction.innerHTML = "<strong>t = " + t.toFixed(2) + ":</strong> predict velocity → move.";
     }
   }
 
@@ -513,7 +513,7 @@
 
   function updateUi() {
     ui.progress.max = state.budget; ui.progress.value = state.update;
-    ui.progressLabel.textContent = state.update.toLocaleString() + " / " + state.budget.toLocaleString() + " updates";
+    ui.progressLabel.textContent = state.update.toLocaleString() + " / " + state.budget.toLocaleString();
     ui.diffusionLoss.textContent = state.diffusionEma === null ? "untrained" : state.diffusionEma.toFixed(4);
     ui.flowLoss.textContent = state.flowEma === null ? "untrained" : state.flowEma.toFixed(4);
     ui.train.disabled = state.running || state.update >= state.budget;
@@ -533,7 +533,7 @@
     drawLoss(ui.flowLossChart, state.flowHistory, "#167d69");
     sampleModels();
     renderTrainingTargets();
-    ui.status.textContent = "Ready · models are untrained · " + state.indices.length.toLocaleString() + " examples available";
+    ui.status.textContent = "Ready · untrained";
   }
 
   function scheduledLearningRate() {
@@ -566,9 +566,9 @@
       drawLoss(ui.flowLossChart, state.flowHistory, "#167d69");
       sampleModels();
     }
-    ui.status.textContent = "Training live · update " + state.update.toLocaleString() + " · lr " + learningRate.toFixed(4) + " · " + state.indices.length.toLocaleString() + " digit images";
+    ui.status.textContent = "Training · " + state.update.toLocaleString() + " · lr " + learningRate.toFixed(4);
     if (state.update >= state.budget) {
-      state.running = false; updateUi(); ui.status.textContent = "Complete · adjust a knob, regenerate, or reset to compare again"; return;
+      state.running = false; updateUi(); ui.status.textContent = "Complete"; return;
     }
     state.frame = window.setTimeout(trainFrame, 0);
   }
@@ -579,10 +579,10 @@
   ui.digit.addEventListener("change", resetLearners);
   ui.updates.addEventListener("input", () => { state.budget = Number(ui.updates.value); ui.updatesOutput.value = state.budget.toLocaleString(); updateUi(); });
   ui.learningRate.addEventListener("input", () => { ui.learningRateOutput.value = Math.pow(10, Number(ui.learningRate.value)).toFixed(4); });
-  ui.speed.addEventListener("input", () => { ui.speedOutput.value = ui.speed.value + " updates / frame"; });
+  ui.speed.addEventListener("input", () => { ui.speedOutput.value = ui.speed.value + " / frame"; });
   ui.solverSteps.addEventListener("input", () => { state.solverSteps = 2 ** Number(ui.solverSteps.value) + 8; ui.solverStepsOutput.value = state.solverSteps; sampleModels(); });
   ui.temperature.addEventListener("input", () => { ui.temperatureOutput.value = Number(ui.temperature.value).toFixed(2); sampleModels(); });
-  ui.regenerate.addEventListener("click", () => { let seed = Number(ui.seed.value); if (!Number.isFinite(seed)) seed = 20260719; ui.seed.value = (seed + 1) >>> 0; makeTargetExample(); sampleModels(); renderTrainingTargets(); ui.status.textContent = "Regenerated from a new shared noise draw and training pair"; });
+  ui.regenerate.addEventListener("click", () => { let seed = Number(ui.seed.value); if (!Number.isFinite(seed)) seed = 20260719; ui.seed.value = (seed + 1) >>> 0; makeTargetExample(); sampleModels(); renderTrainingTargets(); ui.status.textContent = "New noise and pair"; });
   ui.targetMix.addEventListener("input", renderTrainingTargets);
   ui.journey.addEventListener("input", renderMicroscope);
   window.addEventListener("resize", () => { drawLoss(ui.diffusionLossChart, state.diffusionHistory, "#7857b2"); drawLoss(ui.flowLossChart, state.flowHistory, "#167d69"); renderMicroscope(); });

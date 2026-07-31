@@ -395,25 +395,25 @@
 
   const stageCopy = {
     targets: {
-      kicker: "Step 1 · Supervised learning targets", title: "The crucial difference is what appears after the arrow",
-      description: "Diffusion predicts the exact Gaussian noise mixed into a data example. Flow matching predicts the velocity of a temporary noise–data path.",
-      diffusionHint: "Purple line glyphs encode the exact added-noise ε targets—not directions of motion.",
-      flowHint: "The highlighted random pair exists only to make a velocity label.",
-      reading: "<strong>Same input signature, different answer:</strong> both models receive a point and a time. Diffusion is graded against added noise; flow matching is graded against motion."
+      kicker: "Targets", title: "Noise vs velocity",
+      description: "Diffusion predicts noise. Flow predicts motion.",
+      diffusionHint: "Purple marks = added noise ε.",
+      flowHint: "Highlighted pair = one velocity target.",
+      reading: "<strong>Same input:</strong> diffusion predicts noise; flow predicts motion."
     },
     fields: {
-      kicker: "Step 2 · Evidence accumulates", title: "Many incompatible labels become one usable field",
-      description: "Replay learning or scrub the example count. Diffusion averages noise targets into ε̂(x, τ); flow matching averages velocity targets into v̂(x, t).",
-      diffusionHint: "Purple line glyphs show ε̂(x, τ). They are noise estimates, not a velocity field.",
-      flowHint: "Green arrows show the learned velocity field v̂(x, t).",
-      reading: "<strong>What has been learned:</strong> diffusion can turn ε̂ into a denoising update. Flow matching can use v̂ directly as the derivative of its sampling ODE."
+      kicker: "Fields", title: "Learned estimates",
+      description: "More examples smooth both predictions.",
+      diffusionHint: "Purple marks = predicted noise ε̂.",
+      flowHint: "Green arrows = predicted velocity v̂.",
+      reading: "<strong>Use:</strong> ε̂ drives denoising; v̂ drives motion."
     },
     sample: {
-      kicker: "Step 3 · Generation", title: "Release the same fresh noise into both learners",
-      description: "Diffusion repeatedly removes predicted noise. Flow matching repeatedly follows predicted velocity. Neither sampler receives a paired destination.",
-      diffusionHint: "Reverse diffusion repeatedly uses ε̂ to step toward clean data.",
-      flowHint: "The flow solver repeatedly follows v̂ from noise to data.",
-      reading: "<strong>Generation uses the predictions differently:</strong> diffusion converts noise estimates into reverse denoising steps; flow matching integrates velocity as an ODE."
+      kicker: "Generate", title: "Same starting noise",
+      description: "Diffusion denoises. Flow follows velocity.",
+      diffusionHint: "Repeatedly remove predicted noise.",
+      flowHint: "Repeatedly follow predicted velocity.",
+      reading: "<strong>Sampling:</strong> denoise vs integrate velocity."
     }
   };
 
@@ -438,7 +438,7 @@
   }
 
   function stopPlay(completed) {
-    state.playing = false; ui.play.textContent = completed || state.t >= 0.994 ? "Replay" : "Play once"; clearTimeout(state.playFrame);
+    state.playing = false; ui.play.textContent = completed || state.t >= 0.994 ? "Replay" : "Play"; clearTimeout(state.playFrame);
   }
 
   function togglePlay() {
@@ -471,7 +471,7 @@
       state.sampleOrigin.push({ x: p.x, y: p.y });
       state.samples.push({ x: p.x, y: p.y }); state.diffusionSamples.push({ x: p.x, y: p.y });
     }
-    ui.generate.disabled = false; ui.sampleStatus.textContent = "Ready · 180 shared noise points";
+    ui.generate.disabled = false; ui.sampleStatus.textContent = "Ready · shared noise";
     if (state.stage === "sample") drawAll();
   }
 
@@ -503,12 +503,12 @@
       });
       state.sampleStep += 1; state.sampleTime = Math.min(1, state.sampleStep * dt);
       state.diffusionTime = nextTau;
-      ui.sampleStatus.textContent = "Generating both · step " + state.sampleStep + " of " + steps;
+      ui.sampleStatus.textContent = "Step " + state.sampleStep + " / " + steps;
       drawAll();
       if (state.sampleStep < steps) state.sampleFrame = window.setTimeout(animate, 70);
       else {
         state.sampling = false; ui.generate.disabled = false;
-        ui.sampleStatus.textContent = "Complete · " + steps + " steps each · same starting noise";
+        ui.sampleStatus.textContent = "Complete · " + steps + " steps";
       }
     }
     state.sampleFrame = window.setTimeout(animate, 0);
@@ -516,13 +516,13 @@
 
   function stopTraining(completed) {
     state.training = false; clearTimeout(state.trainingFrame);
-    ui.train.textContent = completed || state.trainingCount >= 420 ? "Replay learning" : "Continue learning";
+    ui.train.textContent = completed || state.trainingCount >= 420 ? "Replay" : "Continue";
   }
 
   function replayTraining() {
     if (state.training) { stopTraining(false); return; }
     if (state.trainingCount >= 420) state.trainingCount = 20;
-    state.training = true; ui.train.textContent = "Pause learning";
+    state.training = true; ui.train.textContent = "Pause";
     function tick() {
       if (!state.training) return;
       state.trainingCount = Math.min(420, state.trainingCount + 4);
@@ -540,7 +540,7 @@
     rebuild();
   }));
   ui.time.addEventListener("input", () => {
-    stopPlay(); state.t = Number(ui.time.value); ui.play.textContent = state.t >= 0.994 ? "Replay" : "Play once"; updateStats(); drawAll();
+    stopPlay(); state.t = Number(ui.time.value); ui.play.textContent = state.t >= 0.994 ? "Replay" : "Play"; updateStats(); drawAll();
   });
   ui.play.addEventListener("click", togglePlay);
   [ui.paths, ui.targets, ui.field].forEach((input) => input.addEventListener("change", drawAll));
