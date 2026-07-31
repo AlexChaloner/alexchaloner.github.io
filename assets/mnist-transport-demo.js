@@ -18,7 +18,8 @@
     steps: $("digit-flow-steps"), stepsOutput: $("digit-flow-steps-output"), status: $("digit-flow-status"),
     diffusionStage: $("digit-diffusion-stage"), flowStage: $("digit-flow-stage"),
     time: $("digit-flow-time"), timeLabel: $("digit-flow-time-label"),
-    axisSource: $("digit-flow-axis-source"), axisTarget: $("digit-flow-axis-target"),
+    axisSource: $("digit-flow-axis-source"), axisMiddle: $("digit-flow-axis-middle"), axisTarget: $("digit-flow-axis-target"),
+    microscopeCopy: $("digit-flow-microscope-copy"),
     play: $("digit-flow-play"), playPause: $("digit-flow-play-pause"),
     examples: $("digit-flow-examples"), selection: $("digit-flow-selection"),
     couplingCopy: $("digit-flow-coupling-copy"),
@@ -28,7 +29,8 @@
       inspectTarget: $("digit-diffusion-inspect-target"), sourceCaption: $("digit-diffusion-source-caption"),
       currentCaption: $("digit-diffusion-current-caption"), nextCaption: $("digit-diffusion-next-caption"),
       targetCaption: $("digit-diffusion-target-caption"), film: $("digit-diffusion-film"),
-      filmCopy: $("digit-diffusion-film-copy")
+      filmCopy: $("digit-diffusion-film-copy"), inspectorRule: $("digit-diffusion-inspector-rule"),
+      predictionLabel: $("digit-diffusion-prediction-label"), predictionHelp: $("digit-diffusion-prediction-help")
     },
     flow: {
       inspectSource: $("digit-flow-inspect-source"), inspectCurrent: $("digit-flow-inspect-current"),
@@ -41,12 +43,13 @@
 
   const D = data.pixelDim;
   const IMAGE_SIDE = data.imageSide;
-  const H = 96;
-  const INPUT = D * 2 + 1;
+  const FLOW_H = 96;
+  const DIFFUSION_H = 143;
   const BATCH = 24;
   const LANE_COUNT = 6;
   const DIGIT_PLURALS = ["zeros", "ones", "twos", "threes", "fours", "fives", "sixes", "sevens", "eights", "nines"];
-  const PARAMETER_COUNT = H * INPUT + H + D * H + D + 3 * D;
+  const FLOW_PARAMETER_COUNT = FLOW_H * (D * 2 + 1) + FLOW_H + D * FLOW_H + D + 3 * D;
+  const DIFFUSION_PARAMETER_COUNT = DIFFUSION_H * (D + 1) + DIFFUSION_H + D * DIFFUSION_H + D + 3 * D;
   const DIFFUSION_TINT = [205, 184, 255];
   const FLOW_TINT = [134, 240, 210];
   const SOURCE_TINT = [198, 210, 203];
@@ -177,16 +180,19 @@
     return result;
   }
 
-  function makeNetwork(rng) {
-    const w1 = new Float32Array(H * INPUT), b1 = new Float32Array(H);
-    const w2 = new Float32Array(D * H), b2 = new Float32Array(D);
+  function makeNetwork(rng, method) {
+    const conditioned = method === "flow";
+    const hiddenSize = conditioned ? FLOW_H : DIFFUSION_H;
+    const inputSize = D + (conditioned ? D : 0) + 1;
+    const w1 = new Float32Array(hiddenSize * inputSize), b1 = new Float32Array(hiddenSize);
+    const w2 = new Float32Array(D * hiddenSize), b2 = new Float32Array(D);
     const skip0 = new Float32Array(D), skip1 = new Float32Array(D), skip2 = new Float32Array(D);
-    const limit1 = Math.sqrt(6 / (INPUT + H)), limit2 = Math.sqrt(6 / (H + D));
+    const limit1 = Math.sqrt(6 / (inputSize + hiddenSize)), limit2 = Math.sqrt(6 / (hiddenSize + D));
     for (let i = 0; i < w1.length; i += 1) w1[i] = (rng() * 2 - 1) * limit1;
     for (let i = 0; i < w2.length; i += 1) w2[i] = (rng() * 2 - 1) * limit2;
     const parameters = [w1, b1, w2, b2, skip0, skip1, skip2];
     return {
-      w1, b1, w2, b2, skip0, skip1, skip2, step: 0,
+      w1, b1, w2, b2, skip0, skip1, skip2, conditioned, hiddenSize, inputSize, step: 0,
       m: parameters.map((parameter) => new Float32Array(parameter.length)),
       v: parameters.map((parameter) => new Float32Array(parameter.length)),
       g: parameters.map((parameter) => new Float32Array(parameter.length))
@@ -194,18 +200,21 @@
   }
 
   function predict(net, point, sourceCondition, time, hidden, output) {
-    for (let k = 0; k < H; k += 1) {
-      const row = k * INPUT;
-      let sum = net.b1[k] + net.w1[row + D * 2] * time;
+    const timeIndex = D + (net.conditioned ? D : 0);
+    for (let k = 0; k < net.hiddenSize; k += 1) {
+      const row = k * net.inputSize;
+      let sum = net.b1[k] + net.w1[row + timeIndex] * time;
       for (let j = 0; j < D; j += 1) sum += net.w1[row + j] * point[j];
-      for (let j = 0; j < D; j += 1) sum += net.w1[row + D + j] * sourceCondition[j];
+      if (net.conditioned) {
+        for (let j = 0; j < D; j += 1) sum += net.w1[row + D + j] * sourceCondition[j];
+      }
       hidden[k] = Math.tanh(sum);
     }
     for (let j = 0; j < D; j += 1) {
       const skip = net.skip0[j] + time * net.skip1[j] + time * time * net.skip2[j];
       let sum = net.b2[j] + skip * point[j];
-      const row = j * H;
-      for (let k = 0; k < H; k += 1) sum += net.w2[row + k] * hidden[k];
+      const row = j * net.hiddenSize;
+      for (let k = 0; k < net.hiddenSize; k += 1) sum += net.w2[row + k] * hidden[k];
       output[j] = sum;
     }
   }
@@ -228,36 +237,41 @@
 
   function makeBatch() {
     const source = new Float32Array(BATCH * D), target = new Float32Array(BATCH * D);
-    const noise = new Float32Array(BATCH * D), times = new Float32Array(BATCH);
+    const diffusionTarget = new Float32Array(BATCH * D), noise = new Float32Array(BATCH * D);
+    const flowTimes = new Float32Array(BATCH), diffusionTimes = new Float32Array(BATCH);
     for (let item = 0; item < BATCH; item += 1) {
-      const pair = state.pairs[Math.floor(state.trainingRng() * state.pairs.length)];
+      const pair = state.pairs[Math.floor(state.flowRng() * state.pairs.length)];
+      const targetPool = indicesByDigit[state.targetDigit];
+      const diffusionTargetIndex = targetPool[Math.floor(state.diffusionRng() * targetPool.length)];
       const offset = item * D;
       imageAt(pair[0], source, offset); imageAt(pair[1], target, offset);
-      times[item] = 0.02 + 0.96 * state.trainingRng();
+      imageAt(diffusionTargetIndex, diffusionTarget, offset);
+      flowTimes[item] = 0.02 + 0.96 * state.flowRng();
+      diffusionTimes[item] = 0.02 + 0.96 * state.diffusionRng();
       for (let j = 0; j < D; j += 1) noise[offset + j] = state.trainingNormal();
     }
-    return { source, target, noise, times };
+    return { source, target, diffusionTarget, noise, flowTimes, diffusionTimes };
   }
 
   function trainNetwork(net, batch, method, learningRate) {
     net.g.forEach((gradient) => gradient.fill(0));
     const source = new Float32Array(D), input = new Float32Array(D), desired = new Float32Array(D);
-    const hidden = new Float32Array(H), output = new Float32Array(D), hiddenGradient = new Float32Array(H);
+    const hidden = new Float32Array(net.hiddenSize), output = new Float32Array(D), hiddenGradient = new Float32Array(net.hiddenSize);
     let loss = 0;
     for (let item = 0; item < BATCH; item += 1) {
-      const offset = item * D, time = batch.times[item];
+      const offset = item * D, time = method === "diffusion" ? batch.diffusionTimes[item] : batch.flowTimes[item];
       const cleanScale = Math.sqrt(1 - time), noiseScale = Math.sqrt(time);
       for (let j = 0; j < D; j += 1) {
         source[j] = batch.source[offset + j];
         if (method === "diffusion") {
-          input[j] = cleanScale * batch.target[offset + j] + noiseScale * batch.noise[offset + j];
+          input[j] = cleanScale * batch.diffusionTarget[offset + j] + noiseScale * batch.noise[offset + j];
           desired[j] = batch.noise[offset + j];
         } else {
           input[j] = (1 - time) * batch.source[offset + j] + time * batch.target[offset + j];
           desired[j] = batch.target[offset + j] - batch.source[offset + j];
         }
       }
-      predict(net, input, source, time, hidden, output);
+      predict(net, input, net.conditioned ? source : null, time, hidden, output);
       hiddenGradient.fill(0);
       for (let j = 0; j < D; j += 1) {
         const error = output[j] - desired[j];
@@ -267,19 +281,22 @@
         net.g[4][j] += derivative * input[j];
         net.g[5][j] += derivative * input[j] * time;
         net.g[6][j] += derivative * input[j] * time * time;
-        const row = j * H;
-        for (let k = 0; k < H; k += 1) {
+        const row = j * net.hiddenSize;
+        for (let k = 0; k < net.hiddenSize; k += 1) {
           net.g[2][row + k] += derivative * hidden[k];
           hiddenGradient[k] += net.w2[row + k] * derivative;
         }
       }
-      for (let k = 0; k < H; k += 1) {
+      const timeIndex = D + (net.conditioned ? D : 0);
+      for (let k = 0; k < net.hiddenSize; k += 1) {
         const derivative = hiddenGradient[k] * (1 - hidden[k] * hidden[k]);
         net.g[1][k] += derivative;
-        const row = k * INPUT;
+        const row = k * net.inputSize;
         for (let j = 0; j < D; j += 1) net.g[0][row + j] += derivative * input[j];
-        for (let j = 0; j < D; j += 1) net.g[0][row + D + j] += derivative * source[j];
-        net.g[0][row + D * 2] += derivative * time;
+        if (net.conditioned) {
+          for (let j = 0; j < D; j += 1) net.g[0][row + D + j] += derivative * source[j];
+        }
+        net.g[0][row + timeIndex] += derivative * time;
       }
     }
     adam(net, learningRate);
@@ -375,7 +392,8 @@
   function computeJourneys() {
     if (!state.examples.length || !state.diffusionNet || !state.flowNet) return;
     state.diffusionJourneys = []; state.flowJourneys = [];
-    const hidden = new Float32Array(H), output = new Float32Array(D);
+    const flowHidden = new Float32Array(state.flowNet.hiddenSize), diffusionHidden = new Float32Array(state.diffusionNet.hiddenSize);
+    const output = new Float32Array(D);
     for (let lane = 0; lane < LANE_COUNT; lane += 1) {
       const pair = state.examples[lane], source = new Float32Array(D);
       imageAt(pair[0], source, 0);
@@ -383,18 +401,25 @@
       const flowPoint = new Float32Array(source);
       const flowJourney = [new Float32Array(flowPoint)];
       for (let step = 0; step < state.solverSteps; step += 1) {
-        predict(state.flowNet, flowPoint, source, (step + 0.5) / state.solverSteps, hidden, output);
+        predict(state.flowNet, flowPoint, source, (step + 0.5) / state.solverSteps, flowHidden, output);
         for (let j = 0; j < D; j += 1) flowPoint[j] += output[j] / state.solverSteps;
         flowJourney.push(new Float32Array(flowPoint));
       }
       state.flowJourneys.push(flowJourney);
 
-      const diffusionPoint = laneNoise(pair, lane);
+      const noise = laneNoise(pair, lane);
+      const diffusionPoint = new Float32Array(source);
       const diffusionJourney = [new Float32Array(diffusionPoint)];
+      for (let step = 0; step < state.solverSteps; step += 1) {
+        const tau = 0.98 * (step + 1) / state.solverSteps;
+        const cleanScale = Math.sqrt(1 - tau), noiseScale = Math.sqrt(tau);
+        for (let j = 0; j < D; j += 1) diffusionPoint[j] = cleanScale * source[j] + noiseScale * noise[j];
+        diffusionJourney.push(new Float32Array(diffusionPoint));
+      }
       for (let step = 0; step < state.solverSteps; step += 1) {
         const tau = 0.98 * (1 - step / state.solverSteps);
         const nextTau = 0.98 * (1 - (step + 1) / state.solverSteps);
-        predict(state.diffusionNet, diffusionPoint, source, tau, hidden, output);
+        predict(state.diffusionNet, diffusionPoint, null, tau, diffusionHidden, output);
         const cleanScale = Math.sqrt(1 - tau), noiseScale = Math.sqrt(tau);
         const nextCleanScale = Math.sqrt(1 - nextTau), nextNoiseScale = Math.sqrt(nextTau);
         for (let j = 0; j < D; j += 1) {
@@ -444,11 +469,22 @@
     const selectedBorder = diffusion ? "#eadfff" : "#eafbf5";
     const dimBorder = diffusion ? "#8066a6" : "#4e9d87";
     context.fillStyle = "#111814"; context.fillRect(0, 0, width, height);
+    if (diffusion) {
+      const handoffX = (layout.trackStart + layout.trackEnd) / 2;
+      context.fillStyle = "rgba(198,210,203,0.025)";
+      context.fillRect(layout.trackStart, 29, handoffX - layout.trackStart, height - 29);
+      context.fillStyle = "rgba(166,130,214,0.035)";
+      context.fillRect(handoffX, 29, layout.trackEnd - handoffX, height - 29);
+      context.strokeStyle = "rgba(210,187,245,0.38)";
+      context.setLineDash([3, 4]); context.beginPath(); context.moveTo(handoffX, 30); context.lineTo(handoffX, height); context.stroke(); context.setLineDash([]);
+      context.fillStyle = "#c7b0ea"; context.font = "700 8px monospace"; context.textAlign = "center";
+      context.fillText("MODEL STARTS", handoffX, 39);
+    }
     context.font = "700 9px system-ui, sans-serif"; context.textAlign = "center";
     context.fillStyle = "#aebbb4";
-    context.fillText((diffusion ? "CONDITION " : "START ") + state.sourceDigit, layout.sourceX, 21);
-    context.fillText(diffusion ? "DENOISING STATE" : "FLOWING STATE", (layout.trackStart + layout.trackEnd) / 2, 21);
-    context.fillText("PAIRED " + state.targetDigit, layout.targetX, 21);
+    context.fillText("START " + state.sourceDigit, layout.sourceX, 21);
+    context.fillText(diffusion ? "CORRUPT → DENOISE" : "FLOWING STATE", (layout.trackStart + layout.trackEnd) / 2, 21);
+    context.fillText((diffusion ? "TRAINING " : "PAIRED ") + state.targetDigit, layout.targetX, 21);
 
     const current = new Float32Array(D), ghost = new Float32Array(D), source = new Float32Array(D), target = new Float32Array(D);
     for (let lane = 0; lane < LANE_COUNT; lane += 1) {
@@ -471,24 +507,28 @@
       [0.25, 0.5, 0.75].forEach((checkpoint) => {
         stateAt(journeys[lane], checkpoint, ghost);
         const ghostX = layout.trackStart + checkpoint * (layout.trackEnd - layout.trackStart);
-        drawTile(context, ghost, ghostX, centerY, layout.tile * 0.78, tint, 0.15, null);
+        const ghostTint = diffusion && checkpoint <= 0.5 ? SOURCE_TINT : tint;
+        drawTile(context, ghost, ghostX, centerY, layout.tile * 0.78, ghostTint, 0.15, null);
       });
       stateAt(journeys[lane], state.motionProgress, current);
       const movingX = layout.trackStart + state.motionProgress * (layout.trackEnd - layout.trackStart);
-      drawTile(context, current, movingX, centerY, layout.tile, tint, 1, lane === state.selectedLane ? selectedBorder : dimBorder);
+      const movingTint = diffusion && state.motionProgress < 0.5 ? SOURCE_TINT : tint;
+      drawTile(context, current, movingX, centerY, layout.tile, movingTint, 1, lane === state.selectedLane ? selectedBorder : dimBorder);
       context.fillStyle = lane === state.selectedLane ? "#f7f5fb" : "#75837b";
       context.font = "10px monospace"; context.textAlign = "left";
       context.fillText(String(lane + 1), 4, centerY + 3);
     }
   }
 
-  function drawFilm(canvas, journey, tint, border) {
+  function drawFilm(canvas, journey, tint, border, method) {
     const count = 7;
     canvas.width = count * IMAGE_SIDE; canvas.height = IMAGE_SIDE;
     const context = canvas.getContext("2d"), image = context.createImageData(canvas.width, IMAGE_SIDE);
     for (let checkpoint = 0; checkpoint < count; checkpoint += 1) {
       const index = Math.round((journey.length - 1) * checkpoint / (count - 1));
-      paintPixelImage(image, canvas.width, journey[index], checkpoint * IMAGE_SIDE, 0, tint);
+      const progress = checkpoint / (count - 1);
+      const frameTint = method === "diffusion" && progress <= 0.5 ? SOURCE_TINT : tint;
+      paintPixelImage(image, canvas.width, journey[index], checkpoint * IMAGE_SIDE, 0, frameTint);
     }
     context.putImageData(image, 0, 0);
     const active = Math.round(state.motionProgress * (count - 1));
@@ -501,25 +541,42 @@
     if (!journeys.length) return;
     const refs = ui[method], pair = state.examples[state.selectedLane], journey = journeys[state.selectedLane];
     const source = new Float32Array(D), target = new Float32Array(D), current = new Float32Array(D);
-    const prediction = new Float32Array(D), next = new Float32Array(D), hidden = new Float32Array(H);
+    const net = method === "diffusion" ? state.diffusionNet : state.flowNet;
+    const prediction = new Float32Array(D), next = new Float32Array(D), hidden = new Float32Array(net.hiddenSize);
     imageAt(pair[0], source, 0); imageAt(pair[1], target, 0); stateAt(journey, state.motionProgress, current);
 
     if (method === "diffusion") {
-      const tau = 0.98 * (1 - state.motionProgress);
-      predict(state.diffusionNet, current, source, tau, hidden, prediction);
-      if (state.motionProgress >= 1) {
-        next.set(current);
+      if (state.motionProgress < 0.5) {
+        const corruptionProgress = state.motionProgress * 2;
+        const tau = 0.98 * corruptionProgress;
+        prediction.set(laneNoise(pair, state.selectedLane));
+        stateAt(journey, Math.min(0.5, state.motionProgress + 1 / (2 * state.solverSteps)), next);
+        refs.inspectorRule.textContent = "fixed corruption · no learning yet";
+        refs.predictionLabel.textContent = "Fixed noise draw";
+        refs.predictionHelp.textContent = "known · not predicted";
+        refs.currentCaption.textContent = corruptionProgress <= 0 ? "clean source · τ = 0.00" : "corrupting · τ = " + tau.toFixed(2);
+        refs.nextCaption.textContent = "fixed corruption step";
       } else {
-        const nextProgress = Math.min(1, state.motionProgress + 1 / state.solverSteps);
-        const nextTau = 0.98 * (1 - nextProgress);
+        const denoisingProgress = (state.motionProgress - 0.5) * 2;
+        const tau = 0.98 * (1 - denoisingProgress);
+        predict(state.diffusionNet, current, null, tau, hidden, prediction);
+        const nextDenoisingProgress = Math.min(1, denoisingProgress + 1 / state.solverSteps);
+        const nextTau = 0.98 * (1 - nextDenoisingProgress);
         const cleanScale = Math.sqrt(1 - tau), noiseScale = Math.sqrt(tau);
-        for (let j = 0; j < D; j += 1) {
-          const clean = Math.max(-1.5, Math.min(1.5, (current[j] - noiseScale * prediction[j]) / cleanScale));
-          next[j] = Math.sqrt(1 - nextTau) * clean + Math.sqrt(nextTau) * prediction[j];
+        if (state.motionProgress >= 1) {
+          next.set(current);
+        } else {
+          for (let j = 0; j < D; j += 1) {
+            const clean = Math.max(-1.5, Math.min(1.5, (current[j] - noiseScale * prediction[j]) / cleanScale));
+            next[j] = Math.sqrt(1 - nextTau) * clean + Math.sqrt(nextTau) * prediction[j];
+          }
         }
+        refs.inspectorRule.textContent = "learned five denoising · zero is gone";
+        refs.predictionLabel.textContent = "Predicted noise";
+        refs.predictionHelp.textContent = "blue + · orange −";
+        refs.currentCaption.textContent = state.motionProgress >= 1 ? "generated endpoint · τ = 0.00" : "denoising · τ = " + tau.toFixed(2);
+        refs.nextCaption.textContent = state.motionProgress >= 1 ? "journey complete" : "one learned step cleaner";
       }
-      refs.currentCaption.textContent = state.motionProgress >= 1 ? "clean endpoint · τ = 0.00" : "noise level τ = " + tau.toFixed(2);
-      refs.nextCaption.textContent = state.motionProgress >= 1 ? "journey complete" : "next τ = " + (0.98 * (1 - Math.min(1, state.motionProgress + 1 / state.solverSteps))).toFixed(2);
     } else {
       const time = Math.min(0.999, state.motionProgress);
       predict(state.flowNet, current, source, time, hidden, prediction);
@@ -529,23 +586,35 @@
       refs.nextCaption.textContent = state.motionProgress >= 1 ? "journey complete" : "Δt = " + delta.toFixed(3);
     }
 
-    const tint = method === "diffusion" ? DIFFUSION_TINT : FLOW_TINT;
+    const tint = method === "diffusion" && state.motionProgress < 0.5 ? SOURCE_TINT : method === "diffusion" ? DIFFUSION_TINT : FLOW_TINT;
+    if (method === "diffusion") refs.inspectPrediction.style.outlineColor = state.motionProgress < 0.5 ? "#7f8984" : "#7651aa";
     drawPixelCanvas(refs.inspectSource, source, SOURCE_TINT);
     drawPixelCanvas(refs.inspectCurrent, current, tint);
     drawSignedCanvas(refs.inspectPrediction, prediction);
     drawPixelCanvas(refs.inspectNext, next, tint);
     drawPixelCanvas(refs.inspectTarget, target, TARGET_TINT);
-    refs.sourceCaption.textContent = "source " + state.sourceDigit;
-    refs.targetCaption.textContent = "paired " + state.targetDigit;
-    drawFilm(refs.film, journey, tint, method === "diffusion" ? "#eadfff" : "#eafbf5");
+    refs.sourceCaption.textContent = (method === "diffusion" ? "actual source " : "source ") + state.sourceDigit;
+    refs.targetCaption.textContent = method === "diffusion" ? "a " + state.targetDigit + "-only example" : "paired " + state.targetDigit;
+    drawFilm(refs.film, journey, method === "diffusion" ? DIFFUSION_TINT : tint, method === "diffusion" ? "#eadfff" : "#eafbf5", method);
   }
 
   function renderMotion() {
     const progress = state.motionProgress;
     ui.time.value = Math.round(progress * 1000);
-    if (progress <= 0) ui.timeLabel.textContent = "0% · diffusion has noise; flow has source " + state.sourceDigit;
-    else if (progress >= 1) ui.timeLabel.textContent = "100% · both aim for target " + state.targetDigit;
-    else ui.timeLabel.textContent = Math.round(progress * 100) + "% · diffusion τ = " + (0.98 * (1 - progress)).toFixed(2) + " · flow t = " + progress.toFixed(2);
+    if (progress <= 0) {
+      ui.timeLabel.textContent = "0% · both moving states are source " + state.sourceDigit;
+    } else if (progress < 0.5) {
+      ui.timeLabel.textContent = Math.round(progress * 100) + "% · diffusion fixed corruption τ = " + (0.98 * progress * 2).toFixed(2) + " · flow t = " + progress.toFixed(2);
+    } else if (progress === 0.5) {
+      ui.timeLabel.textContent = "50% · diffusion is near-noise; learned denoising begins · flow is halfway";
+    } else if (progress < 1) {
+      ui.timeLabel.textContent = Math.round(progress * 100) + "% · diffusion learned denoising τ = " + (0.98 * (1 - (progress - 0.5) * 2)).toFixed(2) + " · flow t = " + progress.toFixed(2);
+    } else {
+      ui.timeLabel.textContent = "100% · both aim for target " + state.targetDigit;
+    }
+    ui.microscopeCopy.textContent = progress < 0.5
+      ? "The purple diffusion state is still following fixed Gaussian corruption—its model is not being called. The green flow model is already predicting and applying velocity."
+      : "The purple five-only denoiser is now predicting noise and removing it. The green flow model continues predicting and applying velocity along its direct route.";
     ui.selection.textContent = "Inspecting row " + (state.selectedLane + 1) + " of " + LANE_COUNT;
     drawStage(ui.diffusionStage, state.diffusionJourneys, "diffusion");
     drawStage(ui.flowStage, state.flowJourneys, "flow");
@@ -553,18 +622,19 @@
   }
 
   function updateLabels() {
-    ui.title.textContent = "Two ways to learn " + state.sourceDigit + " → " + state.targetDigit;
-    ui.summary.textContent = "Both learners see the same paired " + DIGIT_PLURALS[state.sourceDigit] + " and " + DIGIT_PLURALS[state.targetDigit] + ". Conditional diffusion learns to remove noise from a " + state.targetDigit + " while reading the " + state.sourceDigit + " as context; flow matching learns the pixel velocity that moves the " + state.sourceDigit + " itself toward a " + state.targetDigit + ".";
-    ui.scopeCopy.textContent = "Diffusion begins from an independent random canvas; its source " + state.sourceDigit + " stays beside the journey as a fixed condition. Flow matching begins from the " + state.sourceDigit + " itself. Both use identical " + PARAMETER_COUNT.toLocaleString() + "-parameter networks, paired batches, update budgets, and solver-call counts. They aim for the same target even though the routes and training labels differ.";
-    ui.motionTitle.textContent = "The same six " + DIGIT_PLURALS[state.sourceDigit] + ", transformed two different ways";
-    ui.motionCopy.textContent = "Each row uses the same source " + state.sourceDigit + " and paired target " + state.targetDigit + " in both columns. Horizontal travel is only a shared clock; the changing 8×8 pixels are the model states. Click either copy of a row to inspect it below.";
-    ui.diffusion.filmCopy.textContent = "source " + state.sourceDigit + " remains fixed context";
-    ui.axisSource.textContent = "diffusion: noise · flow: source " + state.sourceDigit;
+    ui.title.textContent = "Two routes from " + state.sourceDigit + " → " + state.targetDigit;
+    ui.summary.textContent = "The diffusion model trains only on " + DIGIT_PLURALS[state.targetDigit] + ": to use it on a " + state.sourceDigit + ", we first destroy the " + state.sourceDigit + " with fixed Gaussian corruption, then let the learned " + state.targetDigit + " denoiser take over. Flow matching instead learns a direct " + state.sourceDigit + "-to-" + state.targetDigit + " velocity.";
+    ui.scopeCopy.textContent = "Diffusion never sees a " + state.sourceDigit + " during training. Its visible route starts from the actual " + state.sourceDigit + ", but " + state.sourceDigit + " → noise is a fixed mathematical operation—not something it learns. Only the noise → " + state.targetDigit + " half is learned. Flow sees paired " + DIGIT_PLURALS[state.sourceDigit] + " and " + DIGIT_PLURALS[state.targetDigit] + " and learns the whole direct route. The models get " + DIFFUSION_PARAMETER_COUNT.toLocaleString() + " and " + FLOW_PARAMETER_COUNT.toLocaleString() + " parameters respectively, the same update budget, and " + state.solverSteps + " learned model calls.";
+    ui.motionTitle.textContent = "The same six " + DIGIT_PLURALS[state.sourceDigit] + ", two very different routes";
+    ui.motionCopy.textContent = "Both moving tiles begin as the same source " + state.sourceDigit + ". Diffusion deliberately destroys it before its " + state.targetDigit + "-only denoiser can generate; flow continuously reshapes it. Horizontal position is a shared clock. Click either copy of a row to inspect it.";
+    ui.diffusion.filmCopy.textContent = "first half fixed · second half learned on " + DIGIT_PLURALS[state.targetDigit] + " only";
+    ui.axisSource.textContent = "both start: source " + state.sourceDigit;
+    ui.axisMiddle.textContent = "diffusion: noise · flow: halfway";
     ui.axisTarget.textContent = "both aim for target " + state.targetDigit;
     const pairing = state.pairing === "matched"
-      ? "Closest-looking pairing gives both learners a relatively unambiguous relationship to learn."
-      : "Random pairing asks both learners to reconcile many less-consistent source-to-target relationships.";
-    ui.couplingCopy.textContent = "The endpoints are deliberately not the punchline: both models aim for plausible " + DIGIT_PLURALS[state.targetDigit] + ". Compare the beginning and middle. Diffusion reveals structure by repeatedly removing noise from a random canvas while consulting the " + state.sourceDigit + "; flow preserves and reshapes structure already present in it. At this tiny live-training budget diffusion may remain visibly rougher; that is an optimization result, not a different goal. " + pairing;
+      ? "Closest-looking pairing gives flow a relatively unambiguous relationship to learn."
+      : "Random pairing asks flow to reconcile many less-consistent source-to-target relationships.";
+    ui.couplingCopy.textContent = "The diffusion model learns only the purple noise → " + state.targetDigit + " half. Starting from a " + state.sourceDigit + " is our intervention: fixed corruption pushes it onto a state the " + state.targetDigit + "-only model understands, discarding much of its identity. Flow learns the entire green " + state.sourceDigit + " → " + state.targetDigit + " trip from paired examples. Flow pairing changes only the flow learner. " + pairing;
   }
 
   function updateTrainingUi() {
@@ -626,7 +696,7 @@
     state.motionProgress = progress; renderMotion();
     if (progress >= 1) {
       stopMotion(false);
-      ui.status.textContent = "Journeys complete · diffusion travelled noise → " + state.targetDigit + "; flow travelled " + state.sourceDigit + " → " + state.targetDigit;
+      ui.status.textContent = "Journeys complete · diffusion travelled " + state.sourceDigit + " → noise → " + state.targetDigit + "; flow travelled directly " + state.sourceDigit + " → " + state.targetDigit;
       return;
     }
     state.animationFrame = window.requestAnimationFrame(motionFrame);
@@ -646,13 +716,15 @@
   function resetLearners() {
     stopTraining(); stopMotion(false);
     state.update = 0; state.diffusionEma = null; state.flowEma = null; state.motionProgress = 0;
-    const seed = (0x71C3A95D ^ Math.imul(state.sourceDigit, 0x9E3779B1) ^ Math.imul(state.targetDigit, 0x85EBCA77) ^ (state.pairing === "random" ? 0x27D4EB2F : 0)) >>> 0;
-    state.diffusionNet = makeNetwork(mulberry32(seed));
-    state.flowNet = makeNetwork(mulberry32(seed));
-    state.trainingRng = mulberry32((seed ^ 0xB5297A4D) >>> 0);
-    state.trainingNormal = normalSource(mulberry32((seed ^ 0x68E31DA4) >>> 0));
+    const diffusionSeed = (0x71C3A95D ^ Math.imul(state.targetDigit, 0x85EBCA77)) >>> 0;
+    const flowSeed = (0x71C3A95D ^ Math.imul(state.sourceDigit, 0x9E3779B1) ^ Math.imul(state.targetDigit, 0x85EBCA77) ^ (state.pairing === "random" ? 0x27D4EB2F : 0)) >>> 0;
+    state.diffusionNet = makeNetwork(mulberry32(diffusionSeed), "diffusion");
+    state.flowNet = makeNetwork(mulberry32(flowSeed), "flow");
+    state.diffusionRng = mulberry32((diffusionSeed ^ 0x68E31DA4) >>> 0);
+    state.flowRng = mulberry32((flowSeed ^ 0xB5297A4D) >>> 0);
+    state.trainingNormal = normalSource(mulberry32((diffusionSeed ^ 0xD1B54A35) >>> 0));
     chooseExamples(); updateLabels(); updateTrainingUi(); computeJourneys();
-    ui.status.textContent = "Ready · " + state.pairs.length.toLocaleString() + " shared " + (state.pairing === "matched" ? "closest-looking" : "random") + " pairs · " + PARAMETER_COUNT.toLocaleString() + " parameters each · both models untrained";
+    ui.status.textContent = "Ready · diffusion: " + indicesByDigit[state.targetDigit].length.toLocaleString() + " target-only examples, " + DIFFUSION_PARAMETER_COUNT.toLocaleString() + " parameters · flow: " + state.pairs.length.toLocaleString() + " " + (state.pairing === "matched" ? "closest-looking" : "random") + " pairs, " + FLOW_PARAMETER_COUNT.toLocaleString() + " parameters";
   }
 
   function configureExperiment(changedControl) {
@@ -663,7 +735,7 @@
       else { source = (target + 9) % 10; ui.source.value = String(source); }
     }
     state.sourceDigit = source; state.targetDigit = target; state.pairing = ui.pairing.value;
-    ui.status.textContent = "Building shared " + (state.pairing === "matched" ? "closest-looking" : "random") + " " + source + " → " + target + " pairs…";
+    ui.status.textContent = "Building target-only " + target + " data and " + (state.pairing === "matched" ? "closest-looking" : "random") + " " + source + " → " + target + " flow pairs…";
     state.pairs = makePairs(source, target, state.pairing);
     resetLearners();
   }
@@ -677,7 +749,7 @@
   const state = {
     sourceDigit: 0, targetDigit: 5, pairing: "matched", pairs: [], examples: [],
     diffusionJourneys: [], flowJourneys: [], diffusionNet: null, flowNet: null,
-    trainingRng: null, trainingNormal: null, update: 0, budget: Number(ui.budget.value),
+    diffusionRng: null, flowRng: null, trainingNormal: null, update: 0, budget: Number(ui.budget.value),
     diffusionEma: null, flowEma: null, solverSteps: Number(ui.steps.value),
     selectedLane: 0, exampleSeed: 0, training: false, trainingTimer: 0,
     playing: false, animationFrame: 0, motionProgress: 0, motionStartProgress: 0,
@@ -702,7 +774,7 @@
   });
   ui.speed.addEventListener("input", () => { ui.speedOutput.value = ui.speed.value + " / frame"; });
   ui.steps.addEventListener("input", () => {
-    state.solverSteps = Number(ui.steps.value); ui.stepsOutput.value = state.solverSteps; computeJourneys();
+    state.solverSteps = Number(ui.steps.value); ui.stepsOutput.value = state.solverSteps; updateLabels(); computeJourneys();
   });
   ui.time.addEventListener("input", () => {
     stopMotion(false); state.motionProgress = Number(ui.time.value) / 1000; renderMotion();
