@@ -1,0 +1,12 @@
+{% assign local_posts = site.pages | where_exp: 'p', "p.url contains '/musings/' and p.date" %}
+{% assign sorted_posts = local_posts | concat: site.data.external_posts | sort: 'date' | reverse %}
+<ul>
+  {% for post in sorted_posts %}
+    {% if post.external_url %}
+      {% assign post_url = post.external_url %}
+    {% else %}
+      {% assign post_url = post.url | relative_url %}
+    {% endif %}
+    <li>{{ post.date | date: "%Y-%m-%d" }} <a href="{{ post_url }}">{{ post.title | escape }}</a></li>
+  {% endfor %}
+</ul>
