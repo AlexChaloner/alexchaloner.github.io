@@ -62,3 +62,5 @@ I would not put bets on:
 - GRPO-like methods
 
 Personally, I've always thought Reinforcement Learning is one of the few ways where we see *real* intelligence emerge - Move 37 of Alphago is a famous example - it's been a challenge to transfer this to LLMs, but I'm sure we'll get better. I also see a lot of interesting research in Latent Spaces, where they seem to be much easier to manipulate than previously assumed. And I have never been convinced that O(N^2) attention is optimal -- I believe we will see something akin to O(NlogN), or more likely O(N f(N)) where f(N) is the real information content of the N-size context length, for which N is the upper bound.
+
+Finally, this is why I believe you should continue to learn and be passionate about learning in-depth. The current state of things is that AI cannot outlearn you. You are simply too data-efficient. You will see parts of the fractal that GPT-8 will never be able to fill. Continue learning, continue working, you are still far better than AI.
