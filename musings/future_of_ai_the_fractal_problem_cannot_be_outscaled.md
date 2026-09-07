@@ -25,8 +25,7 @@ Domain Knowledge turns out to be like a Fractal. The harder you look, the more t
 
 The way we pre-train LLMs mean that we put a lot of effort into making the LLM understand the Fractal.
 
-![The fractal problem: GPT-4, GPT-6, and reality shown as increasingly detailed Mandelbrot sets.](/assets/fractal-problem-colour.png)
-{: style="max-width: 100%; height: auto;"}
+![The fractal problem: GPT-4, GPT-6, and reality shown as increasingly detailed Mandelbrot sets.](/assets/fractal-problem-colour.png){: style="max-width: 100%; height: auto;"}
 
 Scaling Laws mean we can always spend exponentially more to get to the next iteration of the Fractal. But data inefficiency, and lack of memory, mean the LLM only gets us a surface level, even as we scale by orders of magnitude.
 
