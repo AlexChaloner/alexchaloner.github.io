@@ -28,7 +28,11 @@
     });
     const percentages = data.explainedVariance.map((value) => (100 * value).toFixed(1));
     const total = (100 * data.explainedVariance.reduce((a, b) => a + b, 0)).toFixed(1);
-    $("caption").textContent = `${data.digitCount / 10} images per digit + ${data.noiseCount} Gaussian noise starting points · Same PCA axes, fitted to ${data.pcaFitCount.toLocaleString("en-US")} digits (${total}% of pixel variation). Noise is sampled in the full image space and projected here; its preview is clipped for display.`;
+    $("caption").textContent = data.representation === "model-hidden-features"
+      ? `${data.digitCount} digits + ${data.noiseCount} noise starting points · ${data.featureDimension.toLocaleString("en-US")} learned features projected onto two PCs (${total}% of their joint variation). Images use the same feature extraction settings. Noise previews are clipped for display.`
+      : `${data.digitCount / 10} images per digit + ${data.noiseCount} Gaussian noise starting points · Same PCA axes, fitted to ${data.pcaFitCount.toLocaleString("en-US")} digits (${total}% of pixel variation). Noise is sampled in the full image space and projected here; its preview is clipped for display.`;
+    const imageSide = data.imageSide;
+    digit.width = digit.height = imageSide;
     let width, height, positions = [], selected = -1;
     const xs = data.points.map((p) => p[0]), ys = data.points.map((p) => p[1]);
     const bounds = [Math.min(...xs), Math.max(...xs), Math.min(...ys), Math.max(...ys)];
@@ -41,8 +45,8 @@
       $("label").textContent = pointName(label);
       digit.setAttribute("aria-label", label === null ? "Gaussian noise starting image, clipped for display" : `Original MNIST image of digit ${label}`);
       digit.getContext("2d").drawImage(atlas,
-        (selected % data.atlasColumns) * 28, Math.floor(selected / data.atlasColumns) * 28,
-        28, 28, 0, 0, 28, 28);
+        (selected % data.atlasColumns) * imageSide, Math.floor(selected / data.atlasColumns) * imageSide,
+        imageSide, imageSide, 0, 0, imageSide, imageSide);
       $("coordinates").textContent = `PC1 ${data.points[selected][0].toFixed(2)} · PC2 ${data.points[selected][1].toFixed(2)}`;
       const left = x + 18 + 126 < width ? x + 18 : x - 144;
       tooltip.style.left = `${Math.max(4, Math.min(width - 130, left))}px`;
@@ -59,7 +63,13 @@
       const px = (x) => (left + right) / 2 + (x - midX) * scale;
       const py = (y) => (top + bottom) / 2 - (y - midY) * scale;
       ctx.font = "11px system-ui, sans-serif";
-      for (let value = -12; value <= 12; value += 2) {
+      const rawStep = Math.max(bounds[1] - bounds[0], bounds[3] - bounds[2]) / 6;
+      const magnitude = 10 ** Math.floor(Math.log10(rawStep));
+      const tickStep = [1, 2, 5, 10].find((v) => v * magnitude >= rawStep) * magnitude;
+      const visibleMin = Math.min(midX - (right - left) / (2 * scale), midY - (bottom - top) / (2 * scale));
+      const visibleMax = Math.max(midX + (right - left) / (2 * scale), midY + (bottom - top) / (2 * scale));
+      for (let tick = Math.ceil(visibleMin / tickStep); tick <= Math.floor(visibleMax / tickStep); tick += 1) {
+        const value = Number((tick * tickStep).toPrecision(6));
         const x = px(value), y = py(value);
         ctx.strokeStyle = value === 0 ? "#b9c5be" : "#e4e9e2";
         ctx.fillStyle = "#5f6d66";
