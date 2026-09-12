@@ -5,7 +5,10 @@
   const $ = (id) => document.getElementById(`mnist-pca-${id}`);
   const canvas = $("chart"), ctx = canvas.getContext("2d");
   const tooltip = $("tooltip"), digit = $("digit");
-  const colors = ["#2679b2", "#dc7436", "#31885a", "#cc5054", "#8c62b1", "#956444", "#c75b9d", "#687680", "#9b8a22", "#23989f"];
+  const colors = ["#2679b2", "#dc7436", "#31885a", "#cc5054", "#8c62b1", "#956444", "#c75b9d", "#394a73", "#9b8a22", "#23989f"];
+  const noiseColor = "#888888";
+  const pointColor = (label) => label === null ? noiseColor : colors[label];
+  const pointName = (label) => label === null ? "Noise" : `Digit ${label}`;
   try {
     const atlas = new Image();
     atlas.src = mount.dataset.atlasUrl;
@@ -15,17 +18,17 @@
         return response.json();
       }), atlas.decode()
     ]);
-    colors.forEach((color, label) => {
+    [...colors, noiseColor].forEach((color, label) => {
       const entry = document.createElement("span");
       const swatch = document.createElement("i");
       swatch.style.setProperty("--digit-color", color);
       swatch.setAttribute("aria-hidden", "true");
-      entry.append(swatch, document.createTextNode(label));
+      entry.append(swatch, document.createTextNode(label === 10 ? "Noise · starting points" : label));
       $("legend").append(entry);
     });
     const percentages = data.explainedVariance.map((value) => (100 * value).toFixed(1));
     const total = (100 * data.explainedVariance.reduce((a, b) => a + b, 0)).toFixed(1);
-    $("caption").textContent = `300 images per digit · Original 28 × 28 pixels · These two axes retain ${total}% of the pixel variation. Overlap here doesn’t mean two images are identical; most of their differences are outside this 2D view.`;
+    $("caption").textContent = `${data.digitCount / 10} images per digit + ${data.noiseCount} Gaussian noise starting points · Same PCA axes, fitted to ${data.pcaFitCount.toLocaleString("en-US")} digits (${total}% of pixel variation). Noise is sampled in the full image space and projected here; its preview is clipped for display.`;
     let width, height, positions = [], selected = -1;
     const xs = data.points.map((p) => p[0]), ys = data.points.map((p) => p[1]);
     const bounds = [Math.min(...xs), Math.max(...xs), Math.min(...ys), Math.max(...ys)];
@@ -35,8 +38,8 @@
       if (selected < 0) return;
       const [x, y] = positions[selected];
       const label = data.labels[selected];
-      $("label").textContent = `Digit ${label}`;
-      digit.setAttribute("aria-label", `Original MNIST image of digit ${label}`);
+      $("label").textContent = pointName(label);
+      digit.setAttribute("aria-label", label === null ? "Gaussian noise starting image, clipped for display" : `Original MNIST image of digit ${label}`);
       digit.getContext("2d").drawImage(atlas,
         (selected % data.atlasColumns) * 28, Math.floor(selected / data.atlasColumns) * 28,
         28, 28, 0, 0, 28, 28);
@@ -76,14 +79,14 @@
       positions = data.points.map(([x, y]) => [px(x), py(y)]);
       ctx.globalAlpha = 0.65;
       positions.forEach(([x, y], index) => {
-        ctx.fillStyle = colors[data.labels[index]];
-        ctx.beginPath(); ctx.arc(x, y, width < 500 ? 2.2 : 2.8, 0, 2 * Math.PI); ctx.fill();
+        ctx.fillStyle = pointColor(data.labels[index]);
+        ctx.beginPath(); ctx.arc(x, y, width < 500 ? 3 : 3.8, 0, 2 * Math.PI); ctx.fill();
       });
       ctx.globalAlpha = 1;
       if (selected >= 0) {
         const [x, y] = positions[selected];
         ctx.beginPath(); ctx.arc(x, y, 6, 0, 2 * Math.PI);
-        ctx.fillStyle = colors[data.labels[selected]]; ctx.fill();
+        ctx.fillStyle = pointColor(data.labels[selected]); ctx.fill();
         ctx.lineWidth = 2; ctx.strokeStyle = "#17211d"; ctx.stroke(); ctx.lineWidth = 1;
       }
       showPreview();
@@ -93,7 +96,7 @@
       if (index === selected) return;
       selected = index;
       canvas.style.cursor = index >= 0 ? "pointer" : "crosshair";
-      if (announce && index >= 0) $("announcement").textContent = `Digit ${data.labels[index]}, sample ${index + 1} of ${data.count}.`;
+      if (announce && index >= 0) $("announcement").textContent = `${pointName(data.labels[index])}, sample ${index + 1} of ${data.count}.`;
       draw();
     }
     function inspect(event) {

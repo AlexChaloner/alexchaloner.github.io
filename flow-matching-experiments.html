@@ -27,13 +27,13 @@ title: "Flow matching diagrams"
     <header class="fm-lab-header">
       <div>
         <p class="fm-section-label">Start with the data</p>
-        <h2 id="mnist-pca-title">3,000 handwritten digits. One map.</h2>
-        <p class="mnist-pca-intro">Each image is a point in a space of 784 pixel values. Here are those points projected onto their first two principal components—the two directions with the most variation. Hover or tap a point to see the original digit.</p>
+        <h2 id="mnist-pca-title">300 handwritten digits. One map.</h2>
+        <p class="mnist-pca-intro">Each image is a point in a space of 784 pixel values, projected here onto two principal components. The grey dots are random noise—our starting points. The coloured dots are real digits. Hover or tap either to see the image.</p>
       </div>
     </header>
     <div class="mnist-pca-legend" id="mnist-pca-legend" aria-label="Digit colors"></div>
     <div class="mnist-pca-stage">
-      <canvas id="mnist-pca-chart" tabindex="0" role="img" aria-label="Interactive PCA scatter plot of 3,000 MNIST digits, colored by digit label. Hover or tap to inspect a digit, or focus and use the arrow keys." aria-describedby="mnist-pca-caption"></canvas>
+      <canvas id="mnist-pca-chart" tabindex="0" role="img" aria-label="Interactive PCA scatter plot of 300 MNIST digits, colored by digit label, and 20 grey Gaussian noise starting points. Hover or tap to inspect an image, or focus and use the arrow keys." aria-describedby="mnist-pca-caption"></canvas>
       <div class="mnist-pca-tooltip" id="mnist-pca-tooltip" hidden>
         <strong id="mnist-pca-label"></strong>
         <canvas id="mnist-pca-digit" width="28" height="28" role="img" aria-label="Selected handwritten digit"></canvas>
