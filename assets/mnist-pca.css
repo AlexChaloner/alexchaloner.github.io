@@ -1,0 +1,14 @@
+.mnist-pca-intro { max-width: 720px; line-height: 1.5; color: var(--muted); }
+.mnist-pca-legend { display: flex; flex-wrap: wrap; gap: 0.7rem 1.3rem; margin: 1rem 0; }
+.mnist-pca-legend span { display: inline-flex; align-items: center; gap: 0.4rem; font: 600 0.85rem system-ui, sans-serif; }
+.mnist-pca-legend i { width: 9px; height: 9px; border-radius: 50%; background: var(--digit-color); }
+.mnist-pca-stage { position: relative; background: var(--paper); border: 1px solid var(--line); border-radius: 8px; }
+#mnist-pca-chart { display: block; width: 100%; height: clamp(330px, 49vw, 540px); border-radius: 8px; touch-action: pan-y; -webkit-tap-highlight-color: transparent; }
+#mnist-pca-chart:focus-visible { outline: 3px solid var(--flow); outline-offset: 3px; }
+.mnist-pca-tooltip { position: absolute; z-index: 2; width: 126px; padding: 12px; background: #fff; border: 1px solid var(--line); border-radius: 8px; box-shadow: 0 5px 20px #17211d24; pointer-events: none; font: 12px/1.5 system-ui, sans-serif; }
+.mnist-pca-tooltip[hidden] { display: none; }
+.mnist-pca-tooltip strong { display: block; margin-bottom: 7px; font-size: 14px; }
+#mnist-pca-digit { display: block; width: 100px; height: 100px; image-rendering: pixelated; background: #000; }
+#mnist-pca-coordinates { display: block; margin-top: 6px; color: var(--muted); font-size: 10px; }
+.mnist-pca-caption { margin: 0.8rem 0 1.3rem; color: var(--muted); font-size: 0.86rem; line-height: 1.5; }
+.mnist-pca-sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }

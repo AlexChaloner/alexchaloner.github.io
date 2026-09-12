@@ -4,6 +4,7 @@ title: "Flow matching diagrams"
 ---
 
 <link rel="stylesheet" href="{{ '/assets/flow-matching-demo.css' | relative_url }}">
+<link rel="stylesheet" href="{{ '/assets/mnist-pca.css' | relative_url }}">
 <link rel="stylesheet" href="{{ '/assets/mnist-pixel-demo.css' | relative_url }}">
 <link rel="stylesheet" href="{{ '/assets/mnist-transport-demo.css' | relative_url }}">
 
@@ -11,12 +12,38 @@ title: "Flow matching diagrams"
   <header class="fm-hero">
     <p class="fm-kicker">Interactive experiments</p>
     <h1>Flow Matching Diagrams</h1>
+    <p class="fm-dek">Diffusion predicts noise, which the sampler uses to work out how to move. Flow matching learns that motion directly. Let’s build the intuition with handwritten digits.</p>
     <nav class="fm-meta" aria-label="Diagram index">
+      <a href="#mnist-pca">MNIST map</a>
       <a href="#diagram-dots">1: Dots</a>
       <a href="#mnist-lab">2: Digit Generator</a>
       <a href="#digit-flow-lab">3: Zero to Five</a>
     </nav>
   </header>
+
+  <section class="fm-lab" id="mnist-pca" aria-labelledby="mnist-pca-title"
+    data-points-url="{{ '/assets/mnist-pca-data.json' | relative_url }}"
+    data-atlas-url="{{ '/assets/mnist-pca-atlas.png' | relative_url }}">
+    <header class="fm-lab-header">
+      <div>
+        <p class="fm-section-label">Start with the data</p>
+        <h2 id="mnist-pca-title">3,000 handwritten digits. One map.</h2>
+        <p class="mnist-pca-intro">Each image is a point in a space of 784 pixel values. Here are those points projected onto their first two principal components—the two directions with the most variation. Hover or tap a point to see the original digit.</p>
+      </div>
+    </header>
+    <div class="mnist-pca-legend" id="mnist-pca-legend" aria-label="Digit colors"></div>
+    <div class="mnist-pca-stage">
+      <canvas id="mnist-pca-chart" tabindex="0" role="img" aria-label="Interactive PCA scatter plot of 3,000 MNIST digits, colored by digit label. Hover or tap to inspect a digit, or focus and use the arrow keys." aria-describedby="mnist-pca-caption"></canvas>
+      <div class="mnist-pca-tooltip" id="mnist-pca-tooltip" hidden>
+        <strong id="mnist-pca-label"></strong>
+        <canvas id="mnist-pca-digit" width="28" height="28" role="img" aria-label="Selected handwritten digit"></canvas>
+        <span id="mnist-pca-coordinates"></span>
+      </div>
+    </div>
+    <p class="mnist-pca-caption" id="mnist-pca-caption">Loading the MNIST map…</p>
+    <p class="mnist-pca-sr" id="mnist-pca-announcement" aria-live="polite"></p>
+    <noscript><p>Enable JavaScript to explore the digit map.</p></noscript>
+  </section>
 
   <section class="fm-lab" id="diagram-dots" aria-labelledby="fm-lab-title">
     <header class="fm-lab-header">
@@ -532,6 +559,7 @@ title: "Flow matching diagrams"
 </article>
 
 <script src="{{ '/assets/flow-matching-demo.js' | relative_url }}"></script>
+<script src="{{ '/assets/mnist-pca.js' | relative_url }}"></script>
 <script src="{{ '/assets/mnist-pixel-data.js' | relative_url }}"></script>
 <script src="{{ '/assets/mnist-pixel-demo.js' | relative_url }}"></script>
 <script src="{{ '/assets/mnist-transport-demo.js' | relative_url }}"></script>
