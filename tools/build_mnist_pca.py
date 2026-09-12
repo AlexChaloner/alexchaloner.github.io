@@ -63,7 +63,7 @@ def main():
     # back to raw-pixel coordinates before applying the SAME data PCA.
     # Clip only the image previews, never the values used for projection.
     noise_seed = 20260913
-    noise = np.random.default_rng(noise_seed).normal(size=(20, 784))
+    noise = np.random.default_rng(noise_seed).normal(size=(300, 784))
     noise_pixels = (noise + 1) / 2
     noise_points = (noise_pixels - mean) @ components
     previews = np.rint(np.clip(noise_pixels, 0, 1) * 255).astype(np.uint8).reshape(-1, 28, 28)
