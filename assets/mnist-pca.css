@@ -1,7 +1,4 @@
 .mnist-pca-intro { max-width: 720px; line-height: 1.5; color: var(--muted); }
-.mnist-pca-controls { display: flex; align-items: center; flex-wrap: wrap; gap: 0.65rem; margin: 1rem 0; font: 600 0.85rem system-ui, sans-serif; }
-.mnist-pca-controls select { max-width: 100%; padding: 0.6rem 0.8rem; border: 1px solid var(--line); border-radius: 6px; background: var(--paper); color: var(--ink); font: inherit; }
-.mnist-pca-controls select:focus-visible { outline: 3px solid var(--flow); outline-offset: 2px; }
 .mnist-pca-legend { display: flex; flex-wrap: wrap; gap: 0.7rem 1.3rem; margin: 1rem 0; }
 .mnist-pca-legend span { display: inline-flex; align-items: center; gap: 0.4rem; font: 600 0.85rem system-ui, sans-serif; }
 .mnist-pca-legend i { width: 9px; height: 9px; border-radius: 50%; background: var(--digit-color); }

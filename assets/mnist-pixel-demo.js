@@ -2,10 +2,14 @@
   "use strict";
 
   const data = window.MNISTPixelData;
-  const mount = document.getElementById("mnist-lab");
+  const mount = document.getElementById("live-mnist-lab");
   if (!data || !mount) return;
 
-  const $ = (id) => document.getElementById(id);
+  const panel = mount.closest("details");
+  let initialized = false;
+  function initialize() {
+
+  const $ = (id) => document.getElementById(`live-${id}`);
   const ui = {
     progress: $("mnist-progress"), progressLabel: $("mnist-progress-label"),
     train: $("mnist-train"), pause: $("mnist-pause"), reset: $("mnist-reset"),
@@ -29,7 +33,6 @@
     diffusionCurrent: $("mnist-diffusion-current"), flowCurrent: $("mnist-flow-current"),
     diffusionFilm: $("mnist-diffusion-film"), flowFilm: $("mnist-flow-film"),
     diffusionAction: $("mnist-diffusion-action"), flowAction: $("mnist-flow-action"),
-    pathChart: $("mnist-path-chart")
   };
 
   const D = data.pixelDim;
@@ -333,68 +336,6 @@
     ctx.strokeRect(activeCheckpoint * IMAGE_SIDE + 0.5, 0.5, IMAGE_SIDE - 1, IMAGE_SIDE - 1);
   }
 
-  function drawPathChart(canvas, diffusionJourney, flowJourney, activeIndex) {
-    const rect = canvas.getBoundingClientRect();
-    const dpr = Math.min(2, window.devicePixelRatio || 1);
-    canvas.width = Math.max(1, Math.round(rect.width * dpr));
-    canvas.height = Math.max(1, Math.round(rect.height * dpr));
-    const ctx = canvas.getContext("2d");
-    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    const w = rect.width, h = rect.height, pad = 22;
-    ctx.clearRect(0, 0, w, h);
-    ctx.fillStyle = "#fff"; ctx.fillRect(0, 0, w, h);
-
-    const project = (point) => {
-      let x = 0, y = 0;
-      for (let j = 0; j < D; j += 1) {
-        x += point[j] * Math.sin((j + 1) * 1.71);
-        y += point[j] * Math.cos((j + 1) * 2.17);
-      }
-      return [x, y];
-    };
-    const diffusion = diffusionJourney.map(project), flow = flowJourney.map(project);
-    const points = diffusion.concat(flow);
-    let minX = Math.min.apply(null, points.map((p) => p[0]));
-    let maxX = Math.max.apply(null, points.map((p) => p[0]));
-    let minY = Math.min.apply(null, points.map((p) => p[1]));
-    let maxY = Math.max.apply(null, points.map((p) => p[1]));
-    if (maxX - minX < 0.2) { minX -= 0.1; maxX += 0.1; }
-    if (maxY - minY < 0.2) { minY -= 0.1; maxY += 0.1; }
-    const marginX = (maxX - minX) * 0.12, marginY = (maxY - minY) * 0.12;
-    minX -= marginX; maxX += marginX; minY -= marginY; maxY += marginY;
-    const screen = (p) => [pad + (w - pad * 2) * (p[0] - minX) / (maxX - minX), h - pad - (h - pad * 2) * (p[1] - minY) / (maxY - minY)];
-
-    ctx.strokeStyle = "#e2e7e3"; ctx.lineWidth = 1;
-    for (let i = 1; i < 5; i += 1) {
-      const x = pad + (w - pad * 2) * i / 5, y = pad + (h - pad * 2) * i / 5;
-      ctx.beginPath(); ctx.moveTo(x, pad); ctx.lineTo(x, h - pad); ctx.stroke();
-      ctx.beginPath(); ctx.moveTo(pad, y); ctx.lineTo(w - pad, y); ctx.stroke();
-    }
-
-    function path(pointsToDraw, color) {
-      ctx.strokeStyle = color; ctx.lineWidth = 2.5; ctx.lineJoin = "round"; ctx.lineCap = "round";
-      ctx.beginPath();
-      pointsToDraw.forEach((point, index) => {
-        const p = screen(point);
-        if (index === 0) ctx.moveTo(p[0], p[1]); else ctx.lineTo(p[0], p[1]);
-      });
-      ctx.stroke();
-    }
-    path(diffusion, "#7857b2"); path(flow, "#167d69");
-
-    const start = screen(diffusion[0]);
-    ctx.fillStyle = "#17211d"; ctx.beginPath(); ctx.arc(start[0], start[1], 4, 0, Math.PI * 2); ctx.fill();
-    ctx.font = "10px system-ui, sans-serif"; ctx.fillText("same noise", start[0] + 7, start[1] - 7);
-
-    [[diffusion, "#7857b2"], [flow, "#167d69"]].forEach(([journey, color]) => {
-      const selected = screen(journey[activeIndex]);
-      ctx.fillStyle = "#fff"; ctx.strokeStyle = color; ctx.lineWidth = 3;
-      ctx.beginPath(); ctx.arc(selected[0], selected[1], 6, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
-      const end = screen(journey[journey.length - 1]);
-      ctx.fillStyle = color; ctx.beginPath(); ctx.arc(end[0], end[1], 3, 0, Math.PI * 2); ctx.fill();
-    });
-  }
-
   function renderMicroscope() {
     if (!state.diffusionJourney || !state.flowJourney) return;
     const steps = state.diffusionJourney.length - 1;
@@ -405,7 +346,6 @@
     drawJourneyDigit(ui.flowCurrent, state.flowJourney[index], [163, 245, 215]);
     drawFilmstrip(ui.diffusionFilm, state.diffusionJourney, [205, 184, 255], checkpoint, "#b99ae9");
     drawFilmstrip(ui.flowFilm, state.flowJourney, [163, 245, 215], checkpoint, "#55b79e");
-    drawPathChart(ui.pathChart, state.diffusionJourney, state.flowJourney, index);
 
     if (index === 0) {
       ui.journeyLabel.textContent = "0 / " + steps + " steps · same noise";
@@ -591,4 +531,13 @@
   state.solverSteps = 2 ** Number(ui.solverSteps.value) + 8;
   ui.solverStepsOutput.value = state.solverSteps;
   resetLearners();
+  panel.addEventListener("toggle", () => {
+    if (!panel.open) { state.running = false; clearTimeout(state.frame); updateUi(); }
+    else window.dispatchEvent(new Event("resize"));
+  });
+  }
+  panel.addEventListener("toggle", () => {
+    if (panel.open && !initialized) { initialized = true; initialize(); }
+  });
+  if (panel.open) { initialized = true; initialize(); }
 }());

@@ -13,10 +13,7 @@
     const atlas = new Image();
     atlas.src = mount.dataset.atlasUrl;
     const [data] = await Promise.all([
-      fetch(mount.dataset.pointsUrl).then((response) => {
-        if (!response.ok) throw new Error("Could not load MNIST points");
-        return response.json();
-      }), atlas.decode()
+      window.MNISTSpace.ready, atlas.decode()
     ]);
     [...colors, noiseColor].forEach((color, label) => {
       const entry = document.createElement("span");
@@ -26,49 +23,12 @@
       entry.append(swatch, document.createTextNode(label === 10 ? "Noise · starting points" : label));
       $("legend").append(entry);
     });
-    const views = data.views || { "pca-1-2": {
-      label: "PCA · PC1 / PC2", method: "PCA", axes: ["PC1", "PC2"],
-      points: data.points, explainedVariance: data.explainedVariance, fit: "digits and noise"
-    }};
-    const selector = $("view");
-    let view = views[data.defaultView] || views["pca-1-2"];
-    selector.replaceChildren();
-    ["tsne", "umap", "pca-1-2", "pca-1-3", "pca-2-3", "digits-pca"].forEach((key) => {
-      if (!views[key]) return;
-      const option = document.createElement("option");
-      option.value = key;
-      option.textContent = views[key].label;
-      selector.append(option);
-    });
-    selector.value = data.defaultView || "pca-1-2";
-    selector.disabled = false;
+    const view = { points: data.points, axes: ["PC1", "PC2"] };
+    const total = (100 * data.explainedVariance.reduce((a, b) => a + b, 0)).toFixed(1);
+    $("caption").textContent = `${data.digitCount} digits + ${data.noiseCount} noise starting points · Fixed PC1/PC2 of ${data.featureDimension.toLocaleString("en-US")} learned features (${total}% of joint variation). The same model, feature settings and PCA axes are used throughout the image maps. Noise previews are clipped for display.`;
     const imageSide = data.imageSide;
     digit.width = digit.height = imageSide;
     let width, height, positions = [], selected = -1;
-    let bounds, axisLabels;
-
-    function updateView() {
-      view = views[selector.value];
-      selected = -1;
-      canvas.style.cursor = "crosshair";
-      const xs = view.points.map((p) => p[0]), ys = view.points.map((p) => p[1]);
-      bounds = [Math.min(...xs), Math.max(...xs), Math.min(...ys), Math.max(...ys)];
-      axisLabels = view.axes.map((axis, i) => view.explainedVariance
-        ? `${axis} · ${(100 * view.explainedVariance[i]).toFixed(1)}%` : axis);
-      const total = view.explainedVariance
-        ? (100 * view.explainedVariance.reduce((a, b) => a + b, 0)).toFixed(1) : null;
-      const detail = view.method === "PCA"
-        ? `Axes fitted to ${view.fit}; ${total}% of ${view.fit === "digits only" ? "digit" : "joint"} feature variation. Noise is projected onto the same axes.`
-        : `${view.method} emphasizes local similarity. Gaps and distances between groups are not literal generation distances.`;
-      $("caption").textContent = `${data.digitCount} digits + ${data.noiseCount} noise starting points · ${data.featureDimension.toLocaleString("en-US")} learned features. ${detail} Digit labels only colour the dots. Noise previews are clipped for display.`;
-      canvas.setAttribute("aria-label", `${view.label} scatter plot of ${data.digitCount} MNIST digits and ${data.noiseCount} grey noise starting points. Hover or tap to inspect an image, or focus and use the arrow keys.`);
-      if (width) draw();
-    }
-    selector.addEventListener("change", () => {
-      updateView();
-      $("announcement").textContent = `Showing ${view.label}.`;
-    });
-    updateView();
 
     function showPreview() {
       tooltip.hidden = selected < 0;
@@ -87,39 +47,8 @@
     }
 
     function draw() {
-      ctx.clearRect(0, 0, width, height);
-      const left = 58, right = width - 22, top = 22, bottom = height - 48;
-      // Equal units on both axes preserve the shape of each computed projection.
-      const scale = Math.min((right - left) / ((bounds[1] - bounds[0]) * 1.12),
-        (bottom - top) / ((bounds[3] - bounds[2]) * 1.12));
-      const midX = (bounds[0] + bounds[1]) / 2, midY = (bounds[2] + bounds[3]) / 2;
-      const px = (x) => (left + right) / 2 + (x - midX) * scale;
-      const py = (y) => (top + bottom) / 2 - (y - midY) * scale;
-      ctx.font = "11px system-ui, sans-serif";
-      const rawStep = Math.max(bounds[1] - bounds[0], bounds[3] - bounds[2]) / 6;
-      const magnitude = 10 ** Math.floor(Math.log10(rawStep));
-      const tickStep = [1, 2, 5, 10].find((v) => v * magnitude >= rawStep) * magnitude;
-      const visibleMin = Math.min(midX - (right - left) / (2 * scale), midY - (bottom - top) / (2 * scale));
-      const visibleMax = Math.max(midX + (right - left) / (2 * scale), midY + (bottom - top) / (2 * scale));
-      for (let tick = Math.ceil(visibleMin / tickStep); tick <= Math.floor(visibleMax / tickStep); tick += 1) {
-        const value = Number((tick * tickStep).toPrecision(6));
-        const x = px(value), y = py(value);
-        ctx.strokeStyle = value === 0 ? "#b9c5be" : "#e4e9e2";
-        ctx.fillStyle = "#5f6d66";
-        if (x >= left && x <= right) {
-          ctx.beginPath(); ctx.moveTo(x, top); ctx.lineTo(x, bottom); ctx.stroke();
-          ctx.textAlign = "center"; ctx.fillText(value, x, bottom + 17);
-        }
-        if (y >= top && y <= bottom) {
-          ctx.beginPath(); ctx.moveTo(left, y); ctx.lineTo(right, y); ctx.stroke();
-          ctx.textAlign = "right"; ctx.fillText(value, left - 9, y + 4);
-        }
-      }
-      ctx.fillStyle = "#5f6d66"; ctx.textAlign = "center";
-      ctx.fillText(axisLabels[0], (left + right) / 2, height - 10);
-      ctx.save(); ctx.translate(15, (top + bottom) / 2); ctx.rotate(-Math.PI / 2);
-      ctx.fillText(axisLabels[1], 0, 0); ctx.restore();
-      positions = view.points.map(([x, y]) => [px(x), py(y)]);
+      const screen = window.MNISTSpace.frame(ctx, width, height, data);
+      positions = data.points.map(screen);
       ctx.globalAlpha = 0.65;
       positions.forEach(([x, y], index) => {
         ctx.fillStyle = pointColor(data.labels[index]);

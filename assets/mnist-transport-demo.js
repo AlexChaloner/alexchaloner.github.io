@@ -2,10 +2,14 @@
   "use strict";
 
   const data = window.MNISTPixelData;
-  const mount = document.getElementById("digit-flow-lab");
+  const mount = document.getElementById("live-digit-flow-lab");
   if (!data || !mount) return;
 
-  const $ = (id) => document.getElementById(id);
+  const panel = mount.closest("details");
+  let initialized = false;
+  function initialize() {
+
+  const $ = (id) => document.getElementById(`live-${id}`);
   const ui = {
     title: $("digit-flow-title"), summary: $("digit-flow-summary"), scopeCopy: $("digit-flow-scope-copy"),
     motionTitle: $("digit-flow-motion-title"), motionCopy: $("digit-flow-motion-copy"),
@@ -16,7 +20,6 @@
     budget: $("digit-flow-budget"), budgetOutput: $("digit-flow-budget-output"),
     speed: $("digit-flow-speed"), speedOutput: $("digit-flow-speed-output"),
     steps: $("digit-flow-steps"), stepsOutput: $("digit-flow-steps-output"), status: $("digit-flow-status"),
-    diffusionStage: $("digit-diffusion-stage"), flowStage: $("digit-flow-stage"),
     time: $("digit-flow-time"), timeLabel: $("digit-flow-time-label"),
     axisSource: $("digit-flow-axis-source"), axisMiddle: $("digit-flow-axis-middle"), axisTarget: $("digit-flow-axis-target"),
     microscopeCopy: $("digit-flow-microscope-copy"),
@@ -424,71 +427,6 @@
     return out;
   }
 
-  function stageLayout(width, height) {
-    const compact = width < 560;
-    const tile = compact ? 31 : 46;
-    const top = compact ? 44 : 52;
-    const bottom = 14;
-    const rowHeight = (height - top - bottom) / LANE_COUNT;
-    const sourceX = compact ? 34 : 42;
-    const targetX = width - sourceX;
-    const trackStart = sourceX + tile + (compact ? 12 : 25);
-    const trackEnd = targetX - tile - (compact ? 12 : 25);
-    return { tile, top, rowHeight, sourceX, targetX, trackStart, trackEnd };
-  }
-
-  function drawStage(canvas, journeys, method) {
-    if (!journeys.length) return;
-    const rect = canvas.getBoundingClientRect();
-    const dpr = Math.min(2, window.devicePixelRatio || 1);
-    canvas.width = Math.max(1, Math.round(rect.width * dpr));
-    canvas.height = Math.max(1, Math.round(rect.height * dpr));
-    const context = canvas.getContext("2d");
-    context.setTransform(dpr, 0, 0, dpr, 0, 0);
-    const width = rect.width, height = rect.height, layout = stageLayout(width, height);
-    const diffusion = method === "diffusion";
-    const tint = diffusion ? DIFFUSION_TINT : FLOW_TINT;
-    const selectedBorder = diffusion ? "#eadfff" : "#eafbf5";
-    const dimBorder = diffusion ? "#8066a6" : "#4e9d87";
-    context.fillStyle = "#111814"; context.fillRect(0, 0, width, height);
-    context.font = "700 9px system-ui, sans-serif"; context.textAlign = "center";
-    context.fillStyle = "#aebbb4";
-    context.fillText("START " + state.sourceDigit, layout.sourceX, 21);
-    context.fillText(diffusion ? "DENOISING STATE" : "FLOWING STATE", (layout.trackStart + layout.trackEnd) / 2, 21);
-    context.fillText((diffusion ? "TRAINING " : "PAIRED ") + state.targetDigit, layout.targetX, 21);
-
-    const current = new Float32Array(D), ghost = new Float32Array(D), source = new Float32Array(D), target = new Float32Array(D);
-    for (let lane = 0; lane < LANE_COUNT; lane += 1) {
-      const centerY = layout.top + (lane + 0.5) * layout.rowHeight;
-      if (lane === state.selectedLane) {
-        context.fillStyle = diffusion ? "rgba(166,130,214,0.10)" : "rgba(72,190,154,0.09)";
-        context.fillRect(0, centerY - layout.rowHeight / 2, width, layout.rowHeight);
-      }
-      context.strokeStyle = lane === state.selectedLane
-        ? (diffusion ? "rgba(210,187,245,0.58)" : "rgba(134,220,196,0.55)")
-        : "rgba(174,187,180,0.22)";
-      context.lineWidth = lane === state.selectedLane ? 2 : 1;
-      context.setLineDash([4, 5]);
-      context.beginPath(); context.moveTo(layout.trackStart, centerY); context.lineTo(layout.trackEnd, centerY); context.stroke();
-      context.setLineDash([]);
-
-      imageAt(state.examples[lane][0], source, 0); imageAt(state.examples[lane][1], target, 0);
-      drawTile(context, source, layout.sourceX, centerY, layout.tile, SOURCE_TINT, 1, lane === state.selectedLane ? selectedBorder : null);
-      drawTile(context, target, layout.targetX, centerY, layout.tile, TARGET_TINT, 1, null);
-      [0.25, 0.5, 0.75].forEach((checkpoint) => {
-        stateAt(journeys[lane], checkpoint, ghost);
-        const ghostX = layout.trackStart + checkpoint * (layout.trackEnd - layout.trackStart);
-        drawTile(context, ghost, ghostX, centerY, layout.tile * 0.78, tint, 0.15, null);
-      });
-      stateAt(journeys[lane], state.motionProgress, current);
-      const movingX = layout.trackStart + state.motionProgress * (layout.trackEnd - layout.trackStart);
-      drawTile(context, current, movingX, centerY, layout.tile, tint, 1, lane === state.selectedLane ? selectedBorder : dimBorder);
-      context.fillStyle = lane === state.selectedLane ? "#f7f5fb" : "#75837b";
-      context.font = "10px monospace"; context.textAlign = "left";
-      context.fillText(String(lane + 1), 4, centerY + 3);
-    }
-  }
-
   function drawFilm(canvas, journey, tint, border) {
     const count = 7;
     canvas.width = count * IMAGE_SIDE; canvas.height = IMAGE_SIDE;
@@ -565,9 +503,7 @@
       ui.timeLabel.textContent = "100% · target " + state.targetDigit;
     }
     ui.microscopeCopy.textContent = "Diffusion removes predicted noise. Flow applies predicted velocity.";
-    ui.selection.textContent = "Row " + (state.selectedLane + 1) + " / " + LANE_COUNT;
-    drawStage(ui.diffusionStage, state.diffusionJourneys, "diffusion");
-    drawStage(ui.flowStage, state.flowJourneys, "flow");
+    ui.selection.textContent = "Example " + (state.selectedLane + 1) + " / " + LANE_COUNT;
     renderInspection("diffusion"); renderInspection("flow");
   }
 
@@ -690,12 +626,6 @@
     resetLearners();
   }
 
-  function selectLane(event, canvas) {
-    const rect = canvas.getBoundingClientRect(), layout = stageLayout(rect.width, rect.height);
-    const lane = Math.floor((event.clientY - rect.top - layout.top) / layout.rowHeight);
-    if (lane >= 0 && lane < LANE_COUNT) { state.selectedLane = lane; renderMotion(); }
-  }
-
   const state = {
     sourceDigit: 0, targetDigit: 5, pairing: "matched", pairs: [], examples: [],
     diffusionJourneys: [], flowJourneys: [], diffusionNet: null, flowNet: null,
@@ -735,12 +665,15 @@
     stopMotion(false); state.exampleSeed = (state.exampleSeed + LANE_COUNT) >>> 0; state.motionProgress = 0;
     chooseExamples(); computeJourneys(); ui.status.textContent = "New examples";
   });
-  ui.diffusionStage.addEventListener("click", (event) => selectLane(event, ui.diffusionStage));
-  ui.flowStage.addEventListener("click", (event) => selectLane(event, ui.flowStage));
-  window.addEventListener("resize", () => {
-    drawStage(ui.diffusionStage, state.diffusionJourneys, "diffusion");
-    drawStage(ui.flowStage, state.flowJourneys, "flow");
-  });
-
+  $("digit-flow-lane").addEventListener("change", () => { state.selectedLane = Number($("digit-flow-lane").value); renderMotion(); });
   configureExperiment("pairing");
+  panel.addEventListener("toggle", () => {
+    if (!panel.open) { stopTraining(); stopMotion(false); }
+    else window.dispatchEvent(new Event("resize"));
+  });
+  }
+  panel.addEventListener("toggle", () => {
+    if (panel.open && !initialized) { initialized = true; initialize(); }
+  });
+  if (panel.open) { initialized = true; initialize(); }
 }());
