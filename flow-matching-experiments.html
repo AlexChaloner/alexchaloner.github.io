@@ -7,7 +7,7 @@ title: "Flow matching diagrams"
 <link rel="stylesheet" href="{{ '/assets/mnist-pca.css' | relative_url }}">
 <link rel="stylesheet" href="{{ '/assets/mnist-pixel-demo.css' | relative_url }}">
 <link rel="stylesheet" href="{{ '/assets/mnist-transport-demo.css' | relative_url }}">
-<link rel="stylesheet" href="{{ '/assets/mnist-route-demo.css' | relative_url }}">
+<link rel="stylesheet" href="{{ '/assets/mnist-route-demo.css' | relative_url }}?v=routes2">
 
 <article class="fm-post">
   <header class="fm-hero">
@@ -169,19 +169,20 @@ title: "Flow matching diagrams"
   </section>
 
   <section class="fm-lab mnist-route-demo" id="mnist-lab" aria-labelledby="mnist-lab-title"
-    data-kind="generator" data-routes-url="{{ '/assets/mnist-generator-routes.json' | relative_url }}"
-    data-atlas-url="{{ '/assets/mnist-route-atlas.png' | relative_url }}">
+    data-kind="generator" data-routes-url="{{ '/assets/mnist-generator-routes.json' | relative_url }}?v=routes2"
+    data-atlas-url="{{ '/assets/mnist-route-atlas.png' | relative_url }}?v=routes2">
     <header class="fm-lab-header"><div>
       <p class="fm-section-label">Diagram 2</p>
       <h2 id="mnist-lab-title">Digit Generator</h2>
-      <p class="mnist-route-intro">Six fixed noise samples, two learned routes to zero. Compare recorded training checkpoints and follow each image through the same PC1/PC2 space.</p>
+      <p class="mnist-route-intro">Six noise samples from the grey cloud above, two learned routes to zero. Compare recorded training checkpoints and follow each image through the same PC1/PC2 space.</p>
     </div></header>
     <p class="mnist-route-status" role="status">Loading recorded runs…</p>
     <div class="mnist-route-content" hidden>
       <div class="mnist-route-controls">
         <label>Training checkpoint <select data-control="checkpoint" aria-label="Digit Generator training checkpoint"></select></label>
         <label>Example <select data-control="example" aria-label="Digit Generator example"></select></label>
-        <button type="button" data-control="play">Play route</button>
+        <button type="button" data-control="play" title="Play the selected route from the beginning">Play route</button>
+        <button type="button" data-control="pause" disabled>Pause</button>
       </div>
       <p class="mnist-route-loss" data-role="loss"></p>
       <div class="mnist-route-charts">
@@ -192,21 +193,21 @@ title: "Flow matching diagrams"
           <canvas data-method="flow" tabindex="0" role="img" aria-label="Digit Generator: flow route in the shared PC1/PC2 space. Use left and right arrow keys to step through images."></canvas>
         </figure>
       </div>
-      <p class="mnist-route-note">Fixed PC1/PC2, with the same reference dots and scale as the map above. Click a route point to inspect it. Lines connect recorded image states; the models take their steps in image space.</p>
+      <p class="mnist-route-note">Fixed PC1/PC2, with the same reference dots and scale as the map above. Hover over any route to see its name; click or tap it to select that example and inspect the nearest recorded step. Lines connect recorded image states; the models take their steps in image space.</p>
       <label class="mnist-route-scrubber">Sampling progress <output data-role="step"></output>
         <input data-control="step" type="range" min="0" max="24" step="1" value="0" aria-label="Digit Generator sampling step">
       </label>
       <div class="mnist-route-inspectors" data-role="inspectors"></div>
       <p class="mnist-route-note">Prediction pixels: blue is positive, orange is negative. These show the model’s noise or velocity output.</p>
       <details class="mnist-route-targets" open><summary>Training targets: noise versus velocity</summary><label>Training path point <select data-control="training-time"><option value="0">25% digit</option><option value="1" selected>50% digit</option><option value="2">75% digit</option></select></label><div data-role="targets"></div></details>
-      <p class="mnist-route-note">These are saved runs of the original small 8 × 8 teaching models. Their images are enlarged to the generator’s input size and mapped through its frozen features. The training checkpoint changes the teaching model, never the coordinate system.</p>
+      <p class="mnist-route-note">These teaching models generate full 32 × 32 images, starting from six of the exact noise samples above. Every state is mapped through the same frozen features and PCA axes. The training checkpoint changes the teaching model, never the coordinate system.</p>
     </div>
     <noscript><p>Enable JavaScript to explore the recorded routes.</p></noscript>
   </section>
 
   <section class="fm-lab mnist-route-demo" id="digit-flow-lab" aria-labelledby="digit-flow-lab-title"
-    data-kind="transport" data-routes-url="{{ '/assets/mnist-transport-routes.json' | relative_url }}"
-    data-atlas-url="{{ '/assets/mnist-route-atlas.png' | relative_url }}">
+    data-kind="transport" data-routes-url="{{ '/assets/mnist-transport-routes.json' | relative_url }}?v=routes2"
+    data-atlas-url="{{ '/assets/mnist-route-atlas.png' | relative_url }}?v=routes2">
     <header class="fm-lab-header"><div>
       <p class="fm-section-label">Diagram 3</p>
       <h2 id="digit-flow-lab-title">Zero to Five</h2>
@@ -217,7 +218,8 @@ title: "Flow matching diagrams"
       <div class="mnist-route-controls">
         <label>Training checkpoint <select data-control="checkpoint" aria-label="Zero to Five training checkpoint"></select></label>
         <label>Example <select data-control="example" aria-label="Zero to Five example"></select></label>
-        <button type="button" data-control="play">Play route</button>
+        <button type="button" data-control="play" title="Play the selected route from the beginning">Play route</button>
+        <button type="button" data-control="pause" disabled>Pause</button>
       </div>
       <p class="mnist-route-loss" data-role="loss"></p>
       <div class="mnist-route-charts">
@@ -228,7 +230,7 @@ title: "Flow matching diagrams"
           <canvas data-method="flow" tabindex="0" role="img" aria-label="Zero to Five: flow route in the shared PC1/PC2 space. Use left and right arrow keys to step through images."></canvas>
         </figure>
       </div>
-      <p class="mnist-route-note">Fixed PC1/PC2, with the same reference dots and scale as the map above. Click a route point to inspect it. Lines connect recorded image states; the models take their steps in image space.</p>
+      <p class="mnist-route-note">Fixed PC1/PC2, with the same reference dots and scale as the map above. Hover over any route to see its name; click or tap it to select that example and inspect the nearest recorded step. Lines connect recorded image states; the models take their steps in image space.</p>
       <label class="mnist-route-scrubber">Sampling progress <output data-role="step"></output>
         <input data-control="step" type="range" min="0" max="24" step="1" value="0" aria-label="Zero to Five sampling step">
       </label>
@@ -632,7 +634,7 @@ title: "Flow matching diagrams"
 <script src="{{ '/assets/flow-matching-demo.js' | relative_url }}"></script>
 <script src="{{ '/assets/mnist-space.js' | relative_url }}"></script>
 <script src="{{ '/assets/mnist-pca.js' | relative_url }}"></script>
-<script src="{{ '/assets/mnist-route-demo.js' | relative_url }}"></script>
+<script src="{{ '/assets/mnist-route-demo.js' | relative_url }}?v=routes2"></script>
 <script src="{{ '/assets/mnist-pixel-data.js' | relative_url }}"></script>
 <script src="{{ '/assets/mnist-pixel-demo.js' | relative_url }}"></script>
 <script src="{{ '/assets/mnist-transport-demo.js' | relative_url }}"></script>
