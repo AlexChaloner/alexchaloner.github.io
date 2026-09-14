@@ -26,16 +26,49 @@
       entry.append(swatch, document.createTextNode(label === 10 ? "Noise · starting points" : label));
       $("legend").append(entry);
     });
-    const percentages = data.explainedVariance.map((value) => (100 * value).toFixed(1));
-    const total = (100 * data.explainedVariance.reduce((a, b) => a + b, 0)).toFixed(1);
-    $("caption").textContent = data.representation === "model-hidden-features"
-      ? `${data.digitCount} digits + ${data.noiseCount} noise starting points · ${data.featureDimension.toLocaleString("en-US")} learned features projected onto two PCs (${total}% of their joint variation). Images use the same feature extraction settings. Noise previews are clipped for display.`
-      : `${data.digitCount / 10} images per digit + ${data.noiseCount} Gaussian noise starting points · Same PCA axes, fitted to ${data.pcaFitCount.toLocaleString("en-US")} digits (${total}% of pixel variation). Noise is sampled in the full image space and projected here; its preview is clipped for display.`;
+    const views = data.views || { "pca-1-2": {
+      label: "PCA · PC1 / PC2", method: "PCA", axes: ["PC1", "PC2"],
+      points: data.points, explainedVariance: data.explainedVariance, fit: "digits and noise"
+    }};
+    const selector = $("view");
+    let view = views[data.defaultView] || views["pca-1-2"];
+    selector.replaceChildren();
+    ["tsne", "umap", "pca-1-2", "pca-1-3", "pca-2-3", "digits-pca"].forEach((key) => {
+      if (!views[key]) return;
+      const option = document.createElement("option");
+      option.value = key;
+      option.textContent = views[key].label;
+      selector.append(option);
+    });
+    selector.value = data.defaultView || "pca-1-2";
+    selector.disabled = false;
     const imageSide = data.imageSide;
     digit.width = digit.height = imageSide;
     let width, height, positions = [], selected = -1;
-    const xs = data.points.map((p) => p[0]), ys = data.points.map((p) => p[1]);
-    const bounds = [Math.min(...xs), Math.max(...xs), Math.min(...ys), Math.max(...ys)];
+    let bounds, axisLabels;
+
+    function updateView() {
+      view = views[selector.value];
+      selected = -1;
+      canvas.style.cursor = "crosshair";
+      const xs = view.points.map((p) => p[0]), ys = view.points.map((p) => p[1]);
+      bounds = [Math.min(...xs), Math.max(...xs), Math.min(...ys), Math.max(...ys)];
+      axisLabels = view.axes.map((axis, i) => view.explainedVariance
+        ? `${axis} · ${(100 * view.explainedVariance[i]).toFixed(1)}%` : axis);
+      const total = view.explainedVariance
+        ? (100 * view.explainedVariance.reduce((a, b) => a + b, 0)).toFixed(1) : null;
+      const detail = view.method === "PCA"
+        ? `Axes fitted to ${view.fit}; ${total}% of ${view.fit === "digits only" ? "digit" : "joint"} feature variation. Noise is projected onto the same axes.`
+        : `${view.method} emphasizes local similarity. Gaps and distances between groups are not literal generation distances.`;
+      $("caption").textContent = `${data.digitCount} digits + ${data.noiseCount} noise starting points · ${data.featureDimension.toLocaleString("en-US")} learned features. ${detail} Digit labels only colour the dots. Noise previews are clipped for display.`;
+      canvas.setAttribute("aria-label", `${view.label} scatter plot of ${data.digitCount} MNIST digits and ${data.noiseCount} grey noise starting points. Hover or tap to inspect an image, or focus and use the arrow keys.`);
+      if (width) draw();
+    }
+    selector.addEventListener("change", () => {
+      updateView();
+      $("announcement").textContent = `Showing ${view.label}.`;
+    });
+    updateView();
 
     function showPreview() {
       tooltip.hidden = selected < 0;
@@ -47,7 +80,7 @@
       digit.getContext("2d").drawImage(atlas,
         (selected % data.atlasColumns) * imageSide, Math.floor(selected / data.atlasColumns) * imageSide,
         imageSide, imageSide, 0, 0, imageSide, imageSide);
-      $("coordinates").textContent = `PC1 ${data.points[selected][0].toFixed(2)} · PC2 ${data.points[selected][1].toFixed(2)}`;
+      $("coordinates").textContent = view.axes.map((axis, i) => `${axis} ${view.points[selected][i].toFixed(2)}`).join(" · ");
       const left = x + 18 + 126 < width ? x + 18 : x - 144;
       tooltip.style.left = `${Math.max(4, Math.min(width - 130, left))}px`;
       tooltip.style.top = `${Math.max(4, Math.min(height - tooltip.offsetHeight - 4, y - 65))}px`;
@@ -56,7 +89,7 @@
     function draw() {
       ctx.clearRect(0, 0, width, height);
       const left = 58, right = width - 22, top = 22, bottom = height - 48;
-      // Equal units on both axes preserve the geometry of the PCA projection.
+      // Equal units on both axes preserve the shape of each computed projection.
       const scale = Math.min((right - left) / ((bounds[1] - bounds[0]) * 1.12),
         (bottom - top) / ((bounds[3] - bounds[2]) * 1.12));
       const midX = (bounds[0] + bounds[1]) / 2, midY = (bounds[2] + bounds[3]) / 2;
@@ -83,10 +116,10 @@
         }
       }
       ctx.fillStyle = "#5f6d66"; ctx.textAlign = "center";
-      ctx.fillText(`PC1 · ${percentages[0]}% of variation`, (left + right) / 2, height - 10);
+      ctx.fillText(axisLabels[0], (left + right) / 2, height - 10);
       ctx.save(); ctx.translate(15, (top + bottom) / 2); ctx.rotate(-Math.PI / 2);
-      ctx.fillText(`PC2 · ${percentages[1]}%`, 0, 0); ctx.restore();
-      positions = data.points.map(([x, y]) => [px(x), py(y)]);
+      ctx.fillText(axisLabels[1], 0, 0); ctx.restore();
+      positions = view.points.map(([x, y]) => [px(x), py(y)]);
       ctx.globalAlpha = 0.65;
       positions.forEach(([x, y], index) => {
         ctx.fillStyle = pointColor(data.labels[index]);
