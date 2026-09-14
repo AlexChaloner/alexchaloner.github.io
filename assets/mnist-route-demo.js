@@ -40,6 +40,7 @@
         fetch(mount.dataset.routesUrl).then(response => {if(!response.ok) throw Error("Could not load recorded routes"); return response.json();}),
         loadAtlas(mount.dataset.atlasUrl)]);
       if (data.projectionId !== reference.projectionId) throw Error("The recorded routes do not match the fixed PCA space");
+      data.snapshots=data.snapshots.filter(snapshot=>snapshot.update>0);
       let snapshotIndex=Math.max(0,data.snapshots.findIndex(snapshot=>snapshot.update===(data.defaultCheckpoint || 100)));
       let example=0, step=0, animation=0, playing=false, paused=false, playbackId=0;
       const names=data.exampleNames || Array.from({length:data.sampleCount},(_,i)=>`${data.kind==="generator"?"Noise":"Zero"} ${String.fromCharCode(65+i)} → ${data.kind==="generator"?"0":"5"}`);
@@ -49,7 +50,7 @@
         const tooltip=document.createElement("div");tooltip.className="mnist-route-tooltip";tooltip.hidden=true;
         tooltip.setAttribute("role","tooltip");canvas.parentElement.append(tooltip);tooltips.set(canvas,tooltip);
       });
-      data.snapshots.forEach((snapshot,i) => control("checkpoint").add(new Option(snapshot.update ? `${snapshot.update.toLocaleString()} updates` : "Untrained",i)));
+      data.snapshots.forEach((snapshot,i) => control("checkpoint").add(new Option(`${snapshot.update.toLocaleString()} updates`,i)));
       control("checkpoint").value=String(snapshotIndex);
       for(let i=0;i<data.sampleCount;i++) control("example").add(new Option(names[i],i));
       control("step").max=String(data.solverSteps);
@@ -139,7 +140,7 @@
         control("step").value=String(step);
         control("example").value=String(example);
         role("step").textContent=`${step} / ${data.solverSteps} steps`;
-        role("loss").textContent=snapshot.update===0 ? "Untrained teaching models" : `Recorded training MSE · diffusion ${snapshot.diffusionLoss.toFixed(4)} · flow ${snapshot.flowLoss.toFixed(4)}`;
+        role("loss").textContent=`Recorded training MSE · diffusion ${snapshot.diffusionLoss.toFixed(4)} · flow ${snapshot.flowLoss.toFixed(4)}`;
         role("inspectors").replaceChildren(...["diffusion","flow"].map(method=>renderInspector(snapshot,method)));
         renderTargets(snapshot);updatePlaybackControls();
       }
