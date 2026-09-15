@@ -140,7 +140,7 @@
         control("step").value=String(step);
         control("example").value=String(example);
         role("step").textContent=`${step} / ${data.solverSteps} steps`;
-        role("loss").textContent=`Recorded training MSE · diffusion ${snapshot.diffusionLoss.toFixed(4)} · flow ${snapshot.flowLoss.toFixed(4)}`;
+        role("loss").textContent=`Recorded training MSE · diffusion ${snapshot.diffusionLoss.toFixed(4)} · flow ${snapshot.flowLoss.toFixed(4)} · Different targets; these losses are not directly comparable.`;
         role("inspectors").replaceChildren(...["diffusion","flow"].map(method=>renderInspector(snapshot,method)));
         renderTargets(snapshot);updatePlaybackControls();
       }

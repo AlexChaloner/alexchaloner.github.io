@@ -11,7 +11,8 @@ title: "Flow matching diagrams"
   <header class="fm-hero">
     <p class="fm-kicker">Interactive experiments</p>
     <h1>Flow Matching Diagrams</h1>
-    <p class="fm-dek">Diffusion predicts noise, which the sampler uses to work out how to move. Flow matching learns that motion directly. Let’s build the intuition with handwritten digits.</p>
+    <p class="fm-dek">Here, diffusion predicts noise, which the sampler uses to work out how to move. Flow matching learns that motion directly. Let’s build the intuition with handwritten digits.</p>
+    <p class="mnist-route-note">These are recorded teaching examples. The checkpoints have not been established as converged models, so differences between these runs do not establish which method learns faster. Position in the two-dimensional map is not a measure of digit quality; inspect the images too.</p>
     <nav class="fm-meta" aria-label="Diagram index">
       <a href="#mnist-pca">MNIST map</a>
       <a href="#diagram-dots">1: PC vectors</a>
@@ -120,7 +121,7 @@ title: "Flow matching diagrams"
     <header class="fm-lab-header"><div>
       <p class="fm-section-label">Diagram 3</p>
       <h2 id="digit-flow-lab-title">Zero to Five</h2>
-      <p class="mnist-route-intro">The same six zeros start both routes. Diffusion was trained on fives and treats the starting zero as noise; flow matching was trained on matched zero-to-five pairs. This is a comparison of those two setups.</p>
+      <p class="mnist-route-intro">The same six zeros start both routes. Diffusion was trained to denoise fives corrupted with Gaussian noise, but here starts from a clean zero. Flow matching was trained on matched zero-to-five pairs and also receives the source zero as conditioning. These are different tasks and inputs, so this panel does not isolate the effect of predicting noise versus velocity.</p>
     </div></header>
     <p class="mnist-route-status" role="status">Loading recorded runs…</p>
     <div class="mnist-route-content" hidden>
@@ -156,5 +157,5 @@ title: "Flow matching diagrams"
 
 <script src="{{ '/assets/mnist-space.js' | relative_url }}"></script>
 <script src="{{ '/assets/mnist-pca.js' | relative_url }}"></script>
-<script src="{{ '/assets/mnist-route-demo.js' | relative_url }}?v=vectors1"></script>
+<script src="{{ '/assets/mnist-route-demo.js' | relative_url }}?v=scope1"></script>
 <script src="{{ '/assets/mnist-vector-demo.js' | relative_url }}?v=vectors1"></script>
