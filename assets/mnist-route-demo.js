@@ -258,6 +258,9 @@
       }
       charts.forEach(canvas=>{
         if(initialBounds) {
+          canvas.addEventListener("dblclick",event=>{
+            event.preventDefault();setZoom(initialBounds);
+          });
           canvas.addEventListener("pointerdown",event=>{
             if(event.button!==0||!event.isPrimary||selection)return;
             dragged.delete(canvas);
