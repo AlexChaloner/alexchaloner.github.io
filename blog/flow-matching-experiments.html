@@ -8,14 +8,14 @@ title: "Flow matching diagrams"
 
 <link rel="stylesheet" href="{{ '/assets/flow-matching-demo.css' | relative_url }}">
 <link rel="stylesheet" href="{{ '/assets/mnist-pca.css' | relative_url }}">
-<link rel="stylesheet" href="{{ '/assets/mnist-route-demo.css' | relative_url }}?v=overview1">
+<link rel="stylesheet" href="{{ '/assets/mnist-route-demo.css' | relative_url }}?v=minimal1">
 
 <article class="fm-post">
   <header class="fm-hero">
-    <p class="fm-kicker">Interactive experiments</p>
     <h1>Flow Matching Diagrams</h1>
-    <p class="fm-dek">Here, diffusion predicts noise, which the sampler uses to work out how to move. Flow matching learns that motion directly. Let’s build the intuition with handwritten digits.</p>
-    <p class="mnist-route-note">These are recorded teaching examples. The checkpoints have not been established as converged models, so differences between these runs do not establish which method learns faster. Position in the two-dimensional map is not a measure of digit quality; inspect the images too.</p>
+    <p class="fm-dek">[placeholder description]</p>
+
+    <p class="mnist-route-note">Illustrations, not a performance benchmark.</p>
     <nav class="fm-meta" aria-label="Diagram index">
       <a href="#mnist-pca">MNIST map</a>
       <a href="#mnist-lab">1: Digit Generator</a>
@@ -28,9 +28,9 @@ title: "Flow matching diagrams"
     data-atlas-url="{{ '/assets/mnist-pca-atlas.png' | relative_url }}">
     <header class="fm-lab-header">
       <div>
-        <p class="fm-section-label">Start with the data</p>
-        <h2 id="mnist-pca-title">300 handwritten digits. One fixed space.</h2>
-        <p class="mnist-pca-intro">Real digits and random noise, represented inside a trained digit generator and projected onto PC1 and PC2. We keep these axes fixed throughout the image maps below. Grey dots are our noise starting points. Hover or tap any dot to see its image.</p>
+        <p class="fm-section-label">The data</p>
+        <h2 id="mnist-pca-title">MNIST</h2>
+        <p class="mnist-pca-intro">[placeholder description]</p>
       </div>
     </header>
     <div class="mnist-pca-legend" id="mnist-pca-legend" aria-label="Digit colors"></div>
@@ -54,9 +54,9 @@ title: "Flow matching diagrams"
     <header class="fm-lab-header"><div>
       <p class="fm-section-label">Diagram 1</p>
       <h2 id="mnist-lab-title">Digit Generator</h2>
-      <p class="mnist-route-intro">Six noise samples from the grey cloud above, two learned routes to zero. Follow their sampling-step vectors through the fixed PC1/PC2 space, then inspect the images and predictions underneath.</p>
+      <p class="mnist-route-intro">[placeholder description]</p>
     </div></header>
-    <p class="mnist-route-status" role="status">Loading recorded runs…</p>
+    <p class="mnist-route-status" role="status">Loading…</p>
     <div class="mnist-route-content" hidden>
       <div class="mnist-route-controls">
         <label>Training checkpoint <select data-control="checkpoint" aria-label="Digit Generator training checkpoint"></select></label>
@@ -65,24 +65,23 @@ title: "Flow matching diagrams"
         <button type="button" data-control="play" title="Play the selected route from the beginning">Play route</button>
         <button type="button" data-control="pause" disabled>Pause</button>
       </div>
-      <p class="mnist-route-loss" data-role="loss"></p>
+
       <div class="mnist-route-charts">
-        <figure><figcaption><strong>Diffusion</strong><span>noise prediction → sampler step</span></figcaption>
+        <figure><figcaption><strong>Diffusion</strong><span>Predict noise</span></figcaption>
           <canvas data-method="diffusion" tabindex="0" role="img" aria-label="Digit Generator: diffusion route in the shared PC1/PC2 space. Use left and right arrow keys to step through images."></canvas>
         </figure>
-        <figure><figcaption><strong>Flow matching</strong><span>velocity prediction → Euler step</span></figcaption>
+        <figure><figcaption><strong>Flow matching</strong><span>Predict velocity</span></figcaption>
           <canvas data-method="flow" tabindex="0" role="img" aria-label="Digit Generator: flow route in the shared PC1/PC2 space. Use left and right arrow keys to step through images."></canvas>
         </figure>
       </div>
-      <p class="mnist-route-note">Bold arrows show the current sampling step; faint arrows show other steps along the recorded paths. Hover for image previews; click or tap an arrow to select its example and step. Playback and the image filmstrips below follow the same selection.</p>
+
+      <p class="mnist-route-note">Hover to preview · Click to select</p>
       <label class="mnist-route-scrubber">Sampling progress <output data-role="step"></output>
         <input data-control="step" type="range" min="0" max="24" step="1" value="12" aria-label="Digit Generator sampling step">
       </label>
       <div class="mnist-route-inspectors" data-role="inspectors"></div>
-      <p class="mnist-route-note">Prediction pixels: blue is positive, orange is negative. These show the model’s noise or velocity output.</p>
-      <details class="mnist-route-targets" open><summary>Training targets: noise versus velocity</summary><label>Training path point <select data-control="training-time"><option value="0">25% digit</option><option value="1" selected>50% digit</option><option value="2">75% digit</option></select></label><div data-role="targets"></div></details>
-      <p class="mnist-route-note">Each arrow connects PC(current image) to PC(next image), with no length rescaling. It includes the fixed feature extractor, so it is not a direct projection of raw pixel noise or velocity. Faint arrows come from different sampling times; they are not a vector field at one common time.</p>
-      <p class="mnist-route-note">These teaching models generate full 32 × 32 images, starting from six of the exact noise samples above. Every state is mapped through the same frozen features and PCA axes. The training checkpoint changes the teaching model, never the coordinate system.</p>
+      <p class="mnist-route-note">Predictions: blue + · orange −</p>
+
     </div>
     <noscript><p>Enable JavaScript to explore the recorded routes.</p></noscript>
   </section>
@@ -93,10 +92,10 @@ title: "Flow matching diagrams"
     <header class="fm-lab-header"><div>
       <p class="fm-section-label">Diagram 2</p>
       <h2 id="digit-flow-lab-title">Zero to Five</h2>
-      <p class="mnist-route-intro">Digit Generator again, with zeros in place of noise and fives as the targets. Both 32 × 32 models learn the same zero–five pairs. One predicts the source zero, then derives velocity as (current image − predicted source) / t; flow matching predicts velocity directly.</p>
-      <p class="mnist-route-note">Replacing Gaussian noise with digits makes this a generalized denoising experiment, rather than standard Gaussian diffusion. Neither model gets the source zero as an extra conditioning input. Dividing by t amplifies source-prediction errors near the start; these short runs are sensitive to the sampling step size.</p>
+      <p class="mnist-route-intro">[placeholder description]</p>
+
     </div></header>
-    <p class="mnist-route-status" role="status">Loading recorded runs…</p>
+    <p class="mnist-route-status" role="status">Loading…</p>
     <div class="mnist-route-content" hidden>
       <div class="mnist-route-controls">
         <label>Training checkpoint <select data-control="checkpoint" aria-label="Zero to Five training checkpoint"></select></label>
@@ -105,35 +104,33 @@ title: "Flow matching diagrams"
         <button type="button" data-control="play" title="Play the selected route from the beginning">Play route</button>
         <button type="button" data-control="pause" disabled>Pause</button>
       </div>
-      <p class="mnist-route-loss" data-role="loss"></p>
+
       <figure class="mnist-zoom-overview">
         <canvas data-role="overview" role="img" aria-label="Full PC1/PC2 map. The outlined rectangle marks PC1 20 to 40 and PC2 0 to 25, enlarged in both plots below."></canvas>
-        <figcaption><strong>Same space, closer view</strong><span class="mnist-zoom-key">Full PC1/PC2 map · outlined region</span><span>PC1 20–40 · PC2 0–25</span><span class="mnist-zoom-direction"><span aria-hidden="true">↓</span> Enlarged in both plots below</span></figcaption>
+        <figcaption><strong>Full PC1/PC2</strong><span class="mnist-zoom-key">Selected region</span><span>PC1 20–40 · PC2 0–25</span><span class="mnist-zoom-direction"><span aria-hidden="true">↓</span> Zoomed below</span></figcaption>
       </figure>
       <div class="mnist-route-charts">
-        <figure><figcaption><strong>Source prediction</strong><span>predict source zero → derive velocity</span></figcaption>
+        <figure><figcaption><strong>Source prediction</strong><span>Predict zero · non-Gaussian</span></figcaption>
           <canvas data-method="diffusion" tabindex="0" role="img" aria-label="Zero to Five: source-prediction vectors in the shared PC1/PC2 space. Use left and right arrow keys to step through images."></canvas>
         </figure>
-        <figure><figcaption><strong>Flow matching</strong><span>velocity prediction → Euler step</span></figcaption>
+        <figure><figcaption><strong>Flow matching</strong><span>Predict velocity</span></figcaption>
           <canvas data-method="flow" tabindex="0" role="img" aria-label="Zero to Five: flow route in the shared PC1/PC2 space. Use left and right arrow keys to step through images."></canvas>
         </figure>
       </div>
-      <p class="mnist-route-note">Zoomed to PC1 20–40 and PC2 0–25, using the same fixed PCA coordinates. The view is cropped; arrow lengths retain equal axis units. Bold arrows show the current step; faint arrows show other sampling times. Hover for image previews, or click an arrow to select its example and step.</p>
+
+      <p class="mnist-route-note">Hover to preview · Click to select</p>
       <label class="mnist-route-scrubber">Sampling progress <output data-role="step"></output>
         <input data-control="step" type="range" min="0" max="24" step="1" value="12" aria-label="Zero to Five sampling step">
       </label>
       <div class="mnist-route-inspectors" data-role="inspectors"></div>
-      <p class="mnist-route-note">Prediction pixels: blue is positive, orange is negative. These show the model’s source-zero or velocity output.</p>
+      <p class="mnist-route-note">Predictions: blue + · orange −</p>
 
-      <details class="mnist-route-targets" open><summary>Training targets: source zero versus velocity</summary><label>Training path point <select data-control="training-time"><option value="0">25% five</option><option value="1" selected>50% five</option><option value="2">75% five</option></select></label><div data-role="targets"></div></details>
-      <p class="mnist-route-note">Identical architecture, initialization, training pairs, sampled times, and update budget. Both use the same linear interpolation and Euler stepping; the prediction targets differ. These six zeros come from the MNIST test split; pairing chooses the nearest five in pixel distance, allowing target reuse. All images are native 32 × 32, mapped through the same frozen features and PCA axes.</p>
     </div>
     <noscript><p>Enable JavaScript to explore the recorded routes.</p></noscript>
   </section>
 
-
 </article>
 
 <script src="{{ '/assets/mnist-space.js' | relative_url }}?v=zoom1"></script>
-<script src="{{ '/assets/mnist-pca.js' | relative_url }}"></script>
-<script src="{{ '/assets/mnist-route-demo.js' | relative_url }}?v=overview1"></script>
+<script src="{{ '/assets/mnist-pca.js' | relative_url }}?v=minimal1"></script>
+<script src="{{ '/assets/mnist-route-demo.js' | relative_url }}?v=minimal1"></script>

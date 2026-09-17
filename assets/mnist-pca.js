@@ -20,12 +20,11 @@
       const swatch = document.createElement("i");
       swatch.style.setProperty("--digit-color", color);
       swatch.setAttribute("aria-hidden", "true");
-      entry.append(swatch, document.createTextNode(label === 10 ? "Noise · starting points" : label));
+      entry.append(swatch, document.createTextNode(label === 10 ? "Noise" : label));
       $("legend").append(entry);
     });
     const view = { points: data.points, axes: ["PC1", "PC2"] };
-    const total = (100 * data.explainedVariance.reduce((a, b) => a + b, 0)).toFixed(1);
-    $("caption").textContent = `${data.digitCount} digits + ${data.noiseCount} noise starting points · Fixed PC1/PC2 of ${data.featureDimension.toLocaleString("en-US")} learned features (${total}% of joint variation). The same model, feature settings and PCA axes are used throughout the image maps. Noise previews are clipped for display.`;
+    $("caption").textContent = `${data.digitCount} digits · ${data.noiseCount} noise samples · Fixed PC1/PC2`;
     const imageSide = data.imageSide;
     digit.width = digit.height = imageSide;
     let width, height, positions = [], selected = -1;

@@ -71,33 +71,10 @@
         }
         figure.append(caption,canvas);return figure;
       }
-      let renderedTargetSnapshot=null, renderedTargetTime=null;
-      function renderTargets(snapshot) {
-        if (!snapshot.training) return;
-        const time=Number(control("training-time").value);
-        if(renderedTargetSnapshot===snapshot && renderedTargetTime===time)return;
-        renderedTargetSnapshot=snapshot;renderedTargetTime=time;
-        const record=snapshot.training[time];
-        const target=role("targets");target.replaceChildren();
-        for(const method of ["diffusion","flow"]) {
-          const box=document.createElement("article"), title=document.createElement("h4");
-          title.textContent=method==="diffusion" ? `${denoisingName} · ${sourcePrediction?"t":"τ"} = ${record.tau.toFixed(2)}` : `Flow matching · t = ${record.t.toFixed(2)}`;
-          const cards=document.createElement("div");cards.className="mnist-route-cards";
-          const signal=record[method==="diffusion" ? "noise" : "velocity"];
-          const scale=Array.isArray(signal)?Math.max(.001,...signal.map(Math.abs)):signal.scale;
-          if(record.source!==undefined)cards.append(card("Source zero",record.source));
-          cards.append(card(sourcePrediction?"Target five":"Clean digit",record.clean),card("Input",record[`${method}Input`]),
-            card(method==="diffusion"?(sourcePrediction?"Target source zero":"Target noise"):"Target velocity",null,signal,scale),
-            card("Prediction",null,record[`${method}Prediction`],scale));
-          box.append(title,cards);target.append(box);
-        }
-      }
       function renderInspector(snapshot,method) {
-        const journey=snapshot[method][example], current=journey[step], point=data.points[current];
+        const journey=snapshot[method][example], current=journey[step];
         const inspector=document.createElement("article");inspector.className=`mnist-route-inspector ${method}`;
-        const heading=document.createElement("h4");heading.textContent=`${method==="diffusion"?denoisingName:"Flow matching"}: one step`;
-        const coordinate=document.createElement("p");coordinate.className="mnist-route-coordinates";
-        coordinate.textContent=`${names[example]} · PC1 ${point[0].toFixed(2)} · PC2 ${point[1].toFixed(2)}`;
+        const heading=document.createElement("h4");heading.textContent=method==="diffusion"?denoisingName:"Flow matching";
         const cards=document.createElement("div");cards.className="mnist-route-cards";
         cards.append(card("Start",journey[0]),card("Now",current));
         if(step<data.solverSteps) {
@@ -112,7 +89,7 @@
           const tile=card(`Step ${frame}`,journey[frame]);button.append(tile);
           button.addEventListener("click",()=>{stop();clearHover();step=frame;render();});film.append(button);
         }
-        inspector.append(heading,coordinate,cards,film);return inspector;
+        inspector.append(heading,cards,film);return inspector;
       }
       function renderOverview() {
         const canvas=role("overview");
@@ -186,9 +163,9 @@
         control("step").value=String(step);
         control("example").value=String(example);
         role("step").textContent=step<data.solverSteps?`${step} → ${step+1} / ${data.solverSteps}`:`${step} / ${data.solverSteps} steps`;
-        role("loss").textContent=`Recorded training MSE · ${denoisingName.toLowerCase()} ${snapshot.diffusionLoss.toFixed(4)} · flow ${snapshot.flowLoss.toFixed(4)} · Different targets; these losses are not directly comparable.`;
+
         role("inspectors").replaceChildren(...["diffusion","flow"].map(method=>renderInspector(snapshot,method)));
-        renderTargets(snapshot);updatePlaybackControls();
+        updatePlaybackControls();
       }
       function stop() {
         playing=false;paused=false;playbackId++;cancelAnimationFrame(animation);updatePlaybackControls();
@@ -222,7 +199,7 @@
       control("checkpoint").addEventListener("change",()=>{stop();clearHover();snapshotIndex=Number(control("checkpoint").value);render();});
       control("example").addEventListener("change",()=>{stop();clearHover();example=Number(control("example").value);render();});
       control("step").addEventListener("input",()=>{stop();clearHover();step=Number(control("step").value);render();});
-      if(control("training-time")) control("training-time").addEventListener("change",()=>renderTargets(data.snapshots[snapshotIndex]));
+
       control("play").addEventListener("click",()=>startPlayback(true));
       control("pause").addEventListener("click",()=>{
         if(paused){startPlayback(false);return;}
@@ -289,12 +266,13 @@
         });
       });
       mount.querySelector(".mnist-route-content").hidden=false;
-      status.textContent="Recorded offline · fixed PC1/PC2";
+      status.textContent="";status.hidden=true;
       const resizeObserver=new ResizeObserver(()=>{clearHover();renderOverview();charts.forEach(canvas=>renderChart(canvas,data.snapshots[snapshotIndex]));});
       charts.forEach(canvas=>resizeObserver.observe(canvas));
       if(role("overview"))resizeObserver.observe(role("overview"));
       renderOverview();render();updatePlaybackControls();
     } catch(error) {
+      status.hidden=false;
       status.textContent="The recorded routes couldn’t load. Refresh the page to try again.";
       console.error(error);
     }
