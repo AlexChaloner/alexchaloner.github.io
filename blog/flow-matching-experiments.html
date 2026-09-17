@@ -8,7 +8,7 @@ title: "Flow matching diagrams"
 
 <link rel="stylesheet" href="{{ '/assets/flow-matching-demo.css' | relative_url }}">
 <link rel="stylesheet" href="{{ '/assets/mnist-pca.css' | relative_url }}">
-<link rel="stylesheet" href="{{ '/assets/mnist-route-demo.css' | relative_url }}?v=combined1">
+<link rel="stylesheet" href="{{ '/assets/mnist-route-demo.css' | relative_url }}?v=paired32">
 
 <article class="fm-post">
   <header class="fm-hero">
@@ -24,7 +24,7 @@ title: "Flow matching diagrams"
   </header>
 
   <section class="fm-lab" id="mnist-pca" aria-labelledby="mnist-pca-title"
-    data-points-url="{{ '/assets/mnist-pca-data.json' | relative_url }}"
+    data-points-url="{{ '/assets/mnist-pca-data.json' | relative_url }}?v=paired32"
     data-atlas-url="{{ '/assets/mnist-pca-atlas.png' | relative_url }}">
     <header class="fm-lab-header">
       <div>
@@ -49,8 +49,8 @@ title: "Flow matching diagrams"
 
   <span id="diagram-dots" aria-hidden="true"></span>
   <section class="fm-lab mnist-route-demo" id="mnist-lab" aria-labelledby="mnist-lab-title"
-    data-kind="generator" data-view="vectors" data-routes-url="{{ '/assets/mnist-generator-routes.json' | relative_url }}?v=vectors1"
-    data-atlas-url="{{ '/assets/mnist-route-atlas.png' | relative_url }}?v=routes2">
+    data-kind="generator" data-routes-url="{{ '/assets/mnist-generator-routes.json' | relative_url }}?v=paired32"
+    data-atlas-url="{{ '/assets/mnist-route-atlas.png' | relative_url }}?v=paired32">
     <header class="fm-lab-header"><div>
       <p class="fm-section-label">Diagram 1</p>
       <h2 id="mnist-lab-title">Digit Generator</h2>
@@ -88,38 +88,41 @@ title: "Flow matching diagrams"
   </section>
 
   <section class="fm-lab mnist-route-demo" id="digit-flow-lab" aria-labelledby="digit-flow-lab-title"
-    data-kind="transport" data-routes-url="{{ '/assets/mnist-transport-routes.json' | relative_url }}?v=vectors1"
-    data-atlas-url="{{ '/assets/mnist-route-atlas.png' | relative_url }}?v=routes2">
+    data-kind="transport" data-routes-url="{{ '/assets/mnist-transport-routes.json' | relative_url }}?v=paired32"
+    data-atlas-url="{{ '/assets/mnist-route-atlas.png' | relative_url }}?v=paired32">
     <header class="fm-lab-header"><div>
       <p class="fm-section-label">Diagram 2</p>
       <h2 id="digit-flow-lab-title">Zero to Five</h2>
-      <p class="mnist-route-intro">The same six zeros start both routes. Diffusion was trained to denoise fives corrupted with Gaussian noise, but here starts from a clean zero. Flow matching was trained on matched zero-to-five pairs and also receives the source zero as conditioning. These are different tasks and inputs, so this panel does not isolate the effect of predicting noise versus velocity.</p>
+      <p class="mnist-route-intro">Digit Generator again, with zeros in place of noise and fives as the targets. Both 32 × 32 models learn the same zero–five pairs. One predicts the source zero, then derives velocity as (current image − predicted source) / t; flow matching predicts velocity directly.</p>
+      <p class="mnist-route-note">Replacing Gaussian noise with digits makes this a generalized denoising experiment, rather than standard Gaussian diffusion. Neither model gets the source zero as an extra conditioning input. Dividing by t amplifies source-prediction errors near the start; these short runs are sensitive to the sampling step size.</p>
     </div></header>
     <p class="mnist-route-status" role="status">Loading recorded runs…</p>
     <div class="mnist-route-content" hidden>
       <div class="mnist-route-controls">
         <label>Training checkpoint <select data-control="checkpoint" aria-label="Zero to Five training checkpoint"></select></label>
         <label>Example <select data-control="example" aria-label="Zero to Five example"></select></label>
+        <label class="mnist-vector-check"><input data-control="context" type="checkbox" checked> Show other steps</label>
         <button type="button" data-control="play" title="Play the selected route from the beginning">Play route</button>
         <button type="button" data-control="pause" disabled>Pause</button>
       </div>
       <p class="mnist-route-loss" data-role="loss"></p>
       <div class="mnist-route-charts">
-        <figure><figcaption><strong>Diffusion</strong><span>predict noise → denoise</span></figcaption>
-          <canvas data-method="diffusion" tabindex="0" role="img" aria-label="Zero to Five: diffusion route in the shared PC1/PC2 space. Use left and right arrow keys to step through images."></canvas>
+        <figure><figcaption><strong>Source prediction</strong><span>predict source zero → derive velocity</span></figcaption>
+          <canvas data-method="diffusion" tabindex="0" role="img" aria-label="Zero to Five: source-prediction vectors in the shared PC1/PC2 space. Use left and right arrow keys to step through images."></canvas>
         </figure>
-        <figure><figcaption><strong>Flow matching</strong><span>predict velocity → move</span></figcaption>
+        <figure><figcaption><strong>Flow matching</strong><span>velocity prediction → Euler step</span></figcaption>
           <canvas data-method="flow" tabindex="0" role="img" aria-label="Zero to Five: flow route in the shared PC1/PC2 space. Use left and right arrow keys to step through images."></canvas>
         </figure>
       </div>
-      <p class="mnist-route-note">Fixed PC1/PC2, with the same reference dots and scale as the map above. Hover over any route to see its name; click or tap it to select that example and inspect the nearest recorded step. Lines connect recorded image states; the models take their steps in image space.</p>
+      <p class="mnist-route-note">The same fixed PC1/PC2 axes and vector view as Digit Generator. Bold arrows show the current step; faint arrows show other sampling times. Hover for image previews, or click an arrow to select its example and step.</p>
       <label class="mnist-route-scrubber">Sampling progress <output data-role="step"></output>
-        <input data-control="step" type="range" min="0" max="24" step="1" value="0" aria-label="Zero to Five sampling step">
+        <input data-control="step" type="range" min="0" max="24" step="1" value="12" aria-label="Zero to Five sampling step">
       </label>
       <div class="mnist-route-inspectors" data-role="inspectors"></div>
-      <p class="mnist-route-note">Prediction pixels: blue is positive, orange is negative. These show the model’s noise or velocity output.</p>
+      <p class="mnist-route-note">Prediction pixels: blue is positive, orange is negative. These show the model’s source-zero or velocity output.</p>
 
-      <p class="mnist-route-note">These are saved runs of the original small 8 × 8 teaching models. Their images are enlarged to the generator’s input size and mapped through its frozen features. The training checkpoint changes the teaching model, never the coordinate system.</p>
+      <details class="mnist-route-targets" open><summary>Training targets: source zero versus velocity</summary><label>Training path point <select data-control="training-time"><option value="0">25% five</option><option value="1" selected>50% five</option><option value="2">75% five</option></select></label><div data-role="targets"></div></details>
+      <p class="mnist-route-note">Identical architecture, initialization, training pairs, sampled times, and update budget. Both use the same linear interpolation and Euler stepping; the prediction targets differ. These six zeros come from the MNIST test split; pairing chooses the nearest five in pixel distance, allowing target reuse. All images are native 32 × 32, mapped through the same frozen features and PCA axes.</p>
     </div>
     <noscript><p>Enable JavaScript to explore the recorded routes.</p></noscript>
   </section>
@@ -129,4 +132,4 @@ title: "Flow matching diagrams"
 
 <script src="{{ '/assets/mnist-space.js' | relative_url }}"></script>
 <script src="{{ '/assets/mnist-pca.js' | relative_url }}"></script>
-<script src="{{ '/assets/mnist-route-demo.js' | relative_url }}?v=combined1"></script>
+<script src="{{ '/assets/mnist-route-demo.js' | relative_url }}?v=paired32"></script>
