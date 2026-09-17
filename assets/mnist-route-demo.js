@@ -114,7 +114,8 @@
           const {left,right,top,bottom}=screen.plotRect;
           ctx.beginPath();ctx.rect(left,top,right-left,bottom-top);ctx.clip();
         }
-        space.reference(ctx,reference,screen,.2);
+        const dotOpacity=viewBounds&&data.kind==="transport" ? label => (label===0||label===5 ? .5 : .2) : .2;
+        space.reference(ctx,reference,screen,dotOpacity);
         const method=canvas.dataset.method, journeys=snapshot[method], color=method==="diffusion"?"#7857b2":"#167d69";
         const allPoints=journeys.map(journey=>journey.map(id=>screen(data.points[id])));
         positions.set(canvas,allPoints);

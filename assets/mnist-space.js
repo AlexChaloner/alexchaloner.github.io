@@ -52,8 +52,9 @@
   }
 
   function reference(ctx, data, screen, opacity=.2) {
-    ctx.save();ctx.globalAlpha=opacity;
+    ctx.save();
     data.points.forEach((point,i)=>{
+      ctx.globalAlpha=typeof opacity==="function" ? opacity(data.labels[i]) : opacity;
       const [x,y]=screen(point);
       ctx.fillStyle=data.labels[i]===null ? "#888888" : colors[data.labels[i]];
       ctx.beginPath();ctx.arc(x,y,2,0,2*Math.PI);ctx.fill();
