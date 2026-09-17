@@ -62,19 +62,17 @@
       data.snapshots.forEach((snapshot,i) => control("checkpoint").add(new Option(`${snapshot.update.toLocaleString()} updates`,i)));
       control("checkpoint").value=String(snapshotIndex);
       for(let i=0;i<data.sampleCount;i++) control("example").add(new Option(names[i],i));
-      control("step").max=String(data.solverSteps);
+      const lastStep=data.solverSteps-1;
+      control("step").max=String(lastStep);
       function card(label,id,signal,scale) {
         const figure=document.createElement("figure"), caption=document.createElement("figcaption");
         caption.textContent=label;
         let canvas;
         if(signal) canvas=signalCanvas(signal,scale);
-        else if(id!=null) {
+        else {
           canvas=document.createElement("canvas");canvas.width=canvas.height=data.imageSide;
           canvas.setAttribute("role","img");canvas.setAttribute("aria-label",label);
           imageTile(canvas.getContext("2d"),atlas,id,0,0,data.imageSide,data);
-        } else {
-          canvas=document.createElement("div");canvas.className="mnist-route-unavailable";
-          canvas.textContent="N/A";canvas.setAttribute("role","img");canvas.setAttribute("aria-label",`${label}: not applicable at the final step`);
         }
         figure.append(caption,canvas);return figure;
       }
@@ -84,15 +82,13 @@
         const heading=document.createElement("h4");heading.textContent=method==="diffusion"?denoisingName:"Flow matching";
         const cards=document.createElement("div");cards.className="mnist-route-cards";
         cards.append(card("Start",journey[0]),card("Now",current));
-        if(step<data.solverSteps) {
-          cards.append(card(method==="diffusion"?predictionLabel:"Predicted velocity",null,snapshot.predictions[method][example][step]),card("Next",journey[step+1]));
-        } else cards.append(card(method==="diffusion"?predictionLabel:"Predicted velocity",null),card("Next",null));
+        cards.append(card(method==="diffusion"?predictionLabel:"Predicted velocity",null,snapshot.predictions[method][example][step]),card("Next",journey[step+1]));
         if(snapshot.targets) cards.append(card(`Paired ${targetDigit}`,snapshot.targets[example]));
         const film=document.createElement("div");film.className="mnist-route-film";
         for(let i=0;i<6;i++) {
-          const frame=Math.round(i*data.solverSteps/5), button=document.createElement("button");
+          const frame=Math.round(i*lastStep/5), button=document.createElement("button");
           button.type="button";button.setAttribute("aria-label",`${method} step ${frame}`);
-          button.setAttribute("aria-pressed",String(Math.round(step/data.solverSteps*5)===i));
+          button.setAttribute("aria-pressed",String(Math.round(step/lastStep*5)===i));
           const tile=card(`Step ${frame}`,journey[frame]);button.append(tile);
           button.addEventListener("click",()=>{stop();clearHover();step=frame;render();});film.append(button);
         }
@@ -132,11 +128,11 @@
         positions.set(canvas,allPoints);
         const hovered=hover.get(canvas);
         const order=journeys.map((_,i)=>i).filter(i=>i!==example).concat(example);
-        const selected=journeys[example], points=allPoints[example];
+        const selected=journeys[example];
         const items=[];
         for(let t=0;t<data.solverSteps;t+=3)if(t!==step)
           order.forEach(lane=>items.push({lane,step:t}));
-        if(step<data.solverSteps)order.forEach(lane=>items.push({lane,step}));
+        order.forEach(lane=>items.push({lane,step}));
         items.forEach(item=>{
           const active=item.step===step, chosen=active&&item.lane===example;
           const highlighted=hovered?.lane===item.lane&&hovered?.step===item.step;
@@ -154,10 +150,6 @@
           ctx.beginPath();ctx.arc(x,y,chosen?3:active?2:1.2,0,2*Math.PI);ctx.fill();
         });
         ctx.globalAlpha=1;
-        if(step===data.solverSteps) {
-          const [x,y]=points[step];ctx.strokeStyle=color;ctx.lineWidth=2;
-          ctx.beginPath();ctx.arc(x,y,5,0,2*Math.PI);ctx.stroke();
-        }
         ctx.restore();
         if(viewBounds) {
           const {left,right,top,bottom}=screen.plotRect;
@@ -170,8 +162,8 @@
           ctx.fillRect(x,y,endX-x,endY-y);ctx.strokeRect(x,y,endX-x,endY-y);ctx.restore();
         }
         const point=data.points[selected[step]];
-        const next=step<data.solverSteps?data.points[selected[step+1]]:null;
-        const vectorDescription=next?` Next PC1 ${next[0].toFixed(2)}, PC2 ${next[1].toFixed(2)}.`:" Finished; no next step.";
+        const next=data.points[selected[step+1]];
+        const vectorDescription=` Next PC1 ${next[0].toFixed(2)}, PC2 ${next[1].toFixed(2)}.`;
         canvas.setAttribute("aria-label",`${method==="diffusion"?denoisingName:"Flow matching"}, ${names[example]}, step ${step} of ${data.solverSteps}, PC1 ${point[0].toFixed(2)}, PC2 ${point[1].toFixed(2)}.${vectorDescription} Fixed shared PCA axes.${viewBounds?` Zoomed to PC1 ${viewBounds[0]}–${viewBounds[1]}, PC2 ${viewBounds[2]}–${viewBounds[3]}. Drag a rectangle to zoom both plots. Double-click to reset. Press Escape to cancel or reset zoom, plus or minus to zoom about the centre.`:""} Click any route to select it. Use left and right arrows to step through images.`);
       }
       function render() {
@@ -179,7 +171,7 @@
         charts.forEach(canvas=>renderChart(canvas,snapshot));
         control("step").value=String(step);
         control("example").value=String(example);
-        role("step").textContent=step<data.solverSteps?`${step} → ${step+1} / ${data.solverSteps}`:`${step} / ${data.solverSteps} steps`;
+        role("step").textContent=`${step} → ${step+1} / ${data.solverSteps}`;
 
         role("inspectors").replaceChildren(...["diffusion","flow"].map(method=>renderInspector(snapshot,method)));
         updatePlaybackControls();
@@ -188,7 +180,7 @@
         playing=false;paused=false;playbackId++;cancelAnimationFrame(animation);updatePlaybackControls();
       }
       function updatePlaybackControls() {
-        control("play").textContent=playing||paused?"Restart route":step===data.solverSteps?"Replay route":"Play route";
+        control("play").textContent=playing||paused?"Restart route":step===lastStep?"Replay route":"Play route";
         control("pause").textContent=paused?"Resume":"Pause";
         control("pause").disabled=!playing&&!paused;
       }
@@ -196,14 +188,14 @@
         clearHover();
         cancelAnimationFrame(animation);
         const id=++playbackId;
-        if(restart || step===data.solverSteps)step=0;
+        if(restart || step===lastStep)step=0;
         playing=true;paused=false;updatePlaybackControls();
         const started=performance.now(), initial=step;
         function frame(now) {
           if(!playing || id!==playbackId)return;
-          const next=Math.min(data.solverSteps,initial+Math.floor((now-started)/180));
+          const next=Math.min(lastStep,initial+Math.floor((now-started)/180));
           if(next!==step){step=next;render();}
-          if(step===data.solverSteps){stop();return;}
+          if(step===lastStep){stop();return;}
           animation=requestAnimationFrame(frame);
         }
         render();animation=requestAnimationFrame(frame);
@@ -345,7 +337,7 @@
             example=(example+(event.key==="ArrowDown"?1:names.length-1))%names.length;render();return;
           }
           if(event.key==="Escape"){render();return;}
-          step=event.key==="Home"?0:event.key==="End"?data.solverSteps:Math.max(0,Math.min(data.solverSteps,step+(event.key==="ArrowRight"?1:-1)));
+          step=event.key==="Home"?0:event.key==="End"?lastStep:Math.max(0,Math.min(lastStep,step+(event.key==="ArrowRight"?1:-1)));
           render();
         });
       });
