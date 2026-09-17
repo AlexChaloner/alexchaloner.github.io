@@ -41,6 +41,8 @@
         loadAtlas(mount.dataset.atlasUrl)]);
       if (data.projectionId !== reference.projectionId) throw Error("The recorded routes do not match the fixed PCA space");
       data.snapshots=data.snapshots.filter(snapshot=>snapshot.update>0);
+      const viewBounds=mount.dataset.viewBounds?JSON.parse(mount.dataset.viewBounds):null;
+      const plotRects=new Map();
       const sourcePrediction=data.predictionKind==="source";
       const denoisingName=sourcePrediction?"Source prediction":"Diffusion";
       const predictionLabel=sourcePrediction?"Predicted source zero":"Predicted noise";
@@ -116,7 +118,13 @@
         const {width,height}=canvas.getBoundingClientRect(), dpr=Math.min(2,window.devicePixelRatio||1);
         canvas.width=Math.max(1,Math.round(width*dpr));canvas.height=Math.max(1,Math.round(height*dpr));
         const ctx=canvas.getContext("2d");ctx.setTransform(dpr,0,0,dpr,0,0);
-        const screen=space.frame(ctx,width,height,reference);
+        const screen=space.frame(ctx,width,height,reference,viewBounds);
+        plotRects.set(canvas,screen.plotRect);
+        ctx.save();
+        if(viewBounds) {
+          const {left,right,top,bottom}=screen.plotRect;
+          ctx.beginPath();ctx.rect(left,top,right-left,bottom-top);ctx.clip();
+        }
         space.reference(ctx,reference,screen,.2);
         const method=canvas.dataset.method, journeys=snapshot[method], color=method==="diffusion"?"#7857b2":"#167d69";
         const allPoints=journeys.map(journey=>journey.map(id=>screen(data.points[id])));
@@ -149,10 +157,11 @@
           const [x,y]=points[step];ctx.strokeStyle=color;ctx.lineWidth=2;
           ctx.beginPath();ctx.arc(x,y,5,0,2*Math.PI);ctx.stroke();
         }
+        ctx.restore();
         const point=data.points[selected[step]];
         const next=step<data.solverSteps?data.points[selected[step+1]]:null;
         const vectorDescription=next?` Next PC1 ${next[0].toFixed(2)}, PC2 ${next[1].toFixed(2)}.`:" Finished; no next step.";
-        canvas.setAttribute("aria-label",`${method==="diffusion"?denoisingName:"Flow matching"}, ${names[example]}, step ${step} of ${data.solverSteps}, PC1 ${point[0].toFixed(2)}, PC2 ${point[1].toFixed(2)}.${vectorDescription} Fixed shared PCA axes. Click any route to select it. Use left and right arrows to step through images.`);
+        canvas.setAttribute("aria-label",`${method==="diffusion"?denoisingName:"Flow matching"}, ${names[example]}, step ${step} of ${data.solverSteps}, PC1 ${point[0].toFixed(2)}, PC2 ${point[1].toFixed(2)}.${vectorDescription} Fixed shared PCA axes.${viewBounds?` Zoomed to PC1 ${viewBounds[0]}–${viewBounds[1]}, PC2 ${viewBounds[2]}–${viewBounds[3]}.`:""} Click any route to select it. Use left and right arrows to step through images.`);
       }
       function render() {
         const snapshot=data.snapshots[snapshotIndex];
@@ -205,6 +214,8 @@
       });
       function routeAt(canvas,event) {
         const box=canvas.getBoundingClientRect(), x=event.clientX-box.left, y=event.clientY-box.top;
+        const rect=plotRects.get(canvas);
+        if(viewBounds&&rect&&(x<rect.left||x>rect.right||y<rect.top||y>rect.bottom))return null;
         const touch=event.pointerType==="touch" || window.matchMedia("(pointer: coarse)").matches;
         let nearest=null, distance=(touch?20:10)**2;
         (positions.get(canvas)||[]).forEach((points,lane)=>{

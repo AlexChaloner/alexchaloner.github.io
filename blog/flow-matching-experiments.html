@@ -88,7 +88,7 @@ title: "Flow matching diagrams"
   </section>
 
   <section class="fm-lab mnist-route-demo" id="digit-flow-lab" aria-labelledby="digit-flow-lab-title"
-    data-kind="transport" data-routes-url="{{ '/assets/mnist-transport-routes.json' | relative_url }}?v=paired32"
+    data-kind="transport" data-view-bounds="[20,40,0,25]" data-routes-url="{{ '/assets/mnist-transport-routes.json' | relative_url }}?v=paired32"
     data-atlas-url="{{ '/assets/mnist-route-atlas.png' | relative_url }}?v=paired32">
     <header class="fm-lab-header"><div>
       <p class="fm-section-label">Diagram 2</p>
@@ -114,7 +114,7 @@ title: "Flow matching diagrams"
           <canvas data-method="flow" tabindex="0" role="img" aria-label="Zero to Five: flow route in the shared PC1/PC2 space. Use left and right arrow keys to step through images."></canvas>
         </figure>
       </div>
-      <p class="mnist-route-note">The same fixed PC1/PC2 axes and vector view as Digit Generator. Bold arrows show the current step; faint arrows show other sampling times. Hover for image previews, or click an arrow to select its example and step.</p>
+      <p class="mnist-route-note">Zoomed to PC1 20–40 and PC2 0–25, using the same fixed PCA coordinates. The view is cropped; arrow lengths retain equal axis units. Bold arrows show the current step; faint arrows show other sampling times. Hover for image previews, or click an arrow to select its example and step.</p>
       <label class="mnist-route-scrubber">Sampling progress <output data-role="step"></output>
         <input data-control="step" type="range" min="0" max="24" step="1" value="12" aria-label="Zero to Five sampling step">
       </label>
@@ -130,6 +130,6 @@ title: "Flow matching diagrams"
 
 </article>
 
-<script src="{{ '/assets/mnist-space.js' | relative_url }}"></script>
+<script src="{{ '/assets/mnist-space.js' | relative_url }}?v=zoom1"></script>
 <script src="{{ '/assets/mnist-pca.js' | relative_url }}"></script>
-<script src="{{ '/assets/mnist-route-demo.js' | relative_url }}?v=paired32"></script>
+<script src="{{ '/assets/mnist-route-demo.js' | relative_url }}?v=zoom1"></script>
