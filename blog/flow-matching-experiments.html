@@ -8,7 +8,7 @@ title: "Flow matching diagrams"
 
 <link rel="stylesheet" href="{{ '/assets/flow-matching-demo.css' | relative_url }}">
 <link rel="stylesheet" href="{{ '/assets/mnist-pca.css' | relative_url }}">
-<link rel="stylesheet" href="{{ '/assets/mnist-route-demo.css' | relative_url }}?v=minimal1">
+<link rel="stylesheet" href="{{ '/assets/mnist-route-demo.css' | relative_url }}?v=always-steps1">
 
 <article class="fm-post">
   <header class="fm-hero">
@@ -60,7 +60,6 @@ title: "Flow matching diagrams"
       <div class="mnist-route-controls">
         <label>Training checkpoint <select data-control="checkpoint" aria-label="Digit Generator training checkpoint"></select></label>
         <label>Example <select data-control="example" aria-label="Digit Generator example"></select></label>
-        <label class="mnist-vector-check"><input data-control="context" type="checkbox" checked> Show other steps</label>
         <button type="button" data-control="play" title="Play the selected route from the beginning">Play route</button>
         <button type="button" data-control="pause" disabled>Pause</button>
       </div>
@@ -99,7 +98,6 @@ title: "Flow matching diagrams"
       <div class="mnist-route-controls">
         <label>Training checkpoint <select data-control="checkpoint" aria-label="Zero to Five training checkpoint"></select></label>
         <label>Example <select data-control="example" aria-label="Zero to Five example"></select></label>
-        <label class="mnist-vector-check"><input data-control="context" type="checkbox" checked> Show other steps</label>
         <button type="button" data-control="play" title="Play the selected route from the beginning">Play route</button>
         <button type="button" data-control="pause" disabled>Pause</button>
       </div>
@@ -132,4 +130,4 @@ title: "Flow matching diagrams"
 
 <script src="{{ '/assets/mnist-space.js' | relative_url }}?v=zoom1"></script>
 <script src="{{ '/assets/mnist-pca.js' | relative_url }}?v=minimal1"></script>
-<script src="{{ '/assets/mnist-route-demo.js' | relative_url }}?v=minimal1"></script>
+<script src="{{ '/assets/mnist-route-demo.js' | relative_url }}?v=always-steps1"></script>

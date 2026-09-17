@@ -122,7 +122,7 @@
         const order=journeys.map((_,i)=>i).filter(i=>i!==example).concat(example);
         const selected=journeys[example], points=allPoints[example];
         const items=[];
-        if(control("context").checked)for(let t=0;t<data.solverSteps;t+=3)if(t!==step)
+        for(let t=0;t<data.solverSteps;t+=3)if(t!==step)
           order.forEach(lane=>items.push({lane,step:t}));
         if(step<data.solverSteps)order.forEach(lane=>items.push({lane,step}));
         items.forEach(item=>{
@@ -195,7 +195,6 @@
         hover.clear();tooltips.forEach(tooltip=>{tooltip.hidden=true;});
         charts.forEach(canvas=>{canvas.style.cursor="crosshair";});
       }
-      if(control("context"))control("context").addEventListener("change",()=>{clearHover();render();});
       control("checkpoint").addEventListener("change",()=>{stop();clearHover();snapshotIndex=Number(control("checkpoint").value);render();});
       control("example").addEventListener("change",()=>{stop();clearHover();example=Number(control("example").value);render();});
       control("step").addEventListener("input",()=>{stop();clearHover();step=Number(control("step").value);render();});
@@ -214,7 +213,7 @@
         let nearest=null, distance=(touch?20:10)**2;
         (positions.get(canvas)||[]).forEach((points,lane)=>{
           for(let i=0;i<points.length-1;i++) {
-            if(i!==step&&!(control("context").checked&&i%3===0))continue;
+            if(i!==step&&i%3!==0)continue;
             const [ax,ay]=points[i], [bx,by]=points[i+1], dx=bx-ax, dy=by-ay;
             const fraction=Math.max(0,Math.min(1,((x-ax)*dx+(y-ay)*dy)/(dx*dx+dy*dy||1)));
             const d=(x-ax-fraction*dx)**2+(y-ay-fraction*dy)**2;
