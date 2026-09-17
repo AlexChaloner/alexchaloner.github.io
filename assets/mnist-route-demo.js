@@ -41,13 +41,14 @@
         loadAtlas(mount.dataset.atlasUrl)]);
       if (data.projectionId !== reference.projectionId) throw Error("The recorded routes do not match the fixed PCA space");
       data.snapshots=data.snapshots.filter(snapshot=>snapshot.update>0);
+      const vectors=mount.dataset.view==="vectors";
       let snapshotIndex=Math.max(0,data.snapshots.findIndex(snapshot=>snapshot.update===(data.defaultCheckpoint || 100)));
-      let example=0, step=0, animation=0, playing=false, paused=false, playbackId=0;
+      let example=0, step=vectors?12:0, animation=0, playing=false, paused=false, playbackId=0;
       const names=data.exampleNames || Array.from({length:data.sampleCount},(_,i)=>`${data.kind==="generator"?"Noise":"Zero"} ${String.fromCharCode(65+i)} → ${data.kind==="generator"?"0":"5"}`);
       const charts=[...mount.querySelectorAll("canvas[data-method]")];
       const positions=new Map(), hover=new Map(), tooltips=new Map();
       charts.forEach(canvas=>{
-        const tooltip=document.createElement("div");tooltip.className="mnist-route-tooltip";tooltip.hidden=true;
+        const tooltip=document.createElement("div");tooltip.className="mnist-route-tooltip"+(vectors?" mnist-vector-tooltip":"");tooltip.hidden=true;
         tooltip.setAttribute("role","tooltip");canvas.parentElement.append(tooltip);tooltips.set(canvas,tooltip);
       });
       data.snapshots.forEach((snapshot,i) => control("checkpoint").add(new Option(`${snapshot.update.toLocaleString()} updates`,i)));
@@ -104,7 +105,7 @@
           button.type="button";button.setAttribute("aria-label",`${method} step ${frame}`);
           button.setAttribute("aria-pressed",String(Math.round(step/data.solverSteps*5)===i));
           const tile=card(`Step ${frame}`,journey[frame]);button.append(tile);
-          button.addEventListener("click",()=>{stop();step=frame;render();});film.append(button);
+          button.addEventListener("click",()=>{stop();clearHover();step=frame;render();});film.append(button);
         }
         inspector.append(heading,coordinate,cards,film);return inspector;
       }
@@ -119,27 +120,57 @@
         positions.set(canvas,allPoints);
         const hovered=hover.get(canvas);
         const order=journeys.map((_,i)=>i).filter(i=>i!==example).concat(example);
-        order.forEach(lane=>{
-          ctx.globalAlpha=lane === example ? 1 : lane === hovered?.lane ? .65 : .3;
-          ctx.lineWidth=lane === example || lane === hovered?.lane ? 2.5 : 1.3;ctx.strokeStyle=color;
-          ctx.beginPath();allPoints[lane].forEach(([x,y],i)=>{if(i===0)ctx.moveTo(x,y);else ctx.lineTo(x,y);});ctx.stroke();
-        });
-        ctx.globalAlpha=1;
         const selected=journeys[example], points=allPoints[example];
-        ctx.fillStyle=color;
-        points.forEach(([x,y])=>{ctx.beginPath();ctx.arc(x,y,2,0,2*Math.PI);ctx.fill();});
-        const [x,y]=points[step];
-        ctx.strokeStyle=color;ctx.lineWidth=2;ctx.strokeRect(x-13,y-13,26,26);
-        imageTile(ctx,atlas,selected[step],x-11,y-11,22,data);
+        if(vectors) {
+          const items=[];
+          if(control("context").checked)for(let t=0;t<data.solverSteps;t+=3)if(t!==step)
+            order.forEach(lane=>items.push({lane,step:t}));
+          if(step<data.solverSteps)order.forEach(lane=>items.push({lane,step}));
+          items.forEach(item=>{
+            const active=item.step===step, chosen=active&&item.lane===example;
+            const highlighted=hovered?.lane===item.lane&&hovered?.step===item.step;
+            const [x,y]=allPoints[item.lane][item.step], [endX,endY]=allPoints[item.lane][item.step+1];
+            const dx=endX-x, dy=endY-y, length=Math.hypot(dx,dy);
+            ctx.globalAlpha=chosen||highlighted ? 1 : active ? .7 : .22;
+            ctx.strokeStyle=color;ctx.fillStyle=color;ctx.lineWidth=chosen||highlighted?2.5:active?1.8:1;
+            ctx.beginPath();ctx.moveTo(x,y);ctx.lineTo(endX,endY);ctx.stroke();
+            if(length>.1) {
+              const head=Math.min(6,length*.45), ux=dx/length, uy=dy/length;
+              ctx.beginPath();ctx.moveTo(endX,endY);
+              ctx.lineTo(endX-head*ux+head*.45*uy,endY-head*uy-head*.45*ux);
+              ctx.lineTo(endX-head*ux-head*.45*uy,endY-head*uy+head*.45*ux);ctx.closePath();ctx.fill();
+            }
+            ctx.beginPath();ctx.arc(x,y,chosen?3:active?2:1.2,0,2*Math.PI);ctx.fill();
+          });
+          ctx.globalAlpha=1;
+          if(step===data.solverSteps) {
+            const [x,y]=points[step];ctx.strokeStyle=color;ctx.lineWidth=2;
+            ctx.beginPath();ctx.arc(x,y,5,0,2*Math.PI);ctx.stroke();
+          }
+        } else {
+          order.forEach(lane=>{
+            ctx.globalAlpha=lane === example ? 1 : lane === hovered?.lane ? .65 : .3;
+            ctx.lineWidth=lane === example || lane === hovered?.lane ? 2.5 : 1.3;ctx.strokeStyle=color;
+            ctx.beginPath();allPoints[lane].forEach(([x,y],i)=>{if(i===0)ctx.moveTo(x,y);else ctx.lineTo(x,y);});ctx.stroke();
+          });
+          ctx.globalAlpha=1;
+          ctx.fillStyle=color;
+          points.forEach(([x,y])=>{ctx.beginPath();ctx.arc(x,y,2,0,2*Math.PI);ctx.fill();});
+          const [x,y]=points[step];
+          ctx.strokeStyle=color;ctx.lineWidth=2;ctx.strokeRect(x-13,y-13,26,26);
+          imageTile(ctx,atlas,selected[step],x-11,y-11,22,data);
+        }
         const point=data.points[selected[step]];
-        canvas.setAttribute("aria-label",`${method==="diffusion"?"Diffusion":"Flow matching"}, ${names[example]}, step ${step} of ${data.solverSteps}, PC1 ${point[0].toFixed(2)}, PC2 ${point[1].toFixed(2)}. Fixed shared PCA axes. Click any route to select it. Use left and right arrows to step through images.`);
+        const next=step<data.solverSteps?data.points[selected[step+1]]:null;
+        const vectorDescription=vectors?(next?` Next PC1 ${next[0].toFixed(2)}, PC2 ${next[1].toFixed(2)}.`:" Finished; no next step."):"";
+        canvas.setAttribute("aria-label",`${method==="diffusion"?"Diffusion":"Flow matching"}, ${names[example]}, step ${step} of ${data.solverSteps}, PC1 ${point[0].toFixed(2)}, PC2 ${point[1].toFixed(2)}.${vectorDescription} Fixed shared PCA axes. Click any route to select it. Use left and right arrows to step through images.`);
       }
       function render() {
         const snapshot=data.snapshots[snapshotIndex];
         charts.forEach(canvas=>renderChart(canvas,snapshot));
         control("step").value=String(step);
         control("example").value=String(example);
-        role("step").textContent=`${step} / ${data.solverSteps} steps`;
+        role("step").textContent=vectors&&step<data.solverSteps?`${step} → ${step+1} / ${data.solverSteps}`:`${step} / ${data.solverSteps} steps`;
         role("loss").textContent=`Recorded training MSE · diffusion ${snapshot.diffusionLoss.toFixed(4)} · flow ${snapshot.flowLoss.toFixed(4)} · Different targets; these losses are not directly comparable.`;
         role("inspectors").replaceChildren(...["diffusion","flow"].map(method=>renderInspector(snapshot,method)));
         renderTargets(snapshot);updatePlaybackControls();
@@ -153,6 +184,7 @@
         control("pause").disabled=!playing&&!paused;
       }
       function startPlayback(restart) {
+        clearHover();
         cancelAnimationFrame(animation);
         const id=++playbackId;
         if(restart || step===data.solverSteps)step=0;
@@ -171,9 +203,10 @@
         hover.clear();tooltips.forEach(tooltip=>{tooltip.hidden=true;});
         charts.forEach(canvas=>{canvas.style.cursor="crosshair";});
       }
+      if(control("context"))control("context").addEventListener("change",()=>{clearHover();render();});
       control("checkpoint").addEventListener("change",()=>{stop();clearHover();snapshotIndex=Number(control("checkpoint").value);render();});
-      control("example").addEventListener("change",()=>{stop();example=Number(control("example").value);render();});
-      control("step").addEventListener("input",()=>{stop();step=Number(control("step").value);render();});
+      control("example").addEventListener("change",()=>{stop();clearHover();example=Number(control("example").value);render();});
+      control("step").addEventListener("input",()=>{stop();clearHover();step=Number(control("step").value);render();});
       if(control("training-time")) control("training-time").addEventListener("change",()=>renderTargets(data.snapshots[snapshotIndex]));
       control("play").addEventListener("click",()=>startPlayback(true));
       control("pause").addEventListener("click",()=>{
@@ -187,11 +220,12 @@
         let nearest=null, distance=(touch?20:10)**2;
         (positions.get(canvas)||[]).forEach((points,lane)=>{
           for(let i=0;i<points.length-1;i++) {
+            if(vectors&&i!==step&&!(control("context").checked&&i%3===0))continue;
             const [ax,ay]=points[i], [bx,by]=points[i+1], dx=bx-ax, dy=by-ay;
             const fraction=Math.max(0,Math.min(1,((x-ax)*dx+(y-ay)*dy)/(dx*dx+dy*dy||1)));
             const d=(x-ax-fraction*dx)**2+(y-ay-fraction*dy)**2;
             if(d<distance || (d===distance && lane===example)) {
-              nearest={lane,step:i+(fraction>=.5?1:0),x,y};distance=d;
+              nearest={lane,step:vectors?i:i+(fraction>=.5?1:0),x,y};distance=d;
             }
           }
         });
@@ -200,26 +234,39 @@
       charts.forEach(canvas=>{
         canvas.addEventListener("click",event=>{
           const nearest=routeAt(canvas,event);
-          if(nearest){stop();example=nearest.lane;step=nearest.step;render();}
+          if(nearest){stop();clearHover();example=nearest.lane;step=nearest.step;render();}
         });
         canvas.addEventListener("pointermove",event=>{
           if(event.pointerType==="touch")return;
           const nearest=routeAt(canvas,event), previous=hover.get(canvas), tooltip=tooltips.get(canvas);
           if(nearest) {
-            hover.set(canvas,nearest);tooltip.textContent=`${names[nearest.lane]} · step ${nearest.step}`;tooltip.hidden=false;
+            hover.set(canvas,nearest);
+            if(vectors) {
+              const path=data.snapshots[snapshotIndex][canvas.dataset.method][nearest.lane];
+              const title=document.createElement("strong");title.textContent=`${names[nearest.lane]} · ${nearest.step} → ${nearest.step+1}`;
+              const preview=document.createElement("canvas");preview.width=68;preview.height=32;preview.setAttribute("aria-hidden","true");
+              const ctx=preview.getContext("2d");
+              imageTile(ctx,atlas,path[nearest.step],0,0,32,data);imageTile(ctx,atlas,path[nearest.step+1],36,0,32,data);
+              tooltip.replaceChildren(title,preview);
+            }else tooltip.textContent=`${names[nearest.lane]} · step ${nearest.step}`;
+            tooltip.hidden=false;
             tooltip.style.left=`${Math.max(4,Math.min(canvas.clientWidth-tooltip.offsetWidth-4,nearest.x+12))}px`;
             tooltip.style.top=`${Math.max(canvas.offsetTop+4,canvas.offsetTop+nearest.y-tooltip.offsetHeight-12)}px`;
             canvas.style.cursor="pointer";
           } else {hover.delete(canvas);tooltip.hidden=true;canvas.style.cursor="crosshair";}
-          if(previous?.lane!==nearest?.lane)renderChart(canvas,data.snapshots[snapshotIndex]);
+          if(previous?.lane!==nearest?.lane||previous?.step!==nearest?.step)renderChart(canvas,data.snapshots[snapshotIndex]);
         });
         canvas.addEventListener("pointerleave",()=>{
           hover.delete(canvas);tooltips.get(canvas).hidden=true;canvas.style.cursor="crosshair";
           renderChart(canvas,data.snapshots[snapshotIndex]);
         });
         canvas.addEventListener("keydown",event=>{
-          if(!["ArrowLeft","ArrowRight","Home","End"].includes(event.key))return;
-          event.preventDefault();stop();
+          if(!["ArrowLeft","ArrowRight","ArrowUp","ArrowDown","Home","End","Escape"].includes(event.key))return;
+          event.preventDefault();stop();clearHover();
+          if(event.key==="ArrowUp"||event.key==="ArrowDown") {
+            example=(example+(event.key==="ArrowDown"?1:names.length-1))%names.length;render();return;
+          }
+          if(event.key==="Escape"){render();return;}
           step=event.key==="Home"?0:event.key==="End"?data.solverSteps:Math.max(0,Math.min(data.solverSteps,step+(event.key==="ArrowRight"?1:-1)));
           render();
         });

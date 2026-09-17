@@ -40,10 +40,7 @@
 .mnist-route-charts > figure { position: relative; }
 .mnist-route-tooltip { position: absolute; z-index: 2; max-width: calc(100% - 8px); padding: .5rem .65rem; border: 1px solid var(--line); border-radius: 6px; background: #fff; color: var(--ink); box-shadow: 0 3px 12px #17211d20; pointer-events: none; font: 600 .8rem/1.4 system-ui, sans-serif; }
 .mnist-route-tooltip[hidden] { display: none; }
-.mnist-vector-content[hidden] { display: none; }
-.mnist-vector-status { color: var(--muted); font-size: .86rem; }
 .mnist-route-controls .mnist-vector-check { display: flex; gap: .5rem; align-items: center; padding: .6rem 0; }
 .mnist-vector-check input { accent-color: var(--flow); }
 .mnist-vector-tooltip strong { display: block; margin-bottom: .4rem; }
 .mnist-vector-tooltip canvas { width: 136px; height: 64px; image-rendering: pixelated; }
-.mnist-vector-demo :focus-visible { outline: 3px solid var(--flow); outline-offset: 2px; }
