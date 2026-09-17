@@ -8,7 +8,7 @@ title: "Flow matching diagrams"
 
 <link rel="stylesheet" href="{{ '/assets/flow-matching-demo.css' | relative_url }}">
 <link rel="stylesheet" href="{{ '/assets/mnist-pca.css' | relative_url }}">
-<link rel="stylesheet" href="{{ '/assets/mnist-route-demo.css' | relative_url }}?v=rectangle-zoom1">
+<link rel="stylesheet" href="{{ '/assets/mnist-route-demo.css' | relative_url }}?v=three-nine1">
 
 <article class="fm-post">
   <header class="fm-hero">
@@ -18,7 +18,7 @@ title: "Flow matching diagrams"
     <nav class="fm-meta" aria-label="Diagram index">
       <a href="#mnist-pca">MNIST map</a>
       <a href="#mnist-lab">1: Digit Generator</a>
-      <a href="#digit-flow-lab">2: Zero to Five</a>
+      <a href="#digit-flow-lab">2: Three to Nine</a>
     </nav>
   </header>
 
@@ -48,8 +48,8 @@ title: "Flow matching diagrams"
 
   <span id="diagram-dots" aria-hidden="true"></span>
   <section class="fm-lab mnist-route-demo" id="mnist-lab" aria-labelledby="mnist-lab-title"
-    data-kind="generator" data-routes-url="{{ '/assets/mnist-generator-routes.json' | relative_url }}?v=paired4800"
-    data-atlas-url="{{ '/assets/mnist-route-atlas.png' | relative_url }}?v=paired4800">
+    data-kind="generator" data-routes-url="{{ '/assets/mnist-generator-routes.json' | relative_url }}?v=three-nine4800"
+    data-atlas-url="{{ '/assets/mnist-route-atlas.png' | relative_url }}?v=three-nine4800">
     <header class="fm-lab-header"><div>
       <p class="fm-section-label">Diagram 1</p>
       <h2 id="mnist-lab-title">Digit Generator</h2>
@@ -85,44 +85,44 @@ title: "Flow matching diagrams"
   </section>
 
   <section class="fm-lab mnist-route-demo" id="digit-flow-lab" aria-labelledby="digit-flow-lab-title"
-    data-kind="transport" data-view-bounds="[20,40,0,25]" data-routes-url="{{ '/assets/mnist-transport-routes.json' | relative_url }}?v=paired4800"
-    data-atlas-url="{{ '/assets/mnist-route-atlas.png' | relative_url }}?v=paired4800">
+    data-kind="transport" data-view-bounds="[20,40,-25,30]" data-routes-url="{{ '/assets/mnist-transport-routes.json' | relative_url }}?v=three-nine4800"
+    data-atlas-url="{{ '/assets/mnist-route-atlas.png' | relative_url }}?v=three-nine4800">
     <header class="fm-lab-header"><div>
       <p class="fm-section-label">Diagram 2</p>
-      <h2 id="digit-flow-lab-title">Zero to Five</h2>
+      <h2 id="digit-flow-lab-title">Three to Nine</h2>
       <p class="mnist-route-intro">[placeholder description]</p>
 
     </div></header>
     <p class="mnist-route-status" role="status">Loading…</p>
     <div class="mnist-route-content" hidden>
       <div class="mnist-route-controls">
-        <label>Training checkpoint <select data-control="checkpoint" aria-label="Zero to Five training checkpoint"></select></label>
-        <label>Example <select data-control="example" aria-label="Zero to Five example"></select></label>
+        <label>Training checkpoint <select data-control="checkpoint" aria-label="Three to Nine training checkpoint"></select></label>
+        <label>Example <select data-control="example" aria-label="Three to Nine example"></select></label>
         <button type="button" data-control="play" title="Play the selected route from the beginning">Play route</button>
         <button type="button" data-control="pause" disabled>Pause</button>
       </div>
 
       <figure class="mnist-zoom-overview">
-        <canvas data-role="overview" role="img" aria-label="Full PC1/PC2 map. The outlined rectangle marks PC1 20 to 40 and PC2 0 to 25, enlarged in both plots below."></canvas>
-        <figcaption><strong>Full PC1/PC2</strong><span class="mnist-zoom-key">Selected region</span><span data-role="zoom-bounds" aria-live="polite">PC1 20–40 · PC2 0–25</span><span class="mnist-zoom-direction"><span aria-hidden="true">↓</span> Zoomed below</span></figcaption>
+        <canvas data-role="overview" role="img" aria-label="Full PC1/PC2 map. The outlined rectangle marks PC1 20 to 40 and PC2 −25 to 30, enlarged in both plots below."></canvas>
+        <figcaption><strong>Full PC1/PC2</strong><span class="mnist-zoom-key">Selected region</span><span data-role="zoom-bounds" aria-live="polite">PC1 20–40 · PC2 −25–30</span><span class="mnist-zoom-direction"><span aria-hidden="true">↓</span> Zoomed below</span></figcaption>
       </figure>
       <div class="mnist-zoom-tools">
-        <div class="mnist-digit-key" aria-label="Digit colours"><span data-digit="0">Zero (0)</span><span data-digit="5">Five (5)</span></div>
+        <div class="mnist-digit-key" aria-label="Digit colours"><span data-digit="3">Three (3)</span><span data-digit="9">Nine (9)</span></div>
         <span class="mnist-route-note">Drag to zoom · Double-click to reset</span>
         <button type="button" data-control="reset-zoom" disabled>Reset zoom</button>
       </div>
       <div class="mnist-route-charts">
         <figure><figcaption><strong>Denoising</strong><span>Predict source</span></figcaption>
-          <canvas data-method="diffusion" tabindex="0" role="img" aria-label="Zero to Five: source-prediction vectors in the shared PC1/PC2 space. Use left and right arrow keys to step through images."></canvas>
+          <canvas data-method="diffusion" tabindex="0" role="img" aria-label="Three to Nine: source-prediction vectors in the shared PC1/PC2 space. Use left and right arrow keys to step through images."></canvas>
         </figure>
         <figure><figcaption><strong>Flow matching</strong><span>Predict velocity</span></figcaption>
-          <canvas data-method="flow" tabindex="0" role="img" aria-label="Zero to Five: flow route in the shared PC1/PC2 space. Use left and right arrow keys to step through images."></canvas>
+          <canvas data-method="flow" tabindex="0" role="img" aria-label="Three to Nine: flow route in the shared PC1/PC2 space. Use left and right arrow keys to step through images."></canvas>
         </figure>
       </div>
 
       <p class="mnist-route-note">Hover to preview · Click to select</p>
       <label class="mnist-route-scrubber">Sampling progress <output data-role="step"></output>
-        <input data-control="step" type="range" min="0" max="24" step="1" value="12" aria-label="Zero to Five sampling step">
+        <input data-control="step" type="range" min="0" max="24" step="1" value="12" aria-label="Three to Nine sampling step">
       </label>
       <div class="mnist-route-inspectors" data-role="inspectors"></div>
       <p class="mnist-route-note">Predictions: blue + · orange −</p>
@@ -133,6 +133,6 @@ title: "Flow matching diagrams"
 
 </article>
 
-<script src="{{ '/assets/mnist-space.js' | relative_url }}?v=rectangle-zoom1"></script>
+<script src="{{ '/assets/mnist-space.js' | relative_url }}?v=three-nine1"></script>
 <script src="{{ '/assets/mnist-pca.js' | relative_url }}?v=minimal1"></script>
-<script src="{{ '/assets/mnist-route-demo.js' | relative_url }}?v=rectangle-zoom1"></script>
+<script src="{{ '/assets/mnist-route-demo.js' | relative_url }}?v=three-nine1"></script>

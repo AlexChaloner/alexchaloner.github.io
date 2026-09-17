@@ -59,3 +59,5 @@
 .mnist-digit-key span::before { content: ""; display: inline-block; width: .65rem; height: .65rem; margin-right: .4rem; border-radius: 50%; background: var(--digit-color); }
 .mnist-zoom-tools button { margin-left: auto; padding: .4rem .65rem; border: 1px solid var(--line); border-radius: 6px; background: var(--paper); color: var(--ink); font: inherit; font-size: .8rem; cursor: pointer; }
 .mnist-zoom-tools button:disabled { opacity: .45; cursor: default; }
+
+.mnist-route-unavailable { display: grid; place-items: center; width: 100%; aspect-ratio: 1; background: #000; color: #aaa; font: .65rem system-ui, sans-serif; }

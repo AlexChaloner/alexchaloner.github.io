@@ -46,11 +46,12 @@
       const dragged=new Set();
       const plotRects=new Map();
       const sourcePrediction=data.predictionKind==="source";
+      const sourceDigit=data.sourceDigit??0, targetDigit=data.targetDigit??(data.kind==="transport"?5:0);
       const denoisingName=sourcePrediction?"Denoising":"Diffusion";
       const predictionLabel=sourcePrediction?"Predicted source":"Predicted noise";
       let snapshotIndex=Math.max(0,data.snapshots.findIndex(snapshot=>snapshot.update===(data.defaultCheckpoint || 100)));
       let example=0, step=12, animation=0, playing=false, paused=false, playbackId=0;
-      const names=data.exampleNames || Array.from({length:data.sampleCount},(_,i)=>`${data.kind==="generator"?"Noise":"Zero"} ${String.fromCharCode(65+i)} → ${data.kind==="generator"?"0":"5"}`);
+      const names=data.exampleNames || Array.from({length:data.sampleCount},(_,i)=>`${data.kind==="generator"?"Noise":`Digit ${sourceDigit}`} ${String.fromCharCode(65+i)} → ${targetDigit}`);
       const charts=[...mount.querySelectorAll("canvas[data-method]")];
       const positions=new Map(), hover=new Map(), tooltips=new Map();
       mount.querySelectorAll('[data-digit]').forEach(key=>key.style.setProperty('--digit-color',space.colors[Number(key.dataset.digit)]));
@@ -67,10 +68,13 @@
         caption.textContent=label;
         let canvas;
         if(signal) canvas=signalCanvas(signal,scale);
-        else {
+        else if(id!=null) {
           canvas=document.createElement("canvas");canvas.width=canvas.height=data.imageSide;
           canvas.setAttribute("role","img");canvas.setAttribute("aria-label",label);
           imageTile(canvas.getContext("2d"),atlas,id,0,0,data.imageSide,data);
+        } else {
+          canvas=document.createElement("div");canvas.className="mnist-route-unavailable";
+          canvas.textContent="N/A";canvas.setAttribute("role","img");canvas.setAttribute("aria-label",`${label}: not applicable at the final step`);
         }
         figure.append(caption,canvas);return figure;
       }
@@ -82,8 +86,8 @@
         cards.append(card("Start",journey[0]),card("Now",current));
         if(step<data.solverSteps) {
           cards.append(card(method==="diffusion"?predictionLabel:"Predicted velocity",null,snapshot.predictions[method][example][step]),card("Next",journey[step+1]));
-        } else cards.append(card("Finished",current));
-        if(snapshot.targets) cards.append(card("Paired five",snapshot.targets[example]));
+        } else cards.append(card(method==="diffusion"?predictionLabel:"Predicted velocity",null),card("Next",null));
+        if(snapshot.targets) cards.append(card(`Paired ${targetDigit}`,snapshot.targets[example]));
         const film=document.createElement("div");film.className="mnist-route-film";
         for(let i=0;i<6;i++) {
           const frame=Math.round(i*data.solverSteps/5), button=document.createElement("button");
@@ -121,7 +125,7 @@
           const {left,right,top,bottom}=screen.plotRect;
           ctx.beginPath();ctx.rect(left,top,right-left,bottom-top);ctx.clip();
         }
-        const dotOpacity=viewBounds&&data.kind==="transport" ? label => (label===0||label===5 ? .2 : .0025) : .2;
+        const dotOpacity=viewBounds&&data.kind==="transport" ? label => (label===sourceDigit||label===targetDigit ? .2 : .0025) : .2;
         space.reference(ctx,reference,screen,dotOpacity,viewBounds&&data.kind==="transport"?2.75:2);
         const method=canvas.dataset.method, journeys=snapshot[method], color=method==="diffusion"?"#7857b2":"#167d69";
         const allPoints=journeys.map(journey=>journey.map(id=>screen(data.points[id])));
