@@ -122,7 +122,7 @@
           ctx.beginPath();ctx.rect(left,top,right-left,bottom-top);ctx.clip();
         }
         const dotOpacity=viewBounds&&data.kind==="transport" ? label => (label===0||label===5 ? .2 : .0025) : .2;
-        space.reference(ctx,reference,screen,dotOpacity);
+        space.reference(ctx,reference,screen,dotOpacity,viewBounds&&data.kind==="transport"?2.75:2);
         const method=canvas.dataset.method, journeys=snapshot[method], color=method==="diffusion"?"#7857b2":"#167d69";
         const allPoints=journeys.map(journey=>journey.map(id=>screen(data.points[id])));
         positions.set(canvas,allPoints);
@@ -168,7 +168,7 @@
         const point=data.points[selected[step]];
         const next=step<data.solverSteps?data.points[selected[step+1]]:null;
         const vectorDescription=next?` Next PC1 ${next[0].toFixed(2)}, PC2 ${next[1].toFixed(2)}.`:" Finished; no next step.";
-        canvas.setAttribute("aria-label",`${method==="diffusion"?denoisingName:"Flow matching"}, ${names[example]}, step ${step} of ${data.solverSteps}, PC1 ${point[0].toFixed(2)}, PC2 ${point[1].toFixed(2)}.${vectorDescription} Fixed shared PCA axes.${viewBounds?` Zoomed to PC1 ${viewBounds[0]}–${viewBounds[1]}, PC2 ${viewBounds[2]}–${viewBounds[3]}. Drag a square to zoom both plots. Press Escape to cancel or reset zoom, plus or minus to zoom about the centre.`:""} Click any route to select it. Use left and right arrows to step through images.`);
+        canvas.setAttribute("aria-label",`${method==="diffusion"?denoisingName:"Flow matching"}, ${names[example]}, step ${step} of ${data.solverSteps}, PC1 ${point[0].toFixed(2)}, PC2 ${point[1].toFixed(2)}.${vectorDescription} Fixed shared PCA axes.${viewBounds?` Zoomed to PC1 ${viewBounds[0]}–${viewBounds[1]}, PC2 ${viewBounds[2]}–${viewBounds[3]}. Drag a rectangle to zoom both plots. Double-click to reset. Press Escape to cancel or reset zoom, plus or minus to zoom about the centre.`:""} Click any route to select it. Use left and right arrows to step through images.`);
       }
       function render() {
         const snapshot=data.snapshots[snapshotIndex];
@@ -222,9 +222,8 @@
       function moveSelection(event) {
         const box=selection.canvas.getBoundingClientRect(), {x,y,rect}=selection;
         const dx=event.clientX-box.left-x, dy=event.clientY-box.top-y;
-        const signX=dx<0?-1:1, signY=dy<0?-1:1;
-        const side=Math.min(Math.max(Math.abs(dx),Math.abs(dy)),signX<0?x-rect.left:rect.right-x,signY<0?y-rect.top:rect.bottom-y);
-        selection.endX=x+signX*side;selection.endY=y+signY*side;
+        selection.endX=Math.max(rect.left,Math.min(rect.right,x+dx));
+        selection.endY=Math.max(rect.top,Math.min(rect.bottom,y+dy));
         if(Math.hypot(dx,dy)>=8)dragged.add(selection.canvas);
       }
       control("checkpoint").addEventListener("change",()=>{stop();clearHover();snapshotIndex=Number(control("checkpoint").value);render();});
@@ -274,11 +273,11 @@
             if(selection?.canvas!==canvas||selection.pointerId!==event.pointerId)return;
             moveSelection(event);
             const {x,y,endX,endY,rect}=selection;
-            if(Math.abs(endX-x)>=8) {
+            if(Math.abs(endX-x)>=8&&Math.abs(endY-y)>=8) {
               const pcX=p=>viewBounds[0]+(p-rect.left)/(rect.right-rect.left)*(viewBounds[1]-viewBounds[0]);
               const pcY=p=>viewBounds[3]-(p-rect.top)/(rect.bottom-rect.top)*(viewBounds[3]-viewBounds[2]);
               const bounds=[pcX(Math.min(x,endX)),pcX(Math.max(x,endX)),pcY(Math.max(y,endY)),pcY(Math.min(y,endY))];
-              if(bounds[1]-bounds[0]>=.001)setZoom(bounds);
+              if(bounds[1]-bounds[0]>=.001&&bounds[3]-bounds[2]>=.001)setZoom(bounds);
             }
             cancelSelection();renderChart(canvas,data.snapshots[snapshotIndex]);
           });
