@@ -1,5 +1,5 @@
 ---
-layout: default
+layout: blog-post
 title: "The Future of AI: Scaling Laws Cannot Beat The Fractal Problem"
 date: 2026-09-07
 ---

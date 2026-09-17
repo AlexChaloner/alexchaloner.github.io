@@ -1,0 +1,23 @@
+.blog-post {
+  width: calc(100% - 2rem);
+  max-width: 48rem;
+  margin: 2rem auto;
+}
+
+.blog-post:not(.blog-post--wide) {
+  line-height: 1.55;
+  overflow-wrap: break-word;
+}
+
+.blog-post--wide {
+  max-width: 1120px;
+}
+
+.blog-post .idbd-post {
+  width: 100%;
+}
+
+.blog-post img {
+  max-width: 100%;
+  height: auto;
+}

@@ -1,5 +1,6 @@
 {% assign blog_pages = site.pages | where_exp: 'p', "p.url contains '/blog/'" %}
 {% assign local_posts = blog_pages | where_exp: 'p', 'p.date != nil' %}
+{% assign local_posts = local_posts | where_exp: 'p', 'p.listed != false' %}
 {% assign sorted_posts = local_posts | concat: site.data.external_posts | sort: 'date' | reverse %}
 <ul>
   {% for post in sorted_posts %}
