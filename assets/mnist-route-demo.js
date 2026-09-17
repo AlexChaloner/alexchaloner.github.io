@@ -41,7 +41,9 @@
         loadAtlas(mount.dataset.atlasUrl)]);
       if (data.projectionId !== reference.projectionId) throw Error("The recorded routes do not match the fixed PCA space");
       data.snapshots=data.snapshots.filter(snapshot=>snapshot.update>0);
-      const viewBounds=mount.dataset.viewBounds?JSON.parse(mount.dataset.viewBounds):null;
+      const initialBounds=mount.dataset.viewBounds?JSON.parse(mount.dataset.viewBounds):null;
+      let viewBounds=initialBounds, selection=null;
+      const dragged=new Set();
       const plotRects=new Map();
       const sourcePrediction=data.predictionKind==="source";
       const denoisingName=sourcePrediction?"Denoising":"Diffusion";
@@ -51,6 +53,7 @@
       const names=data.exampleNames || Array.from({length:data.sampleCount},(_,i)=>`${data.kind==="generator"?"Noise":"Zero"} ${String.fromCharCode(65+i)} → ${data.kind==="generator"?"0":"5"}`);
       const charts=[...mount.querySelectorAll("canvas[data-method]")];
       const positions=new Map(), hover=new Map(), tooltips=new Map();
+      mount.querySelectorAll('[data-digit]').forEach(key=>key.style.setProperty('--digit-color',space.colors[Number(key.dataset.digit)]));
       charts.forEach(canvas=>{
         const tooltip=document.createElement("div");tooltip.className="mnist-route-tooltip mnist-vector-tooltip";tooltip.hidden=true;
         tooltip.setAttribute("role","tooltip");canvas.parentElement.append(tooltip);tooltips.set(canvas,tooltip);
@@ -102,6 +105,10 @@
         const [left,top]=screen([viewBounds[0],viewBounds[3]]), [right,bottom]=screen([viewBounds[1],viewBounds[2]]);
         ctx.fillStyle="rgba(95,109,102,.06)";ctx.fillRect(left,top,right-left,bottom-top);
         ctx.strokeStyle="#5f6d66";ctx.lineWidth=1.5;ctx.setLineDash([4,3]);ctx.strokeRect(left,top,right-left,bottom-top);
+        const boundsText=`PC1 ${formatBound(viewBounds[0])}–${formatBound(viewBounds[1])} · PC2 ${formatBound(viewBounds[2])}–${formatBound(viewBounds[3])}`;
+        role("zoom-bounds").textContent=boundsText;
+        canvas.setAttribute("aria-label",`Full PC1/PC2 map. The outlined rectangle marks ${boundsText}, enlarged in both plots below.`);
+        control("reset-zoom").disabled=viewBounds.every((value,i)=>value===initialBounds[i]);
       }
       function renderChart(canvas,snapshot) {
         const {width,height}=canvas.getBoundingClientRect(), dpr=Math.min(2,window.devicePixelRatio||1);
@@ -153,10 +160,15 @@
           ctx.save();ctx.strokeStyle="#5f6d66";ctx.lineWidth=1;ctx.setLineDash([4,3]);
           ctx.strokeRect(left,top,right-left,bottom-top);ctx.restore();
         }
+        if(selection?.canvas===canvas) {
+          const {x,y,endX,endY}=selection;
+          ctx.save();ctx.fillStyle="rgba(38,121,178,.12)";ctx.strokeStyle="#2679b2";ctx.lineWidth=1.5;ctx.setLineDash([4,3]);
+          ctx.fillRect(x,y,endX-x,endY-y);ctx.strokeRect(x,y,endX-x,endY-y);ctx.restore();
+        }
         const point=data.points[selected[step]];
         const next=step<data.solverSteps?data.points[selected[step+1]]:null;
         const vectorDescription=next?` Next PC1 ${next[0].toFixed(2)}, PC2 ${next[1].toFixed(2)}.`:" Finished; no next step.";
-        canvas.setAttribute("aria-label",`${method==="diffusion"?denoisingName:"Flow matching"}, ${names[example]}, step ${step} of ${data.solverSteps}, PC1 ${point[0].toFixed(2)}, PC2 ${point[1].toFixed(2)}.${vectorDescription} Fixed shared PCA axes.${viewBounds?` Zoomed to PC1 ${viewBounds[0]}–${viewBounds[1]}, PC2 ${viewBounds[2]}–${viewBounds[3]}.`:""} Click any route to select it. Use left and right arrows to step through images.`);
+        canvas.setAttribute("aria-label",`${method==="diffusion"?denoisingName:"Flow matching"}, ${names[example]}, step ${step} of ${data.solverSteps}, PC1 ${point[0].toFixed(2)}, PC2 ${point[1].toFixed(2)}.${vectorDescription} Fixed shared PCA axes.${viewBounds?` Zoomed to PC1 ${viewBounds[0]}–${viewBounds[1]}, PC2 ${viewBounds[2]}–${viewBounds[3]}. Drag a square to zoom both plots. Press Escape to cancel or reset zoom, plus or minus to zoom about the centre.`:""} Click any route to select it. Use left and right arrows to step through images.`);
       }
       function render() {
         const snapshot=data.snapshots[snapshotIndex];
@@ -196,6 +208,25 @@
         hover.clear();tooltips.forEach(tooltip=>{tooltip.hidden=true;});
         charts.forEach(canvas=>{canvas.style.cursor="crosshair";});
       }
+      function formatBound(value) {return Number(value.toPrecision(5)).toString();}
+      function cancelSelection() {
+        if(!selection)return;
+        const {canvas,pointerId}=selection;selection=null;
+        if(canvas.hasPointerCapture(pointerId))canvas.releasePointerCapture(pointerId);
+      }
+      function setZoom(bounds) {
+        cancelSelection();clearHover();viewBounds=bounds;
+        renderOverview();charts.forEach(canvas=>renderChart(canvas,data.snapshots[snapshotIndex]));
+      }
+      control("reset-zoom")?.addEventListener("click",()=>setZoom(initialBounds));
+      function moveSelection(event) {
+        const box=selection.canvas.getBoundingClientRect(), {x,y,rect}=selection;
+        const dx=event.clientX-box.left-x, dy=event.clientY-box.top-y;
+        const signX=dx<0?-1:1, signY=dy<0?-1:1;
+        const side=Math.min(Math.max(Math.abs(dx),Math.abs(dy)),signX<0?x-rect.left:rect.right-x,signY<0?y-rect.top:rect.bottom-y);
+        selection.endX=x+signX*side;selection.endY=y+signY*side;
+        if(Math.hypot(dx,dy)>=8)dragged.add(selection.canvas);
+      }
       control("checkpoint").addEventListener("change",()=>{stop();clearHover();snapshotIndex=Number(control("checkpoint").value);render();});
       control("example").addEventListener("change",()=>{stop();clearHover();example=Number(control("example").value);render();});
       control("step").addEventListener("input",()=>{stop();clearHover();step=Number(control("step").value);render();});
@@ -226,11 +257,45 @@
         return nearest;
       }
       charts.forEach(canvas=>{
+        if(initialBounds) {
+          canvas.addEventListener("pointerdown",event=>{
+            if(event.button!==0||!event.isPrimary||selection)return;
+            dragged.delete(canvas);
+            const box=canvas.getBoundingClientRect(), x=event.clientX-box.left, y=event.clientY-box.top, rect=plotRects.get(canvas);
+            if(!rect||x<rect.left||x>rect.right||y<rect.top||y>rect.bottom)return;
+            stop();clearHover();canvas.focus({preventScroll:true});
+            selection={canvas,pointerId:event.pointerId,x,y,endX:x,endY:y,rect};
+            canvas.setPointerCapture(event.pointerId);
+          });
+          canvas.addEventListener("pointerup",event=>{
+            if(selection?.canvas!==canvas||selection.pointerId!==event.pointerId)return;
+            moveSelection(event);
+            const {x,y,endX,endY,rect}=selection;
+            if(Math.abs(endX-x)>=8) {
+              const pcX=p=>viewBounds[0]+(p-rect.left)/(rect.right-rect.left)*(viewBounds[1]-viewBounds[0]);
+              const pcY=p=>viewBounds[3]-(p-rect.top)/(rect.bottom-rect.top)*(viewBounds[3]-viewBounds[2]);
+              const bounds=[pcX(Math.min(x,endX)),pcX(Math.max(x,endX)),pcY(Math.max(y,endY)),pcY(Math.min(y,endY))];
+              if(bounds[1]-bounds[0]>=.001)setZoom(bounds);
+            }
+            cancelSelection();renderChart(canvas,data.snapshots[snapshotIndex]);
+          });
+          ["pointercancel","lostpointercapture"].forEach(type=>canvas.addEventListener(type,()=>{
+            if(selection?.canvas!==canvas)return;
+            dragged.add(canvas);cancelSelection();renderChart(canvas,data.snapshots[snapshotIndex]);
+          }));
+        }
         canvas.addEventListener("click",event=>{
+          if(dragged.delete(canvas))return;
           const nearest=routeAt(canvas,event);
           if(nearest){stop();clearHover();example=nearest.lane;step=nearest.step;render();}
         });
         canvas.addEventListener("pointermove",event=>{
+          if(selection) {
+            if(selection.canvas===canvas&&selection.pointerId===event.pointerId) {
+              moveSelection(event);renderChart(canvas,data.snapshots[snapshotIndex]);
+            }
+            return;
+          }
           if(event.pointerType==="touch")return;
           const nearest=routeAt(canvas,event), previous=hover.get(canvas), tooltip=tooltips.get(canvas);
           if(nearest) {
@@ -255,6 +320,19 @@
           renderChart(canvas,data.snapshots[snapshotIndex]);
         });
         canvas.addEventListener("keydown",event=>{
+          if(initialBounds&&["Escape","+","=","-"].includes(event.key)) {
+            event.preventDefault();
+            if(event.key==="Escape") {
+              if(selection){dragged.add(selection.canvas);cancelSelection();render();}
+              else setZoom(initialBounds);
+            } else {
+              const factor=event.key==="-"?2:.5;
+              const cx=(viewBounds[0]+viewBounds[1])/2, cy=(viewBounds[2]+viewBounds[3])/2;
+              const dx=(viewBounds[1]-viewBounds[0])*factor/2, dy=(viewBounds[3]-viewBounds[2])*factor/2;
+              if(dx>=.0005&&dx<=1e4)setZoom([cx-dx,cx+dx,cy-dy,cy+dy]);
+            }
+            return;
+          }
           if(!["ArrowLeft","ArrowRight","ArrowUp","ArrowDown","Home","End","Escape"].includes(event.key))return;
           event.preventDefault();stop();clearHover();
           if(event.key==="ArrowUp"||event.key==="ArrowDown") {
@@ -267,7 +345,7 @@
       });
       mount.querySelector(".mnist-route-content").hidden=false;
       status.textContent="";status.hidden=true;
-      const resizeObserver=new ResizeObserver(()=>{clearHover();renderOverview();charts.forEach(canvas=>renderChart(canvas,data.snapshots[snapshotIndex]));});
+      const resizeObserver=new ResizeObserver(()=>{cancelSelection();clearHover();renderOverview();charts.forEach(canvas=>renderChart(canvas,data.snapshots[snapshotIndex]));});
       charts.forEach(canvas=>resizeObserver.observe(canvas));
       if(role("overview"))resizeObserver.observe(role("overview"));
       renderOverview();render();updatePlaybackControls();

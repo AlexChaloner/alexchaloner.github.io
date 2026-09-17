@@ -8,7 +8,7 @@ title: "Flow matching diagrams"
 
 <link rel="stylesheet" href="{{ '/assets/flow-matching-demo.css' | relative_url }}">
 <link rel="stylesheet" href="{{ '/assets/mnist-pca.css' | relative_url }}">
-<link rel="stylesheet" href="{{ '/assets/mnist-route-demo.css' | relative_url }}?v=always-steps1">
+<link rel="stylesheet" href="{{ '/assets/mnist-route-demo.css' | relative_url }}?v=box-zoom1">
 
 <article class="fm-post">
   <header class="fm-hero">
@@ -104,8 +104,13 @@ title: "Flow matching diagrams"
 
       <figure class="mnist-zoom-overview">
         <canvas data-role="overview" role="img" aria-label="Full PC1/PC2 map. The outlined rectangle marks PC1 20 to 40 and PC2 0 to 25, enlarged in both plots below."></canvas>
-        <figcaption><strong>Full PC1/PC2</strong><span class="mnist-zoom-key">Selected region</span><span>PC1 20–40 · PC2 0–25</span><span class="mnist-zoom-direction"><span aria-hidden="true">↓</span> Zoomed below</span></figcaption>
+        <figcaption><strong>Full PC1/PC2</strong><span class="mnist-zoom-key">Selected region</span><span data-role="zoom-bounds" aria-live="polite">PC1 20–40 · PC2 0–25</span><span class="mnist-zoom-direction"><span aria-hidden="true">↓</span> Zoomed below</span></figcaption>
       </figure>
+      <div class="mnist-zoom-tools">
+        <div class="mnist-digit-key" aria-label="Digit colours"><span data-digit="0">Zero (0)</span><span data-digit="5">Five (5)</span></div>
+        <span class="mnist-route-note">Drag a square to zoom</span>
+        <button type="button" data-control="reset-zoom" disabled>Reset zoom</button>
+      </div>
       <div class="mnist-route-charts">
         <figure><figcaption><strong>Denoising</strong><span>Predict source</span></figcaption>
           <canvas data-method="diffusion" tabindex="0" role="img" aria-label="Zero to Five: source-prediction vectors in the shared PC1/PC2 space. Use left and right arrow keys to step through images."></canvas>
@@ -130,4 +135,4 @@ title: "Flow matching diagrams"
 
 <script src="{{ '/assets/mnist-space.js' | relative_url }}?v=dot-opacity1"></script>
 <script src="{{ '/assets/mnist-pca.js' | relative_url }}?v=minimal1"></script>
-<script src="{{ '/assets/mnist-route-demo.js' | relative_url }}?v=dot-opacity4"></script>
+<script src="{{ '/assets/mnist-route-demo.js' | relative_url }}?v=box-zoom1"></script>
