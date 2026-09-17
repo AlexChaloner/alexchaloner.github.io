@@ -114,6 +114,18 @@
         }
         inspector.append(heading,coordinate,cards,film);return inspector;
       }
+      function renderOverview() {
+        const canvas=role("overview");
+        if(!canvas||!viewBounds)return;
+        const {width,height}=canvas.getBoundingClientRect(), dpr=Math.min(2,window.devicePixelRatio||1);
+        canvas.width=Math.max(1,Math.round(width*dpr));canvas.height=Math.max(1,Math.round(height*dpr));
+        const ctx=canvas.getContext("2d");ctx.setTransform(dpr,0,0,dpr,0,0);
+        const screen=space.frame(ctx,width,height,reference);
+        space.reference(ctx,reference,screen,.35);
+        const [left,top]=screen([viewBounds[0],viewBounds[3]]), [right,bottom]=screen([viewBounds[1],viewBounds[2]]);
+        ctx.fillStyle="rgba(95,109,102,.06)";ctx.fillRect(left,top,right-left,bottom-top);
+        ctx.strokeStyle="#5f6d66";ctx.lineWidth=1.5;ctx.setLineDash([4,3]);ctx.strokeRect(left,top,right-left,bottom-top);
+      }
       function renderChart(canvas,snapshot) {
         const {width,height}=canvas.getBoundingClientRect(), dpr=Math.min(2,window.devicePixelRatio||1);
         canvas.width=Math.max(1,Math.round(width*dpr));canvas.height=Math.max(1,Math.round(height*dpr));
@@ -158,6 +170,11 @@
           ctx.beginPath();ctx.arc(x,y,5,0,2*Math.PI);ctx.stroke();
         }
         ctx.restore();
+        if(viewBounds) {
+          const {left,right,top,bottom}=screen.plotRect;
+          ctx.save();ctx.strokeStyle="#5f6d66";ctx.lineWidth=1;ctx.setLineDash([4,3]);
+          ctx.strokeRect(left,top,right-left,bottom-top);ctx.restore();
+        }
         const point=data.points[selected[step]];
         const next=step<data.solverSteps?data.points[selected[step+1]]:null;
         const vectorDescription=next?` Next PC1 ${next[0].toFixed(2)}, PC2 ${next[1].toFixed(2)}.`:" Finished; no next step.";
@@ -273,9 +290,10 @@
       });
       mount.querySelector(".mnist-route-content").hidden=false;
       status.textContent="Recorded offline · fixed PC1/PC2";
-      const resizeObserver=new ResizeObserver(()=>{clearHover();charts.forEach(canvas=>renderChart(canvas,data.snapshots[snapshotIndex]));});
+      const resizeObserver=new ResizeObserver(()=>{clearHover();renderOverview();charts.forEach(canvas=>renderChart(canvas,data.snapshots[snapshotIndex]));});
       charts.forEach(canvas=>resizeObserver.observe(canvas));
-      render();updatePlaybackControls();
+      if(role("overview"))resizeObserver.observe(role("overview"));
+      renderOverview();render();updatePlaybackControls();
     } catch(error) {
       status.textContent="The recorded routes couldn’t load. Refresh the page to try again.";
       console.error(error);

@@ -44,3 +44,14 @@
 .mnist-vector-check input { accent-color: var(--flow); }
 .mnist-vector-tooltip strong { display: block; margin-bottom: .4rem; }
 .mnist-vector-tooltip canvas { width: 136px; height: 64px; image-rendering: pixelated; }
+
+.mnist-zoom-overview { display: flex; align-items: center; justify-content: center; gap: 1.2rem; margin: 1rem auto 1.5rem; }
+.mnist-zoom-overview canvas { display: block; width: 300px; max-width: 100%; height: 190px; border: 1px solid var(--line); border-radius: 6px; }
+.mnist-zoom-overview figcaption { display: grid; gap: .35rem; color: var(--muted); font-size: .8rem; line-height: 1.4; }
+.mnist-zoom-overview strong { color: var(--ink); font-size: .9rem; }
+.mnist-zoom-key::before { content: ""; display: inline-block; width: .9rem; height: .6rem; margin-right: .4rem; border: 1px dashed var(--muted); vertical-align: middle; }
+.mnist-zoom-direction { margin-top: .3rem; }
+@media (max-width: 700px) {
+  .mnist-zoom-overview { flex-direction: column; gap: .6rem; }
+  .mnist-zoom-overview figcaption { text-align: center; }
+}
