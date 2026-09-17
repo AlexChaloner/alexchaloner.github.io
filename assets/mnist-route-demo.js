@@ -44,8 +44,8 @@
       const viewBounds=mount.dataset.viewBounds?JSON.parse(mount.dataset.viewBounds):null;
       const plotRects=new Map();
       const sourcePrediction=data.predictionKind==="source";
-      const denoisingName=sourcePrediction?"Source prediction":"Diffusion";
-      const predictionLabel=sourcePrediction?"Predicted source zero":"Predicted noise";
+      const denoisingName=sourcePrediction?"Denoising":"Diffusion";
+      const predictionLabel=sourcePrediction?"Predicted source":"Predicted noise";
       let snapshotIndex=Math.max(0,data.snapshots.findIndex(snapshot=>snapshot.update===(data.defaultCheckpoint || 100)));
       let example=0, step=12, animation=0, playing=false, paused=false, playbackId=0;
       const names=data.exampleNames || Array.from({length:data.sampleCount},(_,i)=>`${data.kind==="generator"?"Noise":"Zero"} ${String.fromCharCode(65+i)} → ${data.kind==="generator"?"0":"5"}`);
