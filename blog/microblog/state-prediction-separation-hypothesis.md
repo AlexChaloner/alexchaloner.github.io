@@ -23,14 +23,12 @@ They find by explicitly separating these functions (simple masking) they can get
 <div class="tweet-media">
 <a href="{{ '/assets/twitter/2081446385547710499-1.jpg' | relative_url }}"><img src="{{ '/assets/twitter/2081446385547710499-1.jpg' | relative_url }}" alt="Image attached to the original tweet" width="892" height="1281" loading="lazy"></a>
 </div>
-<p class="tweet-source"><a href="https://x.com/alex_chaloner/status/2081446385547710499">Original tweet</a></p>
 </section>
 
 <section class="tweet" id="tweet-2081446513050374203">
 <div class="tweet-text">Full paper here:
 
 <a href="https://arxiv.org/abs/2607.01218">https://arxiv.org/abs/2607.01218</a></div>
-<p class="tweet-source"><a href="https://x.com/alex_chaloner/status/2081446513050374203">Original tweet</a></p>
 </section>
 
 <section class="tweet" id="tweet-2081446674900361716">
@@ -44,7 +42,6 @@ Next token prediction is only done on the predict tokens.</div>
 <div class="tweet-media">
 <a href="{{ '/assets/twitter/2081446674900361716-1.jpg' | relative_url }}"><img src="{{ '/assets/twitter/2081446674900361716-1.jpg' | relative_url }}" alt="Image attached to the original tweet" width="953" height="342" loading="lazy"></a>
 </div>
-<p class="tweet-source"><a href="https://x.com/alex_chaloner/status/2081446674900361716">Original tweet</a></p>
 </section>
 
 <section class="tweet" id="tweet-2081446810095091854">
@@ -53,13 +50,11 @@ Next token prediction is only done on the predict tokens.</div>
 This is the opposite end to having all the "chain of thought" at the end of the input but before the output.
 
 An interesting followup idea is: can we get the same result with having thinking space every N tokens? (The algorithm here would need nontrivial adjustments). In some ways, this could look very similar to the Token Superposition paper.</div>
-<p class="tweet-source"><a href="https://x.com/alex_chaloner/status/2081446810095091854">Original tweet</a></p>
 </section>
 
 <section class="tweet" id="tweet-2081447106339127667">
 <div class="tweet-text">(Token superposition paper:)</div>
 <p class="tweet-quote"><a href="https://x.com/alex_chaloner/status/2069155536436670667">Quoted tweet by @alex_chaloner</a></p>
-<p class="tweet-source"><a href="https://x.com/alex_chaloner/status/2081447106339127667">Original tweet</a></p>
 </section>
 
 <section class="tweet" id="tweet-2081447506890662237">
@@ -71,7 +66,6 @@ Results are still a good and significant gain!</div>
 <div class="tweet-media">
 <a href="{{ '/assets/twitter/2081447506890662237-1.jpg' | relative_url }}"><img src="{{ '/assets/twitter/2081447506890662237-1.jpg' | relative_url }}" alt="Image attached to the original tweet" width="1349" height="804" loading="lazy"></a>
 </div>
-<p class="tweet-source"><a href="https://x.com/alex_chaloner/status/2081447506890662237">Original tweet</a></p>
 </section>
 
 <section class="tweet" id="tweet-2081447733320126780">
@@ -84,7 +78,6 @@ I wonder if this will enable e.g. easy+cheap PPO implementation.</div>
 <div class="tweet-media">
 <a href="{{ '/assets/twitter/2081447733320126780-1.jpg' | relative_url }}"><img src="{{ '/assets/twitter/2081447733320126780-1.jpg' | relative_url }}" alt="Image attached to the original tweet" width="515" height="388" loading="lazy"></a>
 </div>
-<p class="tweet-source"><a href="https://x.com/alex_chaloner/status/2081447733320126780">Original tweet</a></p>
 </section>
 
 <section class="tweet" id="tweet-2081447828623183876">
@@ -92,6 +85,5 @@ I wonder if this will enable e.g. easy+cheap PPO implementation.</div>
 It's my favourite kind of paper: we had a simple intuitive insight, we found a way to implement it, and it gives us multiplicative gains!
 
 Very well done to the authors 😊</div>
-<p class="tweet-source"><a href="https://x.com/alex_chaloner/status/2081447828623183876">Original tweet</a></p>
 </section>
 </div>

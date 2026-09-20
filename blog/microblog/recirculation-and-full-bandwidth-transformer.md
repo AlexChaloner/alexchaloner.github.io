@@ -25,7 +25,6 @@ The similarities: Both:
 
 Now the differences:</div>
 <p class="tweet-quote"><a href="https://x.com/mc_mozer/status/2090211279462117796">Quoted tweet by @mc_mozer</a></p>
-<p class="tweet-source"><a href="https://x.com/alex_chaloner/status/2090438759263416328">Original tweet</a></p>
 </section>
 
 <section class="tweet" id="tweet-2090438771988893993">
@@ -35,7 +34,6 @@ However it performs better with training,  or 'adaptation'.</div>
 <div class="tweet-media">
 <a href="{{ '/assets/twitter/2090438771988893993-1.jpg' | relative_url }}"><img src="{{ '/assets/twitter/2090438771988893993-1.jpg' | relative_url }}" alt="Image attached to the original tweet" width="1800" height="683" loading="lazy"></a>
 </div>
-<p class="tweet-source"><a href="https://x.com/alex_chaloner/status/2090438771988893993">Original tweet</a></p>
 </section>
 
 <section class="tweet" id="tweet-2090438789147828251">
@@ -48,7 +46,6 @@ Full-Bandwidth focusses on final layer passed in to next token
 <a href="{{ '/assets/twitter/2090438789147828251-1.jpg' | relative_url }}"><img src="{{ '/assets/twitter/2090438789147828251-1.jpg' | relative_url }}" alt="Image attached to the original tweet" width="1080" height="679" loading="lazy"></a>
 <a href="{{ '/assets/twitter/2090438789147828251-2.jpg' | relative_url }}"><img src="{{ '/assets/twitter/2090438789147828251-2.jpg' | relative_url }}" alt="Image attached to the original tweet" width="388" height="364" loading="lazy"></a>
 </div>
-<p class="tweet-source"><a href="https://x.com/alex_chaloner/status/2090438789147828251">Original tweet</a></p>
 </section>
 
 <section class="tweet" id="tweet-2090438794407444761">
@@ -57,7 +54,6 @@ Full-Bandwidth focusses on final layer passed in to next token
 Full Bandwidth Transformers found the latent space is trained quickly and cheaply via a 2- and 3-stage partial prefill.
 
 Obviously we need to try combining these!</div>
-<p class="tweet-source"><a href="https://x.com/alex_chaloner/status/2090438794407444761">Original tweet</a></p>
 </section>
 
 <section class="tweet" id="tweet-2090438813562839282">
@@ -70,7 +66,6 @@ Recirculation studies flexible family of combinations, introducing new hyperpara
 <a href="{{ '/assets/twitter/2090438813562839282-1.jpg' | relative_url }}"><img src="{{ '/assets/twitter/2090438813562839282-1.jpg' | relative_url }}" alt="Image attached to the original tweet" width="1004" height="560" loading="lazy"></a>
 <a href="{{ '/assets/twitter/2090438813562839282-2.jpg' | relative_url }}"><img src="{{ '/assets/twitter/2090438813562839282-2.jpg' | relative_url }}" alt="Image attached to the original tweet" width="1080" height="553" loading="lazy"></a>
 </div>
-<p class="tweet-source"><a href="https://x.com/alex_chaloner/status/2090438813562839282">Original tweet</a></p>
 </section>
 
 <section class="tweet" id="tweet-2090438819384619171">
@@ -83,13 +78,11 @@ Full Bandwidth Transformer:
 
 Recirculation:&#32;
 <a href="https://arxiv.org/abs/2608.17981">https://arxiv.org/abs/2608.17981</a></div>
-<p class="tweet-source"><a href="https://x.com/alex_chaloner/status/2090438819384619171">Original tweet</a></p>
 </section>
 
 <section class="tweet" id="tweet-2090438825705422949">
 <div class="tweet-text">Apologies as I may have missed some things - I am on holiday!
 
 Please feel free to fill in gaps and correct me!</div>
-<p class="tweet-source"><a href="https://x.com/alex_chaloner/status/2090438825705422949">Original tweet</a></p>
 </section>
 </div>

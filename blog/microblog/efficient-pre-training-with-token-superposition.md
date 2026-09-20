@@ -21,7 +21,6 @@ This paper finds that we can group up tokens to create a much more efficient tra
 <div class="tweet-media">
 <a href="{{ '/assets/twitter/2069155536436670667-1.jpg' | relative_url }}"><img src="{{ '/assets/twitter/2069155536436670667-1.jpg' | relative_url }}" alt="Image attached to the original tweet" width="938" height="1228" loading="lazy"></a>
 </div>
-<p class="tweet-source"><a href="https://x.com/alex_chaloner/status/2069155536436670667">Original tweet</a></p>
 </section>
 
 <section class="tweet" id="tweet-2069155539351646550">
@@ -31,7 +30,6 @@ Great blog post to pair with it, interactive diagrams: <a href="https://nousrese
 <div class="tweet-media">
 <a href="{{ '/assets/twitter/2069155539351646550-1.jpg' | relative_url }}"><img src="{{ '/assets/twitter/2069155539351646550-1.jpg' | relative_url }}" alt="Image attached to the original tweet" width="940" height="805" loading="lazy"></a>
 </div>
-<p class="tweet-source"><a href="https://x.com/alex_chaloner/status/2069155539351646550">Original tweet</a></p>
 </section>
 
 <section class="tweet" id="tweet-2069155542212202738">
@@ -43,7 +41,6 @@ Given its own intuitive CE loss.</div>
 <div class="tweet-media">
 <a href="{{ '/assets/twitter/2069155542212202738-1.png' | relative_url }}"><img src="{{ '/assets/twitter/2069155542212202738-1.png' | relative_url }}" alt="Image attached to the original tweet" width="615" height="111" loading="lazy"></a>
 </div>
-<p class="tweet-source"><a href="https://x.com/alex_chaloner/status/2069155542212202738">Original tweet</a></p>
 </section>
 
 <section class="tweet" id="tweet-2069155544821121476">
@@ -55,7 +52,6 @@ This is necessary because the bags of tokens are unordered.</div>
 <div class="tweet-media">
 <a href="{{ '/assets/twitter/2069155544821121476-1.png' | relative_url }}"><img src="{{ '/assets/twitter/2069155544821121476-1.png' | relative_url }}" alt="Image attached to the original tweet" width="566" height="620" loading="lazy"></a>
 </div>
-<p class="tweet-source"><a href="https://x.com/alex_chaloner/status/2069155544821121476">Original tweet</a></p>
 </section>
 
 <section class="tweet" id="tweet-2069155548315234713">
@@ -67,12 +63,10 @@ All too many papers miss this! But we need it for science!</div>
 <div class="tweet-media">
 <a href="{{ '/assets/twitter/2069155548315234713-1.jpg' | relative_url }}"><img src="{{ '/assets/twitter/2069155548315234713-1.jpg' | relative_url }}" alt="Image attached to the original tweet" width="1277" height="506" loading="lazy"></a>
 </div>
-<p class="tweet-source"><a href="https://x.com/alex_chaloner/status/2069155548315234713">Original tweet</a></p>
 </section>
 
 <section class="tweet" id="tweet-2069155550873448830">
 <div class="tweet-text">(This was especially refreshing after reading the GRAM paper which was terrible in these aspects)</div>
-<p class="tweet-source"><a href="https://x.com/alex_chaloner/status/2069155550873448830">Original tweet</a></p>
 </section>
 
 <section class="tweet" id="tweet-2069155553331318899">
@@ -82,7 +76,6 @@ Really fantastic stuff.</div>
 <div class="tweet-media">
 <a href="{{ '/assets/twitter/2069155553331318899-1.png' | relative_url }}"><img src="{{ '/assets/twitter/2069155553331318899-1.png' | relative_url }}" alt="Image attached to the original tweet" width="864" height="573" loading="lazy"></a>
 </div>
-<p class="tweet-source"><a href="https://x.com/alex_chaloner/status/2069155553331318899">Original tweet</a></p>
 </section>
 
 <section class="tweet" id="tweet-2069155556594528574">
@@ -98,13 +91,11 @@ I wonder how it pairs with token diffusion?
 <div class="tweet-media">
 <a href="{{ '/assets/twitter/2069155556594528574-1.png' | relative_url }}"><img src="{{ '/assets/twitter/2069155556594528574-1.png' | relative_url }}" alt="Image attached to the original tweet" width="632" height="172" loading="lazy"></a>
 </div>
-<p class="tweet-source"><a href="https://x.com/alex_chaloner/status/2069155556594528574">Original tweet</a></p>
 </section>
 
 <section class="tweet" id="tweet-2069155558574194908">
 <div class="tweet-text">Overall big fan of this from @NousResearch.
 Great communication and rigorous research. Will be reading more papers + following more closely.&#32;
 Well done!</div>
-<p class="tweet-source"><a href="https://x.com/alex_chaloner/status/2069155558574194908">Original tweet</a></p>
 </section>
 </div>
