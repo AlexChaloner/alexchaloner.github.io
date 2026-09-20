@@ -3,7 +3,7 @@
 .mnist-pca-legend span { display: inline-flex; align-items: center; gap: 0.4rem; font: 600 0.85rem system-ui, sans-serif; }
 .mnist-pca-legend i { width: 9px; height: 9px; border-radius: 50%; background: var(--digit-color); }
 .mnist-pca-stage { position: relative; }
-#mnist-pca-chart { display: block; width: 100%; height: clamp(330px, 49vw, 540px); touch-action: pan-y; -webkit-tap-highlight-color: transparent; }
+#mnist-pca-chart { outline: 1px solid var(--line); display: block; width: 100%; height: clamp(330px, 49vw, 540px); touch-action: pan-y; -webkit-tap-highlight-color: transparent; }
 #mnist-pca-chart:focus-visible { outline: 3px solid var(--flow); outline-offset: 3px; }
 .mnist-pca-tooltip { position: absolute; z-index: 2; width: 126px; padding: 12px; background: #fff; border: 1px solid var(--line); border-radius: 8px; box-shadow: 0 5px 20px #17211d24; pointer-events: none; font: 12px/1.5 system-ui, sans-serif; }
 .mnist-pca-tooltip[hidden] { display: none; }

@@ -7,19 +7,13 @@ title: "Flow matching diagrams"
 ---
 
 <link rel="stylesheet" href="{{ '/assets/flow-matching-demo.css' | relative_url }}?v=unframed1">
-<link rel="stylesheet" href="{{ '/assets/mnist-pca.css' | relative_url }}?v=unframed1">
-<link rel="stylesheet" href="{{ '/assets/mnist-route-demo.css' | relative_url }}?v=unframed1">
+<link rel="stylesheet" href="{{ '/assets/mnist-pca.css' | relative_url }}?v=plot-border1">
+<link rel="stylesheet" href="{{ '/assets/mnist-route-demo.css' | relative_url }}?v=plot-border1">
 
 <article class="fm-post">
   <header class="fm-hero">
     <h1>Flow Matching Diagrams</h1>
     <p class="fm-dek">[placeholder description]</p>
-
-    <nav class="fm-meta" aria-label="Diagram index">
-      <a href="#mnist-pca">MNIST map</a>
-      <a href="#mnist-lab">1: Digit Generator</a>
-      <a href="#digit-flow-lab">2: Three to Nine</a>
-    </nav>
   </header>
 
   <section class="fm-lab" id="mnist-pca" aria-labelledby="mnist-pca-title"
@@ -27,7 +21,6 @@ title: "Flow matching diagrams"
     data-atlas-url="{{ '/assets/mnist-pca-atlas.png' | relative_url }}">
     <header class="fm-lab-header">
       <div>
-        <p class="fm-section-label">The data</p>
         <h2 id="mnist-pca-title">MNIST</h2>
         <p class="mnist-pca-intro">[placeholder description]</p>
       </div>
@@ -51,7 +44,6 @@ title: "Flow matching diagrams"
     data-kind="generator" data-routes-url="{{ '/assets/mnist-generator-routes.json' | relative_url }}?v=nine-generator1"
     data-atlas-url="{{ '/assets/mnist-route-atlas.png' | relative_url }}?v=nine-generator1">
     <header class="fm-lab-header"><div>
-      <p class="fm-section-label">Diagram 1</p>
       <h2 id="mnist-lab-title">Digit Generator</h2>
       <p class="mnist-route-intro">[placeholder description]</p>
     </div></header>
@@ -88,7 +80,6 @@ title: "Flow matching diagrams"
     data-kind="transport" data-view-bounds="[20,40,-25,30]" data-routes-url="{{ '/assets/mnist-transport-routes.json' | relative_url }}?v=nine-generator1"
     data-atlas-url="{{ '/assets/mnist-route-atlas.png' | relative_url }}?v=nine-generator1">
     <header class="fm-lab-header"><div>
-      <p class="fm-section-label">Diagram 2</p>
       <h2 id="digit-flow-lab-title">Three to Nine</h2>
       <p class="mnist-route-intro">[placeholder description]</p>
 
