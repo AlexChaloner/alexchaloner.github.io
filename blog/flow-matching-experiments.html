@@ -42,8 +42,8 @@ title: "Flow matching diagrams"
 
   <span id="diagram-dots" aria-hidden="true"></span>
   <section class="fm-lab mnist-route-demo" id="mnist-lab" aria-labelledby="mnist-lab-title"
-    data-kind="generator" data-routes-url="{{ '/assets/mnist-generator-routes.json' | relative_url }}?v=routes100-1"
-    data-atlas-url="{{ '/assets/mnist-route-atlas.png' | relative_url }}?v=routes100-1">
+    data-kind="generator" data-routes-url="{{ '/assets/mnist-generator-routes.json' | relative_url }}?v=shared-nine-1"
+    data-atlas-url="{{ '/assets/mnist-route-atlas.png' | relative_url }}?v=shared-nine-1">
     <header class="fm-lab-header"><div>
       <h2 id="mnist-lab-title">Digit Generator</h2>
       <p class="mnist-route-intro">[placeholder description]</p>
@@ -78,11 +78,11 @@ title: "Flow matching diagrams"
   </section>
 
   <section class="fm-lab mnist-route-demo" id="digit-flow-lab" aria-labelledby="digit-flow-lab-title"
-    data-kind="transport" data-view-bounds="[20,40,-25,30]" data-routes-url="{{ '/assets/mnist-transport-routes.json' | relative_url }}?v=routes100-1"
-    data-atlas-url="{{ '/assets/mnist-route-atlas.png' | relative_url }}?v=routes100-1">
+    data-kind="transport" data-view-bounds="[20,40,-25,30]" data-routes-url="{{ '/assets/mnist-transport-routes.json' | relative_url }}?v=shared-nine-1"
+    data-atlas-url="{{ '/assets/mnist-route-atlas.png' | relative_url }}?v=shared-nine-1">
     <header class="fm-lab-header"><div>
       <h2 id="digit-flow-lab-title">Three to Nine</h2>
-      <p class="mnist-route-intro">[placeholder description]</p>
+      <p class="mnist-route-intro">Same noise→9 models, started from a three.</p>
 
     </div></header>
     <p class="mnist-route-status" role="status">Loading…</p>
@@ -102,10 +102,11 @@ title: "Flow matching diagrams"
         <div class="mnist-digit-key" aria-label="Digit colours"><span data-digit="3">Three (3)</span><span data-digit="9">Nine (9)</span></div>
         <span class="mnist-route-note">Drag to zoom · Double-click to reset</span>
         <button type="button" data-control="reset-zoom" disabled>Reset zoom</button>
+        <button type="button" data-control="fit-routes">Fit routes</button>
       </div>
       <div class="mnist-route-charts">
-        <figure><figcaption><strong>Denoising</strong><span>Predict source</span></figcaption>
-          <canvas data-method="diffusion" tabindex="0" role="img" aria-label="Three to Nine: source-prediction vectors in the shared PC1/PC2 space. Use left and right arrow keys to step through images."></canvas>
+        <figure><figcaption><strong>Diffusion</strong><span>Predict noise</span></figcaption>
+          <canvas data-method="diffusion" tabindex="0" role="img" aria-label="Three to Nine: diffusion vectors in the shared PC1/PC2 space. Use left and right arrow keys to step through images."></canvas>
         </figure>
         <figure><figcaption><strong>Flow matching</strong><span>Predict velocity</span></figcaption>
           <canvas data-method="flow" tabindex="0" role="img" aria-label="Three to Nine: flow route in the shared PC1/PC2 space. Use left and right arrow keys to step through images."></canvas>
@@ -128,4 +129,4 @@ title: "Flow matching diagrams"
 
 <script src="{{ '/assets/mnist-space.js' | relative_url }}?v=unframed1"></script>
 <script src="{{ '/assets/mnist-pca.js' | relative_url }}?v=minimal1"></script>
-<script src="{{ '/assets/mnist-route-demo.js' | relative_url }}?v=routes100-1"></script>
+<script src="{{ '/assets/mnist-route-demo.js' | relative_url }}?v=shared-nine-1"></script>

@@ -45,10 +45,7 @@
       let viewBounds=initialBounds, selection=null;
       const dragged=new Set();
       const plotRects=new Map();
-      const sourcePrediction=data.predictionKind==="source";
       const sourceDigit=data.sourceDigit??0, targetDigit=data.targetDigit??(data.kind==="transport"?5:0);
-      const denoisingName=sourcePrediction?"Denoising":"Diffusion";
-      const predictionLabel=sourcePrediction?"Predicted source":"Predicted noise";
       let snapshotIndex=Math.max(0,data.snapshots.findIndex(snapshot=>snapshot.update===(data.defaultCheckpoint || 100)));
       let example=0, step=Math.floor(data.solverSteps/2), animation=0, playing=false, paused=false, playbackId=0;
       const names=data.exampleNames || Array.from({length:data.sampleCount},(_,i)=>`${data.kind==="generator"?"Noise":`Digit ${sourceDigit}`} ${String.fromCharCode(65+i)} → ${targetDigit}`);
@@ -79,11 +76,10 @@
       function renderInspector(snapshot,method) {
         const journey=snapshot[method][example], current=journey[step];
         const inspector=document.createElement("article");inspector.className=`mnist-route-inspector ${method}`;
-        const heading=document.createElement("h4");heading.textContent=method==="diffusion"?denoisingName:"Flow matching";
+        const heading=document.createElement("h4");heading.textContent=method==="diffusion"?"Diffusion":"Flow matching";
         const cards=document.createElement("div");cards.className="mnist-route-cards";
         cards.append(card("Start",journey[0]),card("Now",current));
-        cards.append(card(method==="diffusion"?predictionLabel:"Predicted velocity",null,snapshot.predictions[method][example][step]),card("Next",journey[step+1]));
-        if(snapshot.targets) cards.append(card(`Paired ${targetDigit}`,snapshot.targets[example]));
+        cards.append(card(method==="diffusion"?"Predicted noise":"Predicted velocity",null,snapshot.predictions[method][example][step]),card("Next",journey[step+1]));
         const film=document.createElement("div");film.className="mnist-route-film";
         for(let i=0;i<6;i++) {
           const frame=Math.round(i*lastStep/5), button=document.createElement("button");
@@ -164,7 +160,7 @@
         const point=data.points[selected[step]];
         const next=data.points[selected[step+1]];
         const vectorDescription=` Next PC1 ${next[0].toFixed(2)}, PC2 ${next[1].toFixed(2)}.`;
-        canvas.setAttribute("aria-label",`${method==="diffusion"?denoisingName:"Flow matching"}, ${names[example]}, step ${step} of ${data.solverSteps}, PC1 ${point[0].toFixed(2)}, PC2 ${point[1].toFixed(2)}.${vectorDescription} Fixed shared PCA axes.${viewBounds?` Zoomed to PC1 ${viewBounds[0]}–${viewBounds[1]}, PC2 ${viewBounds[2]}–${viewBounds[3]}. Drag a rectangle to zoom both plots. Double-click to reset. Press Escape to cancel or reset zoom, plus or minus to zoom about the centre.`:""} Click any route to select it. Use left and right arrows to step through images.`);
+        canvas.setAttribute("aria-label",`${method==="diffusion"?"Diffusion":"Flow matching"}, ${names[example]}, step ${step} of ${data.solverSteps}, PC1 ${point[0].toFixed(2)}, PC2 ${point[1].toFixed(2)}.${vectorDescription} Fixed shared PCA axes.${viewBounds?` Zoomed to PC1 ${viewBounds[0]}–${viewBounds[1]}, PC2 ${viewBounds[2]}–${viewBounds[3]}. Drag a rectangle to zoom both plots. Double-click to reset. Press Escape to cancel or reset zoom, plus or minus to zoom about the centre.`:""} Click any route to select it. Use left and right arrows to step through images.`);
       }
       function render() {
         const snapshot=data.snapshots[snapshotIndex];
@@ -215,6 +211,14 @@
         renderOverview();charts.forEach(canvas=>renderChart(canvas,data.snapshots[snapshotIndex]));
       }
       control("reset-zoom")?.addEventListener("click",()=>setZoom(initialBounds));
+      control("fit-routes")?.addEventListener("click",()=>{
+        const snapshot=data.snapshots[snapshotIndex];
+        const points=["diffusion","flow"].flatMap(method=>snapshot[method].flat().map(id=>data.points[id]));
+        const xs=points.map(point=>point[0]), ys=points.map(point=>point[1]);
+        const bounds=[Math.min(...xs),Math.max(...xs),Math.min(...ys),Math.max(...ys)];
+        const dx=Math.max(1,(bounds[1]-bounds[0])*.05), dy=Math.max(1,(bounds[3]-bounds[2])*.05);
+        setZoom([bounds[0]-dx,bounds[1]+dx,bounds[2]-dy,bounds[3]+dy]);
+      });
       function moveSelection(event) {
         const box=selection.canvas.getBoundingClientRect(), {x,y,rect}=selection;
         const dx=event.clientX-box.left-x, dy=event.clientY-box.top-y;
