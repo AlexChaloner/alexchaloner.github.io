@@ -78,7 +78,7 @@ title: "Flow matching diagrams"
   </section>
 
   <section class="fm-lab mnist-route-demo" id="digit-flow-lab" aria-labelledby="digit-flow-lab-title"
-    data-kind="transport" data-view-bounds="[20,40,-25,30]" data-routes-url="{{ '/assets/mnist-transport-routes.json' | relative_url }}?v=shared-nine-1"
+    data-kind="transport" data-routes-url="{{ '/assets/mnist-transport-routes.json' | relative_url }}?v=shared-nine-1"
     data-atlas-url="{{ '/assets/mnist-route-atlas.png' | relative_url }}?v=shared-nine-1">
     <header class="fm-lab-header"><div>
       <h2 id="digit-flow-lab-title">Three to Nine</h2>
@@ -94,15 +94,8 @@ title: "Flow matching diagrams"
         <button type="button" data-control="pause" disabled>Pause</button>
       </div>
 
-      <figure class="mnist-zoom-overview">
-        <canvas data-role="overview" role="img" aria-label="Full PC1/PC2 map. The outlined rectangle marks PC1 20 to 40 and PC2 −25 to 30, enlarged in both plots below."></canvas>
-        <figcaption><strong>Full PC1/PC2</strong><span class="mnist-zoom-key">Selected region</span><span data-role="zoom-bounds" aria-live="polite">PC1 20–40 · PC2 −25–30</span><span class="mnist-zoom-direction"><span aria-hidden="true">↓</span> Zoomed below</span></figcaption>
-      </figure>
       <div class="mnist-zoom-tools">
         <div class="mnist-digit-key" aria-label="Digit colours"><span data-digit="3">Three (3)</span><span data-digit="9">Nine (9)</span></div>
-        <span class="mnist-route-note">Drag to zoom · Double-click to reset</span>
-        <button type="button" data-control="reset-zoom" disabled>Reset zoom</button>
-        <button type="button" data-control="fit-routes">Fit routes</button>
       </div>
       <div class="mnist-route-charts">
         <figure><figcaption><strong>Diffusion</strong><span>Predict noise</span></figcaption>
