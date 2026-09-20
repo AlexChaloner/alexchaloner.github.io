@@ -24,11 +24,11 @@ Blog posts use the `blog-post` layout for reading margins; interactive posts
 can set `wide: true` to retain room for diagrams. Legacy URLs are preserved by
 `redirects/` and `_layouts/redirect.html`.
 
-### Unlisted Twitter cross-posts
+### Twitter cross-posts
 
-The four cross-posts in `blog/microblog/` have `published: true` and `listed: false`.
-They are available at their `/blog/microblog/<name>.html` URLs, but are omitted
-from the home-page and blog lists. To list a post, remove `listed: false`.
+The four cross-posts in `blog/microblog/` have `published: true` and `listed: true`.
+They are available at their `/blog/microblog/<name>.html` URLs and appear
+in the home-page and blog lists under their original tweet dates.
 Each post links to the original thread at the top, retains the
 original tweet date and wording, and stores the attached images in `assets/twitter/`.
 Quoted tweets are linked separately. The scoped stylesheet preserves literal

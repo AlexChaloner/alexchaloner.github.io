@@ -3,7 +3,7 @@ layout: blog-post
 title: "The State-Prediction Separation Hypothesis"
 date: 2026-07-26
 published: true
-listed: false
+listed: true
 original_tweet: https://x.com/alex_chaloner/status/2081446385547710499
 ---
 

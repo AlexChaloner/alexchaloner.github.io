@@ -3,7 +3,7 @@ layout: blog-post
 title: "Recirculation and Full Bandwidth Transformer"
 date: 2026-08-20
 published: true
-listed: false
+listed: true
 original_tweet: https://x.com/alex_chaloner/status/2090438759263416328
 ---
 

@@ -3,7 +3,7 @@ layout: blog-post
 title: "Efficient Pre-Training with Token Superposition"
 date: 2026-06-22
 published: true
-listed: false
+listed: true
 original_tweet: https://x.com/alex_chaloner/status/2069155536436670667
 ---
 

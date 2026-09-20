@@ -3,7 +3,7 @@ layout: blog-post
 title: "Non-transitive preferences"
 date: 2026-08-05
 published: true
-listed: false
+listed: true
 original_tweet: https://x.com/alex_chaloner/status/2084994163406192934
 ---
 
