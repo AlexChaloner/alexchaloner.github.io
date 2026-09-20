@@ -13,9 +13,23 @@ title: "Flow matching diagrams"
 
 <article class="fm-post">
   <header class="fm-hero">
-    <h1>Flow Matching Diagrams</h1>
-    <p class="fm-dek">[placeholder description]</p>
+    <h1>A Grounded Interactive Explanation of Flow Matching</h1>
+    <p class="fm-dek">
+      Flow Matching [paper link here] has become the go-to algorithm for Diffusion models.
+
+      If you're like me, you will be familiar with Noise Diffusion models which simply apply noise to an input gradually, then train to denoise.
+
+      When trying to learn flow matching, I have seen this 'field diagram' which I feel is hiding why we care about flow matching.
+
+      Here, we base everything directly onto MNIST. 
+    </p>
   </header>
+
+  FIRST, THINK ABOUT THE LATENT SPACE, I.E. THE LOW-DIMENSIONAL REPRESENTATION OF YOUR INPUT.
+
+  HERE, WE THINK ABOUT MNIST COMPRESSED INTO 2 DIMENSIONS BY TAKING THE PCA OF A GOOD MODEL. (These PCs remain unchanged for the entire blog post).
+
+  Very simply: Diffusion was modelling what needed to change from step i to step i+1. Flow Matching is modelling directly a vector field of all changes.
 
   <section class="fm-lab" id="mnist-pca" aria-labelledby="mnist-pca-title"
     data-points-url="{{ '/assets/mnist-pca-data.json' | relative_url }}?v=paired32"
@@ -23,7 +37,11 @@ title: "Flow matching diagrams"
     <header class="fm-lab-header">
       <div>
         <h2 id="mnist-pca-title">MNIST</h2>
-        <p class="mnist-pca-intro">[placeholder description]</p>
+        <p class="mnist-pca-intro">
+          We'll use MNIST, the de-facto and rather dated image dataset, to keep things easy.
+
+          Here's MNIST, as modelled by a good model [what kind of model?] 
+        </p>
       </div>
     </header>
     <div class="mnist-pca-legend" id="mnist-pca-legend" aria-label="Digit colors"></div>
