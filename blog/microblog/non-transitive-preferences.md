@@ -1,6 +1,6 @@
 ---
 layout: blog-post
-title: "Non-transitive preferences"
+title: "Paper Summary: Non-transitive preferences"
 date: 2026-08-05
 published: true
 listed: true

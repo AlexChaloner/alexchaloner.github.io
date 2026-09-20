@@ -1,6 +1,6 @@
 ---
 layout: blog-post
-title: "Recirculation and Full Bandwidth Transformer"
+title: "Paper Summary: Recirculation and Full Bandwidth Transformer"
 date: 2026-08-20
 published: true
 listed: true

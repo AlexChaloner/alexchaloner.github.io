@@ -1,6 +1,6 @@
 ---
 layout: blog-post
-title: "The State-Prediction Separation Hypothesis"
+title: "Paper Summary: The State-Prediction Separation Hypothesis"
 date: 2026-07-26
 published: true
 listed: true

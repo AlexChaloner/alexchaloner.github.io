@@ -1,6 +1,6 @@
 ---
 layout: blog-post
-title: "Efficient Pre-Training with Token Superposition"
+title: "Paper Summary: Efficient Pre-Training with Token Superposition"
 date: 2026-06-22
 published: true
 listed: true
