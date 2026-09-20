@@ -23,7 +23,6 @@
     const px = x => (left+right)/2+(x-midX)*scale;
     const py = y => (top+bottom)/2-(y-midY)*scale;
     ctx.clearRect(0, 0, width, height);
-    ctx.fillStyle = "#fbfcf8"; ctx.fillRect(0, 0, width, height);
     ctx.font = "11px system-ui, sans-serif";
     const rawStep = Math.max(bounds[1]-bounds[0], bounds[3]-bounds[2])/6;
     const magnitude = 10 ** Math.floor(Math.log10(rawStep));

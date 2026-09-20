@@ -27,8 +27,6 @@
 
 .fm-hero {
   margin: 2rem 0 1.75rem;
-  padding-left: 1.15rem;
-  border-left: 5px solid var(--flow);
 }
 
 .fm-kicker,
@@ -117,8 +115,6 @@
 .fm-sampler {
   width: min(1120px, calc(100vw - 2rem));
   margin: 2.5rem 0 4rem;
-  border-top: 3px double var(--ink);
-  border-bottom: 1px solid var(--line);
 }
 
 .fm-lab-header,

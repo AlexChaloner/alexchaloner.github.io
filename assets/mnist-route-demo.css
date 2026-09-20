@@ -5,16 +5,16 @@
 .mnist-route-controls label { display: grid; gap: .4rem; font: 600 .85rem system-ui, sans-serif; }
 .mnist-route-controls select, .mnist-route-controls button { padding: .6rem .8rem; border: 1px solid var(--line); border-radius: 6px; background: var(--paper); color: var(--ink); font: 600 .85rem system-ui, sans-serif; }
 .mnist-route-controls button { background: var(--flow); color: white; cursor: pointer; }
-.mnist-route-charts, .mnist-route-inspectors { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 1rem; }
-.mnist-route-charts figure { margin: 0; min-width: 0; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
-.mnist-route-charts figcaption { display: flex; justify-content: space-between; flex-wrap: wrap; gap: .4rem; padding: .8rem; font-size: .85rem; }
+.mnist-route-charts, .mnist-route-inspectors { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 2rem; }
+.mnist-route-charts figure { margin: 0; min-width: 0; }
+.mnist-route-charts figcaption { display: flex; justify-content: space-between; flex-wrap: wrap; gap: .4rem; padding: .8rem 0; font-size: .85rem; }
 .mnist-route-charts figcaption span { color: var(--muted); }
 .mnist-route-charts canvas { display: block; width: 100%; height: 390px; touch-action: pan-y; cursor: crosshair; }
 .mnist-route-demo :focus-visible { outline: 3px solid var(--flow); outline-offset: 2px; }
 .mnist-route-scrubber { display: block; margin: 1.4rem 0; font: 600 .85rem system-ui, sans-serif; }
 .mnist-route-scrubber output { float: right; }
 .mnist-route-scrubber input { display: block; width: 100%; margin-top: .8rem; accent-color: var(--flow); }
-.mnist-route-inspector { min-width: 0; padding: .9rem; background: var(--paper); border: 1px solid var(--line); border-radius: 8px; }
+.mnist-route-inspector { min-width: 0; padding: .9rem 0; }
 .mnist-route-inspector h4 { margin: 0 0 .5rem; }
 .mnist-route-cards { display: flex; gap: .6rem; margin: 1rem 0; align-items: end; }
 .mnist-route-cards figure { margin: 0; flex: 1; min-width: 0; max-width: 110px; }
@@ -40,7 +40,7 @@
 .mnist-vector-tooltip canvas { width: 136px; height: 64px; image-rendering: pixelated; }
 
 .mnist-zoom-overview { display: grid; grid-template-columns: minmax(0,300px) minmax(0,280px); align-items: center; justify-content: center; gap: 1.2rem; margin: 1rem auto 1.5rem; }
-.mnist-zoom-overview canvas { display: block; width: 300px; max-width: 100%; height: 190px; border: 1px solid var(--line); border-radius: 6px; }
+.mnist-zoom-overview canvas { display: block; width: 300px; max-width: 100%; height: 190px; }
 .mnist-zoom-overview figcaption { display: grid; gap: .35rem; color: var(--muted); font-size: .8rem; line-height: 1.4; }
 .mnist-zoom-overview [data-role="zoom-bounds"] { min-height: 2.8em; font-variant-numeric: tabular-nums; }
 .mnist-zoom-overview strong { color: var(--ink); font-size: .9rem; }
