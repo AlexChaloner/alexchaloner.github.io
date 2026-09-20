@@ -60,6 +60,7 @@
       control("checkpoint").value=String(snapshotIndex);
       for(let i=0;i<data.sampleCount;i++) control("example").add(new Option(names[i],i));
       const lastStep=data.solverSteps-1;
+      if(role("update-scale")) role("update-scale").textContent=`Sampling updates ×${data.sampling.updateScale ?? 1} for both models.`;
       control("step").max=String(lastStep);
       function card(label,id,signal,scale) {
         const figure=document.createElement("figure"), caption=document.createElement("figcaption");

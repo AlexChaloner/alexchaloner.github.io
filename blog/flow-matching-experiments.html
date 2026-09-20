@@ -60,8 +60,8 @@ title: "Flow matching diagrams"
 
   <span id="diagram-dots" aria-hidden="true"></span>
   <section class="fm-lab mnist-route-demo" id="mnist-lab" aria-labelledby="mnist-lab-title"
-    data-kind="generator" data-routes-url="{{ '/assets/mnist-generator-routes.json' | relative_url }}?v=shared-nine-2m-4800"
-    data-atlas-url="{{ '/assets/mnist-route-atlas.png' | relative_url }}?v=shared-nine-2m-4800">
+    data-kind="generator" data-routes-url="{{ '/assets/mnist-generator-routes.json' | relative_url }}?v=shared-nine-2m-stronger"
+    data-atlas-url="{{ '/assets/mnist-route-atlas.png' | relative_url }}?v=shared-nine-2m-stronger">
     <header class="fm-lab-header"><div>
       <h2 id="mnist-lab-title">Digit Generator</h2>
       <p class="mnist-route-intro">[placeholder description]</p>
@@ -96,8 +96,8 @@ title: "Flow matching diagrams"
   </section>
 
   <section class="fm-lab mnist-route-demo" id="digit-flow-lab" aria-labelledby="digit-flow-lab-title"
-    data-kind="transport" data-routes-url="{{ '/assets/mnist-transport-routes.json' | relative_url }}?v=shared-nine-2m-4800"
-    data-atlas-url="{{ '/assets/mnist-route-atlas.png' | relative_url }}?v=shared-nine-2m-4800">
+    data-kind="transport" data-routes-url="{{ '/assets/mnist-transport-routes.json' | relative_url }}?v=shared-nine-2m-stronger"
+    data-atlas-url="{{ '/assets/mnist-route-atlas.png' | relative_url }}?v=shared-nine-2m-stronger">
     <header class="fm-lab-header"><div>
       <h2 id="digit-flow-lab-title">Three to Nine</h2>
       <p class="mnist-route-intro">Same noise→9 models, started from a three.</p>
@@ -112,6 +112,7 @@ title: "Flow matching diagrams"
         <button type="button" data-control="pause" disabled>Pause</button>
       </div>
 
+      <p class="mnist-route-note" data-role="update-scale">Sampling updates ×3 for both models.</p>
       <div class="mnist-zoom-tools">
         <div class="mnist-digit-key" aria-label="Digit colours"><span data-digit="3">Three (3)</span><span data-digit="9">Nine (9)</span></div>
       </div>
@@ -140,4 +141,4 @@ title: "Flow matching diagrams"
 
 <script src="{{ '/assets/mnist-space.js' | relative_url }}?v=unframed1"></script>
 <script src="{{ '/assets/mnist-pca.js' | relative_url }}?v=minimal1"></script>
-<script src="{{ '/assets/mnist-route-demo.js' | relative_url }}?v=shared-nine-2m-4800"></script>
+<script src="{{ '/assets/mnist-route-demo.js' | relative_url }}?v=shared-nine-2m-stronger"></script>
