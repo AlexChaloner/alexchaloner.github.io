@@ -29,7 +29,7 @@ title: "Flow matching diagrams"
 
   HERE, WE THINK ABOUT MNIST COMPRESSED INTO 2 DIMENSIONS BY TAKING THE PCA OF A GOOD MODEL. (These PCs remain unchanged for the entire blog post).
 
-  Very simply: Diffusion was modelling what needed to change from step i to step i+1. Flow Matching is modelling directly a vector field of all changes.
+  We compare noise prediction with the standard DDPM noise schedule against flow matching with a straight interpolation path.
 
   <section class="fm-lab" id="mnist-pca" aria-labelledby="mnist-pca-title"
     data-points-url="{{ '/assets/mnist-pca-data.json' | relative_url }}?v=paired32"
@@ -60,8 +60,8 @@ title: "Flow matching diagrams"
 
   <span id="diagram-dots" aria-hidden="true"></span>
   <section class="fm-lab mnist-route-demo" id="mnist-lab" aria-labelledby="mnist-lab-title"
-    data-kind="generator" data-routes-url="{{ '/assets/mnist-generator-routes.json' | relative_url }}?v=shared-nine-2m-stronger"
-    data-atlas-url="{{ '/assets/mnist-route-atlas.png' | relative_url }}?v=shared-nine-2m-stronger">
+    data-kind="generator" data-routes-url="{{ '/assets/mnist-generator-routes.json' | relative_url }}?v=ddpm-schedule-4800"
+    data-atlas-url="{{ '/assets/mnist-route-atlas.png' | relative_url }}?v=ddpm-schedule-4800">
     <header class="fm-lab-header"><div>
       <h2 id="mnist-lab-title">Digit Generator</h2>
       <p class="mnist-route-intro">[placeholder description]</p>
@@ -76,7 +76,7 @@ title: "Flow matching diagrams"
       </div>
 
       <div class="mnist-route-charts">
-        <figure><figcaption><strong>Diffusion</strong><span>Predict noise</span></figcaption>
+        <figure><figcaption><strong>Diffusion</strong><span>Predict noise · DDIM sampling</span></figcaption>
           <canvas data-method="diffusion" tabindex="0" role="img" aria-label="Digit Generator: diffusion route in the shared PC1/PC2 space. Use left and right arrow keys to step through images."></canvas>
         </figure>
         <figure><figcaption><strong>Flow matching</strong><span>Predict velocity</span></figcaption>
@@ -96,8 +96,8 @@ title: "Flow matching diagrams"
   </section>
 
   <section class="fm-lab mnist-route-demo" id="digit-flow-lab" aria-labelledby="digit-flow-lab-title"
-    data-kind="transport" data-routes-url="{{ '/assets/mnist-transport-routes.json' | relative_url }}?v=shared-nine-2m-stronger"
-    data-atlas-url="{{ '/assets/mnist-route-atlas.png' | relative_url }}?v=shared-nine-2m-stronger">
+    data-kind="transport" data-routes-url="{{ '/assets/mnist-transport-routes.json' | relative_url }}?v=ddpm-schedule-4800"
+    data-atlas-url="{{ '/assets/mnist-route-atlas.png' | relative_url }}?v=ddpm-schedule-4800">
     <header class="fm-lab-header"><div>
       <h2 id="digit-flow-lab-title">Three to Nine</h2>
       <p class="mnist-route-intro">Same noise→9 models, started from a three.</p>
@@ -117,7 +117,7 @@ title: "Flow matching diagrams"
         <div class="mnist-digit-key" aria-label="Digit colours"><span data-digit="3">Three (3)</span><span data-digit="9">Nine (9)</span></div>
       </div>
       <div class="mnist-route-charts">
-        <figure><figcaption><strong>Diffusion</strong><span>Predict noise</span></figcaption>
+        <figure><figcaption><strong>Diffusion</strong><span>Predict noise · DDIM sampling</span></figcaption>
           <canvas data-method="diffusion" tabindex="0" role="img" aria-label="Three to Nine: diffusion vectors in the shared PC1/PC2 space. Use left and right arrow keys to step through images."></canvas>
         </figure>
         <figure><figcaption><strong>Flow matching</strong><span>Predict velocity</span></figcaption>
@@ -141,4 +141,4 @@ title: "Flow matching diagrams"
 
 <script src="{{ '/assets/mnist-space.js' | relative_url }}?v=unframed1"></script>
 <script src="{{ '/assets/mnist-pca.js' | relative_url }}?v=minimal1"></script>
-<script src="{{ '/assets/mnist-route-demo.js' | relative_url }}?v=shared-nine-2m-stronger"></script>
+<script src="{{ '/assets/mnist-route-demo.js' | relative_url }}?v=ddpm-schedule-4800"></script>
