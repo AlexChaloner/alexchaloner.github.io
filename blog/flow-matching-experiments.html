@@ -10,7 +10,6 @@ title: "Flow matching diagrams"
 <link rel="stylesheet" href="{{ '/assets/mnist-pca.css' | relative_url }}?v=plot-border1">
 <link rel="stylesheet" href="{{ '/assets/mnist-route-demo.css' | relative_url }}?v=plot-border1">
 
-<link rel="stylesheet" href="{{ '/assets/mnist-sampling-demo.css' | relative_url }}?v=sampling1">
 
 <article class="fm-post">
   <header class="fm-hero">
@@ -43,8 +42,8 @@ title: "Flow matching diagrams"
 
   <span id="diagram-dots" aria-hidden="true"></span>
   <section class="fm-lab mnist-route-demo" id="mnist-lab" aria-labelledby="mnist-lab-title"
-    data-kind="generator" data-routes-url="{{ '/assets/mnist-generator-routes.json' | relative_url }}?v=nine-generator1"
-    data-atlas-url="{{ '/assets/mnist-route-atlas.png' | relative_url }}?v=nine-generator1">
+    data-kind="generator" data-routes-url="{{ '/assets/mnist-generator-routes.json' | relative_url }}?v=routes100-1"
+    data-atlas-url="{{ '/assets/mnist-route-atlas.png' | relative_url }}?v=routes100-1">
     <header class="fm-lab-header"><div>
       <h2 id="mnist-lab-title">Digit Generator</h2>
       <p class="mnist-route-intro">[placeholder description]</p>
@@ -69,7 +68,7 @@ title: "Flow matching diagrams"
 
       <p class="mnist-route-note">Hover to preview · Click to select</p>
       <label class="mnist-route-scrubber">Sampling progress <output data-role="step"></output>
-        <input data-control="step" type="range" min="0" max="23" step="1" value="12" aria-label="Digit Generator sampling step">
+        <input data-control="step" type="range" min="0" max="99" step="1" value="50" aria-label="Digit Generator sampling step">
       </label>
       <div class="mnist-route-inspectors" data-role="inspectors"></div>
       <p class="mnist-route-note">Predictions: blue + · orange −</p>
@@ -79,8 +78,8 @@ title: "Flow matching diagrams"
   </section>
 
   <section class="fm-lab mnist-route-demo" id="digit-flow-lab" aria-labelledby="digit-flow-lab-title"
-    data-kind="transport" data-view-bounds="[20,40,-25,30]" data-routes-url="{{ '/assets/mnist-transport-routes.json' | relative_url }}?v=nine-generator1"
-    data-atlas-url="{{ '/assets/mnist-route-atlas.png' | relative_url }}?v=nine-generator1">
+    data-kind="transport" data-view-bounds="[20,40,-25,30]" data-routes-url="{{ '/assets/mnist-transport-routes.json' | relative_url }}?v=routes100-1"
+    data-atlas-url="{{ '/assets/mnist-route-atlas.png' | relative_url }}?v=routes100-1">
     <header class="fm-lab-header"><div>
       <h2 id="digit-flow-lab-title">Three to Nine</h2>
       <p class="mnist-route-intro">[placeholder description]</p>
@@ -115,7 +114,7 @@ title: "Flow matching diagrams"
 
       <p class="mnist-route-note">Hover to preview · Click to select</p>
       <label class="mnist-route-scrubber">Sampling progress <output data-role="step"></output>
-        <input data-control="step" type="range" min="0" max="23" step="1" value="12" aria-label="Three to Nine sampling step">
+        <input data-control="step" type="range" min="0" max="99" step="1" value="50" aria-label="Three to Nine sampling step">
       </label>
       <div class="mnist-route-inspectors" data-role="inspectors"></div>
       <p class="mnist-route-note">Predictions: blue + · orange −</p>
@@ -125,58 +124,8 @@ title: "Flow matching diagrams"
   </section>
 
 
-  <section class="fm-lab mnist-sampling-demo" id="sampling-paths" aria-labelledby="sampling-paths-title"
-    data-routes-url="{{ '/assets/mnist-sampling-paths.json' | relative_url }}?v=sampling1"
-    data-atlas-url="{{ '/assets/mnist-sampling-atlas.png' | relative_url }}?v=sampling1">
-    <header class="fm-lab-header"><div>
-      <h2 id="sampling-paths-title">Sampling paths (experimental)</h2>
-      <p class="mnist-route-intro">The nine generators at 600 training updates. Here, diffusion adds fresh noise while sampling; switch it off to compare the same diffusion model without added noise.</p>
-    </div></header>
-    <p class="mnist-route-status" data-role="status" role="status">Loading sampling paths…</p>
-    <div data-role="content" hidden>
-      <div class="mnist-route-controls">
-        <label>Sampling steps <select data-control="steps" aria-label="Experimental sampling steps"></select></label>
-        <label>Diffusion sampling noise <select data-control="sampler"><option value="ddpm">On · DDPM</option><option value="ddim">Off · DDIM</option></select></label>
-        <label>Example <select data-control="example" aria-label="Experimental noise example"></select></label>
-        <button type="button" data-control="play">Replay route</button>
-        <button type="button" data-control="pause" disabled>Pause</button>
-      </div>
-      <div class="mnist-zoom-tools">
-        <span class="mnist-route-note">Drag to zoom · Double-click to reset</span>
-        <button type="button" data-control="reset-zoom" disabled>Reset zoom</button>
-      </div>
-      <div class="mnist-route-charts">
-        <figure><figcaption><strong>Diffusion</strong><span data-role="diffusion-sampler">DDPM · added noise</span></figcaption>
-          <canvas data-method="diffusion" tabindex="0" role="img" aria-label="Diffusion sampling paths in the fixed PC1/PC2 space"></canvas>
-        </figure>
-        <figure><figcaption><strong>Flow matching</strong><span>Euler · no added noise</span></figcaption>
-          <canvas data-method="flow" tabindex="0" role="img" aria-label="Flow matching sampling paths in the fixed PC1/PC2 space"></canvas>
-        </figure>
-      </div>
-      <p class="mnist-route-note">Hover for example · Click a path to inspect a step</p>
-      <label class="mnist-route-scrubber">Sampling progress <output data-role="step"></output>
-        <input data-control="step" type="range" min="0" max="999" value="999" step="1" aria-label="Experimental sampling progress">
-      </label>
-      <div class="mnist-route-inspectors">
-        <article class="mnist-route-inspector"><h4>Diffusion</h4><div class="mnist-route-cards">
-          <figure><figcaption>Start</figcaption><canvas data-image="diffusion-start" width="32" height="32" role="img" aria-label="Diffusion starting noise"></canvas></figure>
-          <figure><figcaption>Now</figcaption><canvas data-image="diffusion-now" width="32" height="32" role="img" aria-label="Current diffusion image"></canvas></figure>
-          <figure><figcaption>Next</figcaption><canvas data-image="diffusion-next" width="32" height="32" role="img" aria-label="Next diffusion image"></canvas></figure>
-        </div></article>
-        <article class="mnist-route-inspector"><h4>Flow matching</h4><div class="mnist-route-cards">
-          <figure><figcaption>Start</figcaption><canvas data-image="flow-start" width="32" height="32" role="img" aria-label="Flow matching starting noise"></canvas></figure>
-          <figure><figcaption>Now</figcaption><canvas data-image="flow-now" width="32" height="32" role="img" aria-label="Current flow matching image"></canvas></figure>
-          <figure><figcaption>Next</figcaption><canvas data-image="flow-next" width="32" height="32" role="img" aria-label="Next flow matching image"></canvas></figure>
-        </div></article>
-      </div>
-    </div>
-    <noscript><p>Enable JavaScript to explore the recorded sampling paths.</p></noscript>
-  </section>
-
 </article>
 
 <script src="{{ '/assets/mnist-space.js' | relative_url }}?v=unframed1"></script>
 <script src="{{ '/assets/mnist-pca.js' | relative_url }}?v=minimal1"></script>
-<script src="{{ '/assets/mnist-route-demo.js' | relative_url }}?v=last-transition1"></script>
-
-<script src="{{ '/assets/mnist-sampling-demo.js' | relative_url }}?v=sampling1"></script>
+<script src="{{ '/assets/mnist-route-demo.js' | relative_url }}?v=routes100-1"></script>

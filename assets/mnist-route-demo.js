@@ -50,7 +50,7 @@
       const denoisingName=sourcePrediction?"Denoising":"Diffusion";
       const predictionLabel=sourcePrediction?"Predicted source":"Predicted noise";
       let snapshotIndex=Math.max(0,data.snapshots.findIndex(snapshot=>snapshot.update===(data.defaultCheckpoint || 100)));
-      let example=0, step=12, animation=0, playing=false, paused=false, playbackId=0;
+      let example=0, step=Math.floor(data.solverSteps/2), animation=0, playing=false, paused=false, playbackId=0;
       const names=data.exampleNames || Array.from({length:data.sampleCount},(_,i)=>`${data.kind==="generator"?"Noise":`Digit ${sourceDigit}`} ${String.fromCharCode(65+i)} → ${targetDigit}`);
       const charts=[...mount.querySelectorAll("canvas[data-method]")];
       const positions=new Map(), hover=new Map(), tooltips=new Map();

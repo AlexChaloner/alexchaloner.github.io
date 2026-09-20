@@ -1,4 +1,0 @@
-.mnist-sampling-demo [hidden] { display: none; }
-.mnist-sampling-demo :focus-visible { outline: 3px solid var(--flow); outline-offset: 2px; }
-.mnist-sampling-demo canvas[data-method] { touch-action: none; }
-.mnist-sampling-demo .mnist-route-inspectors { margin-top: 1rem; }
