@@ -26,7 +26,7 @@ can set `wide: true` to retain room for diagrams. Legacy URLs are preserved by
 
 ### Twitter cross-posts
 
-The four cross-posts in `blog/microblog/` have `published: true` and `listed: true`.
+The five cross-posts in `blog/microblog/` have `published: true` and `listed: true`.
 They are available at their `/blog/microblog/<name>.html` URLs and appear
 in the home-page and blog lists under their original tweet dates.
 Each post links to the original thread at the top, retains the
