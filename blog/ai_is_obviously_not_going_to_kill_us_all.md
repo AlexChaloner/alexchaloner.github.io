@@ -25,13 +25,13 @@ Before we get started, I want to lay out some of my convictions:
 - AI Is Obviously Not Going To Kill Us All
 
 
-## 1. The Marvelification of AI Prediction
+## 1. The Marvel-ification of AI Prediction
 
 In many fictional stories, a single person works for a little while and then comes out with a Very Powerful weapon.
 
-![Tony Stark Was Able to Build This In A Cave With A Box Of Scraps!](/assets/tony-stark-box-of-scraps.png)
+![Tony Stark Was Able to Build This In A Cave With A Box Of Scraps!](/assets/tony-stark-box-of-scraps.png){: style="width: 50%; height: auto;"}
 
-These are great stories! These are inspiring stories!
+These are great stories! These are fun stories!
 However please note that this does not happen in real life. Especially in today's world, massive collaborations of people and capital are needed to achieve anything noteworthy. Supply chains are very real and very slow!
 (That is not to say that singular persons cannot change outcomes and be extremely influential - simply, they cannot do it alone)
 
@@ -68,6 +68,8 @@ But there are diminishing returns to everything.
 Absorbing the entirety of human knowledge is a [Fractal Problem](/blog/future_of_ai_the_fractal_problem_cannot_be_outscaled.html) - it takes significantly more effort to remember the next tiny details.
 
 When we measure the amazing improvements of AI ([see the Epoch AI report](https://epoch.ai/publications/the-plunging-price-of-thought)) compared to the investment of billions of dollars that have gone into it -- it's suddenly looking like an ordinary technology. ([R&D-adjusted comparison](https://github.com/karthiktadepalli1/rd-price-declines))
+
+![Capex expenditure from hyperscalers](/assets/hyperscaler-capex-spending.png)
 
 ![price to AI - comparable to compute](/assets/ai-price-declines-vs-rd.png)
 
@@ -112,12 +114,16 @@ People have wondered for a while [why Apple had not invested heavily into AI](ht
 I always thought this was in line with Apple's psyche: Apple loves to perfect and control their technology and AI is famously difficult to control!
 
 Other companies are fine with imperfections in AI.
-Now, Companies make money! That is their one and only goal! When push comes to shove, the money will guide them.
-There has been some grace in the OpenAI and Anthropic hacks, but there will soon be easy legal precedents for suing the hell out of a company whose agent hacks you. There will be huge fines.
+Companies have one goal: Companies make money! That is their one and only goal! When push comes to shove, the money will guide them.
+There has been some grace in the OpenAI and Anthropic hacks -- so far, very little [litigation](https://www.wired.com/story/openai-sued-over-the-hugging-face-hack/) -- but there will soon be easy legal precedents for suing the hell out of a company whose agent hacks you. It will be the same as any other hacks.
 
-Beyond this - no user is going to use an agent that is misaligned with them. Few users are going to use the Commit-a-Felony-Bot 2000
+Beyond this - no user is going to use an agent that is misaligned with them. Few users are going to use the Commit-a-Felony-Bot 2000.
 Mark Zuckerberg talks about this extensively in [his essay on the future of AI](https://www.meta.com/thefutureisforeveryone/)
 With capable agents, there is a Strong Monetary Incentive now to align them. As such, alignment is getting the same exponential investment that has benefitted AI! Alignment is a bottleneck! It must be solved - it is not optional.
+
+![Muse / Jolly](/assets/muse-jolly.png)
+
+^ You are not gonna pay for this fuzzy lil guy if you don't trust him.
 
 Alignment is important! This has always been the case, but now we have capable AIs to experiment on. Now we have a science rather than a philosophy. Now we have progress.
 
@@ -129,6 +135,8 @@ Elephants are far stronger than us, and yet we can contain them.
 The Safetyists of 10000BC would tell us we could never beat a Mammoth, and that we could never tame a Wolf. They would have lots of good points to prove it!
 
 Meanwhile, the Mammoths were hunted down and the wolves are now corgis.
+
+![Corgi](/assets/wolf-like-dog.png)
 
 There's no reason we can't have a similar [dog outcome for AI](/blog/microblog/the-dog-outcome-for-ai.html).
 
