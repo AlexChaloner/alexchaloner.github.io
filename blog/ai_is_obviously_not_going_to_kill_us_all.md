@@ -1,5 +1,6 @@
 ---
 layout: blog-post
+permalink: /blog/ai-is-obviously-not-going-to-kill-us-all.html
 center_images: true
 listed: false
 noindex: true
