@@ -4,7 +4,7 @@ center_images: true
 listed: false
 noindex: true
 preserve_line_breaks: true
-title: "AI Will Obviously Not Kill Us All"
+title: "AI Is Obviously Not Going To Kill Us All"
 date: 2026-10-28
 ---
 
