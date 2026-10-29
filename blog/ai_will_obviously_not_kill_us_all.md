@@ -1,5 +1,6 @@
 ---
 layout: blog-post
+center_images: true
 listed: false
 noindex: true
 preserve_line_breaks: true
@@ -43,6 +44,8 @@ In the "If Anyone Builds It, Everyone Dies" book, whose title does a lot to reas
 Funnily enough, this example shows the opposite of the intended effect: when the Wright Brothers created the first Airplane in [1903](https://en.wikipedia.org/wiki/Wright_Flyer), it took a whole [8](https://en.wikipedia.org/wiki/Giulio_Gavotti) years before we had (extremely limited) machines of war. It took [over 30](https://en.wikipedia.org/wiki/Douglas_DC-3) years before commercial airflights became commonplace. These are long timeframes!
 The weak version of the technology, what was effectively a paper plane, came out of nowhere - but it was nearly useless! The strong and important development happened slowly over decades.
 Materials, jet fuel, aerodynamics - masses of research, supply chains - all of these could not have been created by the Wright Brothers alone.
+
+![Wright Model A](/assets/wright-model-a.png)
 
 Technology does not come out of nowhere. It comes slowly, through building of global supply chains, over many years.
 Software people often have a really skewed view of how fast the world moves, because in Software World you can deploy a change worldwide in 5 minutes. In the real world Hardware is needed, and there are Trillion-dollar companies set up to execute on this difficult task.

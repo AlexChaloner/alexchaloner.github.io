@@ -2,6 +2,6 @@
 layout: default
 ---
 <link rel="stylesheet" href="{{ '/assets/blog-post.css' | relative_url }}">
-<div class="blog-post{% if page.wide %} blog-post--wide{% endif %}{% if page.preserve_line_breaks %} blog-post--preserve-line-breaks{% endif %}">
+<div class="blog-post{% if page.wide %} blog-post--wide{% endif %}{% if page.preserve_line_breaks %} blog-post--preserve-line-breaks{% endif %}{% if page.center_images %} blog-post--center-images{% endif %}">
   {{ content }}
 </div>

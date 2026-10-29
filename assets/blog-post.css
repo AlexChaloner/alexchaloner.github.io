@@ -25,3 +25,9 @@
 .blog-post--preserve-line-breaks p {
   white-space: pre-line;
 }
+
+.blog-post--center-images img {
+  display: block;
+  margin-left: auto;
+  margin-right: auto;
+}
