@@ -45,7 +45,7 @@ Funnily enough, this example shows the opposite of the intended effect: when the
 The weak version of the technology, what was effectively a paper plane, came out of nowhere - but it was nearly useless! The strong and important development happened slowly over decades.
 Materials, jet fuel, aerodynamics - masses of research, supply chains - all of these could not have been created by the Wright Brothers alone.
 
-![Wright Model A](/assets/wright-model-a.png)
+![Wright Model A](/assets/wright-model-a.png){: style="width: 50%; height: auto;"}
 
 Technology does not come out of nowhere. It comes slowly, through building of global supply chains, over many years.
 Software people often have a really skewed view of how fast the world moves, because in Software World you can deploy a change worldwide in 5 minutes. In the real world Hardware is needed, and there are Trillion-dollar companies set up to execute on this difficult task.
@@ -139,7 +139,7 @@ The Safetyists of 10000BC would tell us we could never beat a Mammoth, and that 
 
 Meanwhile, the Mammoths were hunted down and the wolves are now corgis.
 
-![Corgi](/assets/wolf-like-dog.png)
+![Corgi](/assets/wolf-like-dog.png){: style="width: 50%; height: auto;"}
 
 There's no reason we can't have a similar [dog outcome for AI](/blog/microblog/the-dog-outcome-for-ai.html).
 
@@ -166,11 +166,12 @@ The AI Existential Risk crowd have formed some little cults. How are they cults?
 If it walks like a duck and quacks like a duck -- it's a duck.
 
 For them, real progress is not something to celebrate - it erodes their raison d'etre, their entire personality. As such, we can probably expect them to fall increasingly behind the real world. 
-Those who work real jobs in AI Alignment will see this quickly, and pull apart. And
+Those who work real jobs in AI Alignment will see this quickly, and pull apart.
 
 
 ----
 
+![the future is bright](/assets/future-city.png)
 
 Wrapping up - I want everybody to be as optimistic about the future as I am. 
 I remember when GPT-3 was held back because there was worry it would flood the internet with false information. This didn't end up happening - the concerns were overblown. It's good to be considerate, but at some point you need to realise you are worrying too much.
