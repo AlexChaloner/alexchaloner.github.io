@@ -34,7 +34,7 @@ In many fictional stories, a single person works for a little while and then com
 ![Tony Stark Was Able to Build This In A Cave With A Box Of Scraps!](/assets/tony-stark-box-of-scraps.png){: style="width: 50%; height: auto;"}
 
 These are great stories! These are fun stories!
-However please note that this does not happen in real life. Especially in today's world, massive collaborations of people and capital are needed to achieve anything noteworthy. Supply chains are very real and very slow!
+However please note that this does not happen in real life. Especially in today's world, massive collaborations of people and capital are needed to achieve anything noteworthy. Supply chains are very real and very slow.
 (That is not to say that singular persons cannot change outcomes and be extremely influential - simply, they cannot do it alone)
 
 AI development is very different to Tony Stark In A Cave.
@@ -42,8 +42,8 @@ Firstly, it is happening in public, and everybody can see it happening.
 Secondly, and famously, AI improvements come continuously with scale (see [the scaling law paper](https://arxiv.org/abs/2001.08361)). The gains do not come for free - it gets exponentially more expensive - so emergent properties are incremental enough that we can react, mitigate and slow down in plenty of time.
 
 In the "If Anyone Builds It, Everyone Dies" book, whose title does a lot to reassure readers that it has sane and measured arguments, they mention the Wright brothers and the Airplane as an example of technology that nobody thought was possible a few years before, but then became suddenly possible!
-Funnily enough, this example shows the opposite of the intended effect: when the Wright Brothers created the first Airplane in [1903](https://en.wikipedia.org/wiki/Wright_Flyer), it took a whole [8](https://en.wikipedia.org/wiki/Giulio_Gavotti) years before we had (extremely limited) machines of war. It took [over 30](https://en.wikipedia.org/wiki/Douglas_DC-3) years before commercial airflights became commonplace. These are long timeframes!
-The weak version of the technology, what was effectively a paper plane, came out of nowhere - but it was nearly useless! The strong and important development happened slowly over decades.
+Funnily enough, this example shows the opposite of the intended effect: when the Wright Brothers created the first Airplane in [1903](https://en.wikipedia.org/wiki/Wright_Flyer), it took a whole [8](https://en.wikipedia.org/wiki/Giulio_Gavotti) years before we had (extremely limited) machines of war. It took [over 30](https://en.wikipedia.org/wiki/Douglas_DC-3) years before commercial airflights became commonplace. These are long timeframes.
+The weak version of the technology, what was effectively a paper plane, came out of nowhere - but it was nearly useless. The strong and important development happened slowly over decades.
 Materials, jet fuel, aerodynamics - masses of research, supply chains - all of these could not have been created by the Wright Brothers alone.
 
 ![Wright Model A](/assets/wright-model-a.png){: style="width: 50%; height: auto;"}
@@ -115,7 +115,7 @@ And now alignment will be improving rapidly, because these companies obviously d
 ## 4. Misaligned AIs Are Not Profitable
 
 People have wondered for a while [why Apple had not invested heavily into AI](https://www.youtube.com/watch?v=hz6oys4Eem4) and seem to be far behind.
-I always thought this was in line with Apple's psyche: Apple loves to perfect and control their technology and AI is famously difficult to control!
+I always thought this was in line with Apple's psyche: Apple loves to perfect and control their technology and AI is famously difficult to control.
 
 Other companies are fine with imperfections in AI.
 Companies have one goal: Companies make money! That is their one and only goal! When push comes to shove, the money will guide them.
@@ -123,7 +123,7 @@ There has been some grace in the OpenAI and Anthropic hacks -- so far, very litt
 
 Beyond this - no user is going to use an agent that is misaligned with them. Few users are going to use the Commit-a-Felony-Bot 2000.
 Mark Zuckerberg talks about this extensively in [his essay on the future of AI](https://www.meta.com/thefutureisforeveryone/)
-With capable agents, there is a Strong Monetary Incentive now to align them. As such, alignment is getting the same exponential investment that has benefitted AI! Alignment is a bottleneck! It must be solved - it is not optional.
+With capable agents, there is a Strong Monetary Incentive now to align them. As such, alignment is getting the same exponential investment that has benefitted AI -- Alignment is a bottleneck. It must be solved - it is not optional.
 
 ![Muse / Jolly](/assets/muse-jolly.png)
 
