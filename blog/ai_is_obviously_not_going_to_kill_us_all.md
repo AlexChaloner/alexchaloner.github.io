@@ -2,7 +2,7 @@
 layout: blog-post
 permalink: /blog/ai-is-obviously-not-going-to-kill-us-all.html
 center_images: true
-listed: false
+listed: true
 noindex: true
 preserve_line_breaks: true
 title: "AI Is Obviously Not Going To Kill Us All"
