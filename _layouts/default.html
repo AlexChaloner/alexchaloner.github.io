@@ -4,14 +4,14 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>{{ page.title }} | {{ site.title }}</title>
+  {% if page.noindex %}<meta name="robots" content="noindex">{% endif %}
 </head>
 <body>
   <header>
     <h2>{{ site.title }}</h2>
     <nav aria-label="Main navigation">
       <a href="{{ "/" | relative_url }}">Main</a> |
-      <a href="{{ "/blog/" | relative_url }}">Blog</a> |
-      <a href="{{ "/about_me.html" | relative_url }}">About Me</a>
+      <a href="{{ "/blog/" | relative_url }}">Blog</a>
     </nav>
   </header>
 
